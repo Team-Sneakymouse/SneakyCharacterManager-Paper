@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class CommandSkin extends Command {
 
-    protected CommandSkin(@NotNull String name) {
+    public CommandSkin(@NotNull String name) {
         super(name);
         //TODO Auto-generated constructor stub
     }
