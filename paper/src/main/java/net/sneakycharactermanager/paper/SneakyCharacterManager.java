@@ -1,4 +1,4 @@
-package io.sneakymouse.sneakycharactermanager;
+package net.sneakycharactermanager.paper;
 
 import org.bukkit.plugin.java.JavaPlugin;
 

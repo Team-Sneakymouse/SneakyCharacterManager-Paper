@@ -8,4 +8,5 @@
  */
 
 rootProject.name = "SneakyCharacterManager-Paper"
-include("app")
+include("paper")
+include("bungee")
