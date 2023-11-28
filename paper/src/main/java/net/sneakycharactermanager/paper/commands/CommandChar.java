@@ -6,8 +6,8 @@ import org.jetbrains.annotations.NotNull;
 
 public class CommandChar extends Command {
 
-    protected CommandChar(@NotNull String name) {
-        super(name);
+    public CommandChar() {
+        super("char");
         //TODO Auto-generated constructor stub
     }
 
