@@ -11,10 +11,12 @@ public class SneakyCharacterManager extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        saveDefaultConfig();
+
         instance = this;
 
-        getServer().getCommandMap().register("sneakycharactermanager", new CommandChar("char"));
-        getServer().getCommandMap().register("sneakycharactermanager", new CommandSkin("skin"));
+        getServer().getCommandMap().register("sneakycharactermanager", new CommandChar());
+        getServer().getCommandMap().register("sneakycharactermanager", new CommandSkin());
     }
 
     public static SneakyCharacterManager getInstance() {
