@@ -17,10 +17,6 @@ public class SneakyCharacterManager extends JavaPlugin {
 
         saveDefaultConfig();
 
-        if (!getCharacterDataFolder().exists()) {
-            getCharacterDataFolder().mkdirs();
-        }
-
         if (getConfig().getBoolean("deleteCharacterDataOnServerStart")) {
             deleteFolderContents(getCharacterDataFolder());
         }
@@ -34,7 +30,13 @@ public class SneakyCharacterManager extends JavaPlugin {
     }
 
     private static File getCharacterDataFolder() {
-        return new File(SneakyCharacterManager.getInstance().getServer().getWorldContainer(), "characterdata");
+        File dir = new File(SneakyCharacterManager.getInstance().getServer().getWorldContainer(), "characterdata");
+
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        return dir;
     }
 
     private static void deleteFolderContents(File folder) {
