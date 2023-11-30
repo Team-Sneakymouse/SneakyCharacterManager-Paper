@@ -4,9 +4,9 @@ import java.io.File;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
-import net.sneakycharactermanager.listeners.EventListeners;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.commands.CommandSkin;
+import net.sneakycharactermanager.paper.listeners.EventListeners;
 
 public class SneakyCharacterManager extends JavaPlugin {
 
