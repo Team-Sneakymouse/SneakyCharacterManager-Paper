@@ -4,6 +4,7 @@ import java.io.File;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
+import net.sneakycharactermanager.listeners.EventListeners;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.commands.CommandSkin;
 
@@ -23,6 +24,8 @@ public class SneakyCharacterManager extends JavaPlugin {
 
         getServer().getCommandMap().register("sneakycharactermanager", new CommandChar());
         getServer().getCommandMap().register("sneakycharactermanager", new CommandSkin());
+
+        getServer().getPluginManager().registerEvents(new EventListeners(), this);
     }
 
     public static SneakyCharacterManager getInstance() {
