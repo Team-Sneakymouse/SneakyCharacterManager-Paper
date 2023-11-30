@@ -1,4 +1,4 @@
-package net.sneakycharactermanager.listeners;
+package net.sneakycharactermanager.paper.listeners;
 
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
