@@ -10,7 +10,7 @@ public class BungeeMessagingUtil {
 
     public static void sendByteArray(String subChannelName, Object... objects) {
         try (ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
-             DataOutputStream out = new DataOutputStream(byteArrayOutput)) {
+            DataOutputStream out = new DataOutputStream(byteArrayOutput)) {
 
             out.writeUTF(subChannelName);
 
