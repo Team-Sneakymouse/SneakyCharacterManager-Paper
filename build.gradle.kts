@@ -21,8 +21,8 @@ subprojects {
 }
 
 tasks {
+
     "shadowJar"(com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar::class) {
-        archiveBaseName.set("SneakyCharacterManager")
         manifest {
             attributes["Main-Class"] = "your.main.class"
         }
@@ -34,5 +34,12 @@ tasks {
         from(subprojects.map { it.file("src/resources").absolutePath })
 
         configurations = listOf()
+
+        archiveBaseName.set("SneakyCharacterManager")
+        archiveClassifier.set("")
     }
+}
+
+artifacts {
+    add("archives", tasks.named("shadowJar"))
 }

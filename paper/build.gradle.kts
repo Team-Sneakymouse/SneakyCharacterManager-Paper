@@ -9,6 +9,7 @@
 plugins {
     // Apply the application plugin to add support for building a CLI application in Java.
     application
+    id("io.papermc.paperweight.userdev") version "1.5.10"
 }
 
 repositories {
@@ -18,9 +19,26 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.20.2-R0.1-SNAPSHOT")
+    //compileOnly("io.papermc.paper:paper-api:1.20.2-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("1.20.2-R0.1-SNAPSHOT")
 }
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(17))
+}
+
+tasks {
+    assemble {
+        dependsOn(reobfJar)
+    }
+
+    compileJava {
+        options.encoding = Charsets.UTF_8.name()
+
+        options.release.set(17)
+    }
+
+    javadoc {
+        options.encoding = Charsets.UTF_8.name()
+    }
 }
