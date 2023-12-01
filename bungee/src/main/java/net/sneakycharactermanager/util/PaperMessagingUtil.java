@@ -8,7 +8,7 @@ import net.sneakycharactermanager.bungee.SneakyCharacterManager;
 
 public class PaperMessagingUtil {
 
-    public void SendPacket(ServerInfo server, String subChannelName, Object... objects) {
+    public static void sendByteArray(ServerInfo server, String subChannelName, Object... objects) {
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
 
         out.writeUTF( subChannelName );
