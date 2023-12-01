@@ -6,6 +6,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.commands.CommandSkin;
+import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;
 import net.sneakycharactermanager.paper.listeners.EventListeners;
 
 public class SneakyCharacterManager extends JavaPlugin {
@@ -26,6 +27,8 @@ public class SneakyCharacterManager extends JavaPlugin {
         getServer().getCommandMap().register("sneakycharactermanager", new CommandSkin());
 
         getServer().getPluginManager().registerEvents(new EventListeners(), this);
+
+        getServer().getMessenger().registerIncomingPluginChannel(this, "SneakyCharacterManager", new BungeeMessageListener());
     }
 
     public static SneakyCharacterManager getInstance() {
