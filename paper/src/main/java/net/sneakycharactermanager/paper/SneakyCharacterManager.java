@@ -2,20 +2,25 @@ package net.sneakycharactermanager.paper;
 
 import java.io.File;
 
+import net.sneakycharactermanager.paper.commands.CommandTesting;
+import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.commands.CommandSkin;
 import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;
-import net.sneakycharactermanager.paper.listeners.EventListeners;
+import net.sneakycharactermanager.paper.listeners.ConnectionEventListeners;
 
 public class SneakyCharacterManager extends JavaPlugin {
 
     private static SneakyCharacterManager instance = null;
 
+    public NametagManager nametagManager;
+
     @Override
     public void onEnable() {
         instance = this;
+        nametagManager = new NametagManager();
 
         saveDefaultConfig();
 
@@ -25,10 +30,12 @@ public class SneakyCharacterManager extends JavaPlugin {
 
         getServer().getCommandMap().register("sneakycharactermanager", new CommandChar());
         getServer().getCommandMap().register("sneakycharactermanager", new CommandSkin());
-
-        getServer().getPluginManager().registerEvents(new EventListeners(), this);
+        getServer().getCommandMap().register("sneakycharactermanager", new CommandTesting());
 
         getServer().getMessenger().registerIncomingPluginChannel(this, "SneakyCharacterManager", new BungeeMessageListener());
+
+        getServer().getPluginManager().registerEvents(new ConnectionEventListeners(), this);
+
     }
 
     public static SneakyCharacterManager getInstance() {

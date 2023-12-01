@@ -7,6 +7,7 @@
  * in the user manual at https://docs.gradle.org/8.0.2/userguide/multi_project_builds.html
  */
 
+startParameter.isParallelProjectExecutionEnabled = true;
 rootProject.name = "SneakyCharacterManager-Paper"
-include("paper")
-include("bungee")
+include(":paper")
+include(":bungee")
