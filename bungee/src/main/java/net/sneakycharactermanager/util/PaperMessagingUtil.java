@@ -11,7 +11,7 @@ public class PaperMessagingUtil {
     public static void sendByteArray(ServerInfo server, String subChannelName, Object... objects) {
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
 
-        out.writeUTF( subChannelName );
+        out.writeUTF(subChannelName);
 
         for (Object object : objects) {
             if (object instanceof Boolean o)

@@ -9,6 +9,7 @@ import com.google.common.io.ByteStreams;
 
 public class BungeeMessageListener implements PluginMessageListener
 {
+    
     @Override
     public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, @NotNull byte[] message) {
         if (!channel.equalsIgnoreCase("SneakyCharacterManager"))
