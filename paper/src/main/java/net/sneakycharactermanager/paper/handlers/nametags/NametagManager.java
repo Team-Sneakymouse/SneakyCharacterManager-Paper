@@ -38,6 +38,7 @@ public class NametagManager {
      * @deprecated Going to change to 'showRealName' instead of createLocalized
      *               May use "createLocalized" as a sub function for locally changing a players nickname.
      * */
+    @Deprecated
     public void createLocalized(Player requester, boolean enabled){
         for(Nickname name : nicknames.values()){
             name.showRealName(requester, enabled);

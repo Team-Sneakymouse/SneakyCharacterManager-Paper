@@ -34,7 +34,7 @@ public class BungeeMessagingUtil {
                 else SneakyCharacterManager.getInstance().getLogger().severe( "SneakyCharacterManager attempted to write an unidentified object to a ByteArray!" );
             }
 
-            SneakyCharacterManager.getInstance().getServer().sendPluginMessage(SneakyCharacterManager.getInstance(), "SneakyCharacterManager", byteArrayOutput.toByteArray());
+            SneakyCharacterManager.getInstance().getServer().sendPluginMessage(SneakyCharacterManager.getInstance(), "sneakymouse:sneakycharactermanager", byteArrayOutput.toByteArray());
 
         } catch (IOException e) {
             e.printStackTrace();

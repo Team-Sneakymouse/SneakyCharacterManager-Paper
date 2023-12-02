@@ -33,7 +33,7 @@ public class PaperMessagingUtil {
             else SneakyCharacterManager.getInstance().getLogger().severe( "SneakyCharacterManager attempted to write an unidentified object to a ByteArray!" );
         }
 
-        server.sendData( "SneakyCharacterManager", out.toByteArray() );
+        server.sendData( "sneakymouse:sneakycharactermanager", out.toByteArray() );
     }
 
 }

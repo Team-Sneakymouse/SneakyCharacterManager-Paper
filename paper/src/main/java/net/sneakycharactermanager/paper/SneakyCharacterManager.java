@@ -32,7 +32,7 @@ public class SneakyCharacterManager extends JavaPlugin {
         getServer().getCommandMap().register("sneakycharactermanager", new CommandSkin());
         getServer().getCommandMap().register("sneakycharactermanager", new CommandTesting());
 
-        getServer().getMessenger().registerIncomingPluginChannel(this, "SneakyCharacterManager", new BungeeMessageListener());
+        getServer().getMessenger().registerIncomingPluginChannel(this, "sneakymouse:sneakycharactermanager", new BungeeMessageListener());
 
         getServer().getPluginManager().registerEvents(new ConnectionEventListeners(), this);
 

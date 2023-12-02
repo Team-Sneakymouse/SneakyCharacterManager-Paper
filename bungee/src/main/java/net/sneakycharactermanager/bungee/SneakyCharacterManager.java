@@ -11,7 +11,7 @@ public class SneakyCharacterManager extends Plugin {
     public void onEnable() {
         instance = this;
 
-        getProxy().registerChannel("SneakyCharacterManager");
+        getProxy().registerChannel("sneakymouse:sneakycharactermanager");
         getProxy().getPluginManager().registerListener(this, new PluginMessageListener());
     }
 

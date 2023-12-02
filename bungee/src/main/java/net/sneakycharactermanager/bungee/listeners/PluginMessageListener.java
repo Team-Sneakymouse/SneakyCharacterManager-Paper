@@ -12,7 +12,7 @@ public class PluginMessageListener implements Listener {
     @EventHandler
     public void on(PluginMessageEvent event)
     {
-        if (!event.getTag().equalsIgnoreCase( "SneakyCharacterManager" ) )
+        if (!event.getTag().equalsIgnoreCase( "sneakymouse:sneakycharactermanager" ) )
         {
             return;
         }
