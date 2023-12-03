@@ -30,10 +30,10 @@ public class PaperMessagingUtil {
                 out.writeShort((int) object);
             else if (object.getClass() == String.class)
                 out.writeUTF((String) object);
-            else SneakyCharacterManager.getInstance().getLogger().severe( "SneakyCharacterManager attempted to write an unidentified object to a ByteArray!" );
+            else SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager attempted to write an unidentified object to a ByteArray!");
         }
 
-        server.sendData( "sneakymouse:sneakycharactermanager", out.toByteArray() );
+        server.sendData("sneakymouse:sneakycharactermanager", out.toByteArray());
     }
 
 }
