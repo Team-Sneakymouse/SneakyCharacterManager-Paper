@@ -1,4 +1,4 @@
-package net.sneakycharactermanager.util;
+package net.sneakycharactermanager.bungee.util;
 
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
