@@ -7,6 +7,9 @@ import org.jetbrains.annotations.NotNull;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+
 public class BungeeMessageListener implements PluginMessageListener
 {
     
@@ -19,9 +22,14 @@ public class BungeeMessageListener implements PluginMessageListener
 
         ByteArrayDataInput in = ByteStreams.newDataInput(message);
         String subChannel = in.readUTF();
-        if (subChannel.equalsIgnoreCase("Placeholder"))
-        {
 
+        switch (subChannel) {
+            case "checkConnection" :
+                BungeeMessagingUtil.sendByteArray("pluginEnabled");
+                break;
+            default:
+                SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
+                break;
         }
     }
 
