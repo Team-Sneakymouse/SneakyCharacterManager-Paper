@@ -14,22 +14,22 @@ public class PaperMessagingUtil {
         out.writeUTF(subChannelName);
 
         for (Object object : objects) {
-            if (object instanceof Boolean o)
-                out.writeBoolean(o);
-            else if (object instanceof Byte o)
-                out.writeByte(o);
-            else if (object instanceof Double o)
-                out.writeDouble(o);
-            else if (object instanceof Float o)
-                out.writeFloat(o);
-            else if (object instanceof Integer o)
-                out.writeInt(o);
-            else if (object instanceof Long o)
-                out.writeLong(o);
-            else if (object instanceof Short o)
-                out.writeShort(o);
-            else if (object instanceof String o)
-                out.writeUTF(o);
+            if (object.getClass() == Boolean.class)
+                out.writeBoolean((boolean) object);
+            else if (object.getClass() == Byte.class || object.getClass() == byte.class)
+                out.writeByte((int) object);
+            else if (object.getClass() == Double.class || object.getClass() == double.class)
+                out.writeDouble((double) object);
+            else if (object.getClass() == Float.class || object.getClass() == float.class)
+                out.writeFloat((float) object);
+            else if (object.getClass() == Integer.class || object.getClass() == int.class)
+                out.writeInt((int) object);
+            else if (object.getClass() == Long.class || object.getClass() == long.class)
+                out.writeLong((long) object);
+            else if (object.getClass() == Short.class || object.getClass() == short.class)
+                out.writeShort((int) object);
+            else if (object.getClass() == String.class)
+                out.writeUTF((String) object);
             else SneakyCharacterManager.getInstance().getLogger().severe( "SneakyCharacterManager attempted to write an unidentified object to a ByteArray!" );
         }
 
