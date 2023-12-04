@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -61,7 +62,7 @@ public class Character {
                 config.set("location.pitch", 0.0);
 
                 for (int i = 0; i < 36; i++) {
-                    config.set("inventory." + i, null);
+                    config.set("inventory." + i, new ItemStack(Material.AIR));
                 }
             }
 
@@ -135,8 +136,12 @@ public class Character {
         config.set("location.pitch", playerLocation.getPitch());
 
         ItemStack[] inventoryContents = player.getInventory().getContents();
-        for (int i = 0; i < inventoryContents.length; i++) {
-            config.set("inventory." + i, inventoryContents[i]);
+        for (int i = 0; i < 36; i++) {
+            if (i < inventoryContents.length && inventoryContents[i] != null) {
+                config.set("inventory." + i, inventoryContents[i]);
+            } else {
+                config.set("inventory." + i, new ItemStack(Material.AIR));
+            }
         }
 
         try {
