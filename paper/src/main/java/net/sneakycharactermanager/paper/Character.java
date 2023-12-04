@@ -49,9 +49,13 @@ public class Character {
                 config.set("location.yaw", playerLocation.getYaw());
                 config.set("location.pitch", playerLocation.getPitch());
 
-                ItemStack[] playerInventory = this.player.getInventory().getContents();
-                for (int i = 0; i < playerInventory.length; i++) {
-                    config.set("inventory." + i, playerInventory[i]);
+                ItemStack[] inventoryContents = player.getInventory().getContents();
+                for (int i = 0; i < 36; i++) {
+                    if (i < inventoryContents.length && inventoryContents[i] != null) {
+                        config.set("inventory." + i, inventoryContents[i]);
+                    } else {
+                        config.set("inventory." + i, new ItemStack(Material.AIR));
+                    }
                 }
             } else {
                 config.set("location.world", Bukkit.getWorlds().get(0).getName());
