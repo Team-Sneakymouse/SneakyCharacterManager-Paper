@@ -40,6 +40,11 @@ public class PluginMessageListener implements Listener {
                 PlayerData playerData = PlayerData.get(playerUUID);
                 playerData.loadLastPlayedCharacter(serverInfo);
                 break;
+            case "characterSelectionGUI" :
+                playerUUID = in.readUTF();
+                playerData = PlayerData.get(playerUUID);
+                playerData.sendCharacterSelectionGui(serverInfo);;
+                break;
             default:
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
                 break;

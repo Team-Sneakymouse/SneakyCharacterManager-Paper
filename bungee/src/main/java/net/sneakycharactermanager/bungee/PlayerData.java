@@ -4,8 +4,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -14,6 +16,7 @@ import org.yaml.snakeyaml.Yaml;
 
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.config.ServerInfo;
+import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
 
 public class PlayerData {
 
@@ -224,6 +227,16 @@ public class PlayerData {
             this.characterMap.put(characterUUID, character);
             this.updateCharacterInYaml(character);
         }
+    }
+
+    public void sendCharacterSelectionGui(ServerInfo serverInfo) {
+        List<Character> enabledCharacters = new ArrayList<Character>();
+
+        for (Character character: characterMap.values()) {
+            if (character.isEnabled()) enabledCharacters.add(character);
+        }
+
+        PaperMessagingUtil.sendByteArray(serverInfo, "characterSelectionGUI", this.playerUUID, enabledCharacters);
     }
 
 }
