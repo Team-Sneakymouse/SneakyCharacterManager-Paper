@@ -35,15 +35,27 @@ public class Character {
     }
     
     public boolean isEnabled() {
-        return enabled;
+        return this.enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 
     public String getName() {
         return this.name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public String getSkin() {
         return this.skin;
+    }
+
+    public void setSkin(String skin) {
+        this.skin = skin;
     }
     
 }

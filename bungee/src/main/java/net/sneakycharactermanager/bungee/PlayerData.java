@@ -154,4 +154,74 @@ public class PlayerData {
         }
     }
 
+    private void updateCharacterInYaml(Character character) {
+        File playerFile = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID + ".yml");
+    
+        Map<String, Object> yamlData;
+        if (playerFile.exists()) {
+            Yaml yaml = new Yaml();
+            try (FileReader reader = new FileReader(playerFile)) {
+                yamlData = yaml.load(reader);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+        } else {
+            yamlData = new HashMap<>();
+        }
+    
+        if (yamlData.containsKey(character.getUUID())) {
+            Map<String, Object> characterData = (Map<String, Object>) yamlData.get(character.getUUID());
+            characterData.put("enabled", character.isEnabled());
+            characterData.put("name", character.getName());
+            characterData.put("skin", character.getSkin());
+            yamlData.put(character.getUUID(), characterData);
+        } else {
+            SneakyCharacterManager.getInstance().getLogger().severe("Character not found in YAML data! [" + playerUUID + ", " + character.getUUID() + "]");
+        }
+    
+        try (FileWriter writer = new FileWriter(playerFile)) {
+            Yaml yaml = new Yaml();
+            yaml.dump(yamlData, writer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setCharacterEnabled(String characterUUID, boolean enabled) {
+        Character character = characterMap.get(characterUUID);
+
+        if (character == null) {
+            SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to enable/disable a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
+        } else {
+            character.setEnabled(enabled);
+            characterMap.put(characterUUID, character);
+            updateCharacterInYaml(character);
+        }
+    }
+
+    public void setCharacterName(String characterUUID, String name) {
+        Character character = characterMap.get(characterUUID);
+
+        if (character == null) {
+            SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to rename a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
+        } else {
+            character.setName(name);
+            characterMap.put(characterUUID, character);
+            updateCharacterInYaml(character);
+        }
+    }
+
+    public void setCharacterSkin(String characterUUID, String skin) {
+        Character character = characterMap.get(characterUUID);
+
+        if (character == null) {
+            SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to reskin a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
+        } else {
+            character.setSkin(skin);
+            characterMap.put(characterUUID, character);
+            updateCharacterInYaml(character);
+        }
+    }
+
 }
