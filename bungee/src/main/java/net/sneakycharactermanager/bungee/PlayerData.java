@@ -118,4 +118,40 @@ public class PlayerData {
         }
     }
 
+    public void createNewCharacter(String name, String skin) {
+        Character character = new Character(name, skin);
+
+        this.characterMap.put(character.getUUID(), character);
+
+        File playerFile = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID + ".yml");
+
+        Map<String, Object> yamlData;
+        if (playerFile.exists()) {
+            Yaml yaml = new Yaml();
+            try (FileReader reader = new FileReader(playerFile)) {
+                yamlData = yaml.load(reader);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+        } else {
+            SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to access character data that doesn't exist! [" + this.playerUUID + "]");
+            return;
+        }
+
+        Map<String, Object> characterData = new LinkedHashMap<>();
+        characterData.put("enabled", character.isEnabled());
+        characterData.put("name", character.getName());
+        characterData.put("skin", character.getSkin());
+
+        yamlData.put(character.getUUID(), characterData);
+        
+        try (FileWriter writer = new FileWriter(playerFile)) {
+            Yaml yaml = new Yaml();
+            yaml.dump(yamlData, writer);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }

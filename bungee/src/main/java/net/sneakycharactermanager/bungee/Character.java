@@ -25,13 +25,25 @@ public class Character {
         this.name = name;
         this.skin = skin;
     }
+
+    public void loadCharacter(ServerInfo serverInfo, String playerUUID) {
+        PaperMessagingUtil.sendByteArray(serverInfo, "loadCharacter", playerUUID, this.uuid, this.name, this.skin);
+    }
+
+    public String getUUID() {
+        return this.uuid;
+    }
     
     public boolean isEnabled() {
         return enabled;
     }
 
-    public void loadCharacter(ServerInfo serverInfo, String playerUUID) {
-        PaperMessagingUtil.sendByteArray(serverInfo, "loadCharacter", playerUUID, this.uuid, this.name, this.skin);
+    public String getName() {
+        return this.name;
+    }
+
+    public String getSkin() {
+        return this.skin;
     }
     
 }
