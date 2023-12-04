@@ -75,9 +75,34 @@ public class PlayerData {
         Character character = characterMap.get(characterUUID);
 
         if (character == null) {
-
+            SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to load a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
         } else {
             character.loadCharacter(serverInfo, this.playerUUID);
+        }
+
+        if (this.lastPlayedCharacter != characterUUID) {
+            this.lastPlayedCharacter = characterUUID;
+            File playerFile = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID + ".yml");
+
+            Yaml yaml = new Yaml();
+            Map<String, Object> yamlData;
+        
+            try (FileReader reader = new FileReader(playerFile)) {
+                yamlData = yaml.load(reader);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+        
+            // Update the lastPlayedCharacter in the YAML data
+            yamlData.put("lastPlayedCharacter", characterUUID);
+        
+            // Save the updated YAML data back to the file
+            try (FileWriter writer = new FileWriter(playerFile)) {
+                yaml.dump(yamlData, writer);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
