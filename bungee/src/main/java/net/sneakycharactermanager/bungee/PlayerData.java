@@ -156,7 +156,7 @@ public class PlayerData {
     }
 
     private void updateCharacterInYaml(Character character) {
-        File playerFile = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID + ".yml");
+        File playerFile = new File(SneakyCharacterManager.getCharacterDataFolder(), this.playerUUID + ".yml");
     
         Map<String, Object> yamlData;
         if (playerFile.exists()) {
@@ -178,7 +178,7 @@ public class PlayerData {
             characterData.put("skin", character.getSkin());
             yamlData.put(character.getUUID(), characterData);
         } else {
-            SneakyCharacterManager.getInstance().getLogger().severe("Character not found in YAML data! [" + playerUUID + ", " + character.getUUID() + "]");
+            SneakyCharacterManager.getInstance().getLogger().severe("Character not found in YAML data! [" + this.playerUUID + ", " + character.getUUID() + "]");
             return;
         }
     
