@@ -39,41 +39,27 @@ public class Character {
         File characterFile = new File(playerDir, characterUUID + ".yml");
 
         if (!characterFile.exists()) {
-            YamlConfiguration config = new YamlConfiguration();
             if (firstLogin && !SneakyCharacterManager.getInstance().getConfig().getBoolean("deleteCharacterDataOnServerStart")) {
-                Location playerLocation = player.getLocation();
-                config.set("location.world", playerLocation.getWorld().getName());
-                config.set("location.x", playerLocation.getX());
-                config.set("location.y", playerLocation.getY());
-                config.set("location.z", playerLocation.getZ());
-                config.set("location.yaw", playerLocation.getYaw());
-                config.set("location.pitch", playerLocation.getPitch());
-
-                ItemStack[] inventoryContents = player.getInventory().getContents();
-                for (int i = 0; i < 36; i++) {
-                    if (i < inventoryContents.length && inventoryContents[i] != null) {
-                        config.set("inventory." + i, inventoryContents[i]);
-                    } else {
-                        config.set("inventory." + i, new ItemStack(Material.AIR));
-                    }
-                }
+                this.save();
             } else {
+                YamlConfiguration config = new YamlConfiguration();
+
                 config.set("location.world", Bukkit.getWorlds().get(0).getName());
                 config.set("location.x", Bukkit.getWorlds().get(0).getSpawnLocation().getX());
                 config.set("location.y", Bukkit.getWorlds().get(0).getSpawnLocation().getY());
                 config.set("location.z", Bukkit.getWorlds().get(0).getSpawnLocation().getZ());
-                config.set("location.yaw", 0.0);
-                config.set("location.pitch", 0.0);
+                config.set("location.yaw", Bukkit.getWorlds().get(0).getSpawnLocation().getYaw());
+                config.set("location.pitch", Bukkit.getWorlds().get(0).getSpawnLocation().getPitch());
 
                 for (int i = 0; i < 36; i++) {
                     config.set("inventory." + i, new ItemStack(Material.AIR));
                 }
-            }
 
-            try {
-                config.save(characterFile);
-            } catch (IOException e) {
-                e.printStackTrace();
+                try {
+                    config.save(characterFile);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -123,11 +109,6 @@ public class Character {
         }
 
         File characterFile = new File(playerDir, this.characterUUID + ".yml");
-
-        if (!characterFile.exists()) {
-            SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager attempted to save character data to a file that does not exist: " + this.characterUUID);
-            return;
-        }
 
         YamlConfiguration config = new YamlConfiguration();
 
