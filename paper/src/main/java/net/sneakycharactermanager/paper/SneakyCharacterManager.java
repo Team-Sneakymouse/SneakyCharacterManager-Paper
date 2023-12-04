@@ -41,7 +41,6 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getMessenger().registerOutgoingPluginChannel(this, "sneakymouse:sneakycharactermanager");
 
         getServer().getPluginManager().registerEvents(this, this);
-        getServer().getPluginManager().registerEvents(new ConnectionEventListeners(), this);
 
         BungeeMessagingUtil.sendByteArray("pluginEnabled");
     }

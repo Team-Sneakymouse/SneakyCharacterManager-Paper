@@ -8,6 +8,8 @@ public class ConnectionEventListeners implements Listener {
     
     @EventHandler
     public void onPlayerConnect(PostLoginEvent event) {
+        // TODO: This function needs to be rethought and moved over to the backend
+
         // Check if the server that the player connected to is running the Paper plugin
 
         // Get player UUID
