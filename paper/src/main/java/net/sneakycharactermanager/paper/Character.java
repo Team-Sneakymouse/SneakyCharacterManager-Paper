@@ -36,7 +36,7 @@ public class Character {
             playerDir.mkdirs();
         }
 
-        File characterFile = new File(playerDir, characterUUID + ".yml");
+        File characterFile = new File(playerDir, this.characterUUID + ".yml");
 
         if (!characterFile.exists()) {
             if (firstLogin && !SneakyCharacterManager.getInstance().getConfig().getBoolean("deleteCharacterDataOnServerStart")) {
@@ -51,7 +51,7 @@ public class Character {
                 config.set("location.yaw", Bukkit.getWorlds().get(0).getSpawnLocation().getYaw());
                 config.set("location.pitch", Bukkit.getWorlds().get(0).getSpawnLocation().getPitch());
 
-                for (int i = 0; i < 36; i++) {
+                for (int i = 0; i < this.player.getInventory().getContents().length; i++) {
                     config.set("inventory." + i, new ItemStack(Material.AIR));
                 }
 
@@ -69,8 +69,8 @@ public class Character {
             characterMap.get(this.player).save();
         }
 
-        File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), player.getUniqueId().toString());
-        File characterFile = new File(playerDir, characterUUID + ".yml");
+        File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), this.player.getUniqueId().toString());
+        File characterFile = new File(playerDir, this.characterUUID + ".yml");
 
         if (!characterFile.exists()) {
             SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager attempted to load character data from a file that does not exist: " + this.characterUUID);
@@ -80,21 +80,21 @@ public class Character {
         YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
 
         Location playerLocation = new Location(
-                player.getServer().getWorld(config.getString("location.world")),
+                this.player.getServer().getWorld(config.getString("location.world")),
                 config.getDouble("location.x"),
                 config.getDouble("location.y"),
                 config.getDouble("location.z"),
                 (float) config.getDouble("location.yaw"),
                 (float) config.getDouble("location.pitch")
         );
-        player.teleport(playerLocation);
+        this.player.teleport(playerLocation);
 
         ItemStack[] inventoryContents = new ItemStack[config.getInt("inventory.size", 36)];
         for (String key : config.getConfigurationSection("inventory").getKeys(false)) {
             int slot = Integer.parseInt(key);
             inventoryContents[slot] = config.getItemStack("inventory." + key);
         }
-        player.getInventory().setContents(inventoryContents);
+        this.player.getInventory().setContents(inventoryContents);
 
         //TODO: Load skin, apply nickname
 
@@ -112,7 +112,7 @@ public class Character {
 
         YamlConfiguration config = new YamlConfiguration();
 
-        Location playerLocation = player.getLocation();
+        Location playerLocation = this.player.getLocation();
         config.set("location.world", playerLocation.getWorld().getName());
         config.set("location.x", playerLocation.getX());
         config.set("location.y", playerLocation.getY());
@@ -120,9 +120,9 @@ public class Character {
         config.set("location.yaw", playerLocation.getYaw());
         config.set("location.pitch", playerLocation.getPitch());
 
-        ItemStack[] inventoryContents = player.getInventory().getContents();
-        for (int i = 0; i < 36; i++) {
-            if (i < inventoryContents.length && inventoryContents[i] != null) {
+        ItemStack[] inventoryContents = this.player.getInventory().getContents();
+        for (int i = 0; i < inventoryContents.length; i++) {
+            if (inventoryContents[i] != null) {
                 config.set("inventory." + i, inventoryContents[i]);
             } else {
                 config.set("inventory." + i, new ItemStack(Material.AIR));
