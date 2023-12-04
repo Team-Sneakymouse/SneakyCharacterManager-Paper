@@ -10,6 +10,7 @@ import net.md_5.bungee.api.connection.Server;
 import net.md_5.bungee.api.event.PluginMessageEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
+import net.sneakycharactermanager.bungee.SneakyCharacterManager;
 
 public class PluginMessageListener implements Listener {
 
@@ -32,8 +33,10 @@ public class PluginMessageListener implements Listener {
         ByteArrayDataInput in = ByteStreams.newDataInput( event.getData() );
         String subChannel = in.readUTF();
 
-        if (subChannel.equals("Placeholder")) {
-            // Read and process your data from 'in'
+        switch (subChannel) {
+            default:
+                SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
+                break;
         }
     }
 }
