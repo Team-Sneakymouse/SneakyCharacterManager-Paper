@@ -80,7 +80,7 @@ public class PlayerData {
             character.loadCharacter(serverInfo, this.playerUUID);
         }
 
-        if (this.lastPlayedCharacter != characterUUID) {
+        if (this.lastPlayedCharacter.equals(characterUUID)) {
             this.lastPlayedCharacter = characterUUID;
             File playerFile = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID + ".yml");
 
