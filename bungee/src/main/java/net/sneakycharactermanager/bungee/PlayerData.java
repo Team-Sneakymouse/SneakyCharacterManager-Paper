@@ -94,10 +94,8 @@ public class PlayerData {
                 return;
             }
         
-            // Update the lastPlayedCharacter in the YAML data
             yamlData.put("lastPlayedCharacter", characterUUID);
         
-            // Save the updated YAML data back to the file
             try (FileWriter writer = new FileWriter(playerFile)) {
                 yaml.dump(yamlData, writer);
             } catch (IOException e) {
