@@ -36,6 +36,8 @@ public class SneakyCharacterManager extends JavaPlugin {
         getServer().getMessenger().registerOutgoingPluginChannel(this, "sneakymouse:sneakycharactermanager");
 
         getServer().getPluginManager().registerEvents(new ConnectionEventListeners(), this);
+
+        //TODO: When the plugin reloads, the characterMap in Character.java needs to be rebuilt
     }
 
     public static SneakyCharacterManager getInstance() {

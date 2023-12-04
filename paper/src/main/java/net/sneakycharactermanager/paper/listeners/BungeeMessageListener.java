@@ -1,5 +1,8 @@
 package net.sneakycharactermanager.paper.listeners;
 
+import java.util.UUID;
+
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.jetbrains.annotations.NotNull;
@@ -8,6 +11,7 @@ import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.Character;
 
 public class BungeeMessageListener implements PluginMessageListener
 {
@@ -29,7 +33,8 @@ public class BungeeMessageListener implements PluginMessageListener
                 String characterName = in.readUTF();
                 String skin = in.readUTF();
                 
-                //TODO: Load skin, apply nickname, and load inventory
+                Character character = new Character(playerUUID, characterUUID, characterName, skin);
+                character.load();
                 break;
             default:
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
