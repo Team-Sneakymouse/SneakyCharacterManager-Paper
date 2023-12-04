@@ -11,7 +11,6 @@ import net.md_5.bungee.api.event.PluginMessageEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
 import net.sneakycharactermanager.bungee.SneakyCharacterManager;
-import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
 
 public class PluginMessageListener implements Listener {
 
@@ -39,11 +38,10 @@ public class PluginMessageListener implements Listener {
 
         switch (subChannel) {
             case "pluginEnabled" :
-                SneakyCharacterManager.addAuthenticatedServer(serverInfo);
-                PaperMessagingUtil.sendByteArray(serverInfo, "authConfirmed");
+                SneakyCharacterManager.addConnectedServer(serverInfo);
                 break;
             case "pluginDisabled" :
-                SneakyCharacterManager.removeAuthenticatedServer(serverInfo);
+                SneakyCharacterManager.removeConnectedServer(serverInfo);
                 break;
             default:
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
