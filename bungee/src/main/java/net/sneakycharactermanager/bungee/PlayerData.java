@@ -76,6 +76,7 @@ public class PlayerData {
 
         if (character == null) {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to load a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
+            return;
         } else {
             character.loadCharacter(serverInfo, this.playerUUID);
         }
@@ -178,6 +179,7 @@ public class PlayerData {
             yamlData.put(character.getUUID(), characterData);
         } else {
             SneakyCharacterManager.getInstance().getLogger().severe("Character not found in YAML data! [" + playerUUID + ", " + character.getUUID() + "]");
+            return;
         }
     
         try (FileWriter writer = new FileWriter(playerFile)) {
