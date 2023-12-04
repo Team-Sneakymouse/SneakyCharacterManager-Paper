@@ -64,7 +64,7 @@ public class PlayerData {
             .forEach(key -> {
                 Character character = new Character(key, (Map<String, Object>) yamlData.get(key));
 
-                characterMap.put(key, character);
+                this.characterMap.put(key, character);
             });
         } catch (IOException e) {
             e.printStackTrace();
@@ -72,7 +72,7 @@ public class PlayerData {
     }
 
     public void loadCharacter(ServerInfo serverInfo, String characterUUID) {
-        Character character = characterMap.get(characterUUID);
+        Character character = this.characterMap.get(characterUUID);
 
         if (character == null) {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to load a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
@@ -106,7 +106,7 @@ public class PlayerData {
     }
 
     public void loadLastPlayedCharacter(ServerInfo serverInfo) {
-        loadCharacter(serverInfo, this.lastPlayedCharacter);
+        this.loadCharacter(serverInfo, this.lastPlayedCharacter);
     }
 
     public static PlayerData get(String playerUUID) {
@@ -191,38 +191,38 @@ public class PlayerData {
     }
 
     public void setCharacterEnabled(String characterUUID, boolean enabled) {
-        Character character = characterMap.get(characterUUID);
+        Character character = this.characterMap.get(characterUUID);
 
         if (character == null) {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to enable/disable a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
         } else {
             character.setEnabled(enabled);
-            characterMap.put(characterUUID, character);
-            updateCharacterInYaml(character);
+            this.characterMap.put(characterUUID, character);
+            this.updateCharacterInYaml(character);
         }
     }
 
     public void setCharacterName(String characterUUID, String name) {
-        Character character = characterMap.get(characterUUID);
+        Character character = this.characterMap.get(characterUUID);
 
         if (character == null) {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to rename a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
         } else {
             character.setName(name);
-            characterMap.put(characterUUID, character);
-            updateCharacterInYaml(character);
+            this.characterMap.put(characterUUID, character);
+            this.updateCharacterInYaml(character);
         }
     }
 
     public void setCharacterSkin(String characterUUID, String skin) {
-        Character character = characterMap.get(characterUUID);
+        Character character = this.characterMap.get(characterUUID);
 
         if (character == null) {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to reskin a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
         } else {
             character.setSkin(skin);
-            characterMap.put(characterUUID, character);
-            updateCharacterInYaml(character);
+            this.characterMap.put(characterUUID, character);
+            this.updateCharacterInYaml(character);
         }
     }
 
