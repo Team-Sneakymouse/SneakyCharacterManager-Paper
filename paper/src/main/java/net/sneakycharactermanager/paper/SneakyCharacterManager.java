@@ -42,8 +42,8 @@ public class SneakyCharacterManager extends JavaPlugin {
         return instance;
     }
 
-    private static File getCharacterDataFolder() {
-        File dir = new File(SneakyCharacterManager.getInstance().getServer().getWorldContainer(), "characterdata");
+    public static File getCharacterDataFolder() {
+        File dir = new File(getInstance().getDataFolder(), "characterdata");
 
         if (!dir.exists()) {
             dir.mkdirs();

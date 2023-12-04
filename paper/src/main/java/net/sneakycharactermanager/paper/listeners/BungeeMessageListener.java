@@ -8,7 +8,6 @@ import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 
 public class BungeeMessageListener implements PluginMessageListener
 {
@@ -24,6 +23,14 @@ public class BungeeMessageListener implements PluginMessageListener
         String subChannel = in.readUTF();
         
         switch (subChannel) {
+            case "loadCharacter" :
+                String playerUUID = in.readUTF();
+                String characterUUID = in.readUTF();
+                String characterName = in.readUTF();
+                String skin = in.readUTF();
+                
+                //TODO: Load skin, apply nickname, and load inventory
+                break;
             default:
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
                 break;
