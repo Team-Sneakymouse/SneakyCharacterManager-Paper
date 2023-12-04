@@ -27,6 +27,9 @@ public class BungeeMessageListener implements PluginMessageListener
             case "checkConnection" :
                 BungeeMessagingUtil.sendByteArray("pluginEnabled");
                 break;
+            case "authConfirmed" :
+                SneakyCharacterManager.getInstance().getLogger().info("SneakyCharacterManager has succesfully authenticated with Bungee");
+                break;
             default:
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
                 break;
