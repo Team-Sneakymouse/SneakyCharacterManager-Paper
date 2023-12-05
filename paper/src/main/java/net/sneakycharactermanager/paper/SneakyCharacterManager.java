@@ -2,16 +2,20 @@ package net.sneakycharactermanager.paper;
 
 import java.io.File;
 
-import net.sneakycharactermanager.paper.commands.CommandTesting;
-import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
+import org.bukkit.Bukkit;
+import org.bukkit.event.Listener;
+import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import net.sneakycharactermanager.paper.commands.CommandTesting;
+import net.md_5.bungee.event.EventHandler;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.commands.CommandSkin;
 import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;
 import net.sneakycharactermanager.paper.listeners.ConnectionEventListeners;
+import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 
-public class SneakyCharacterManager extends JavaPlugin {
+public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
     private static SneakyCharacterManager instance = null;
 
@@ -35,9 +39,19 @@ public class SneakyCharacterManager extends JavaPlugin {
         getServer().getMessenger().registerIncomingPluginChannel(this, "sneakymouse:sneakycharactermanager", new BungeeMessageListener());
         getServer().getMessenger().registerOutgoingPluginChannel(this, "sneakymouse:sneakycharactermanager");
 
+        getServer().getPluginManager().registerEvents(this, this);
         getServer().getPluginManager().registerEvents(new ConnectionEventListeners(), this);
 
         //TODO: When the plugin reloads, the characterMap in Character.java needs to be rebuilt
+
+        Bukkit.getScheduler().scheduleSyncRepeatingTask(instance, () -> {
+            Character.saveAll();
+        }, 0, 1200);
+    }
+
+    @EventHandler
+    public void onPluginDisable(PluginDisableEvent event) {
+        if (event.getPlugin() == this) Character.saveAll();
     }
 
     public static SneakyCharacterManager getInstance() {

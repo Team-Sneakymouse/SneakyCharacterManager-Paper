@@ -66,7 +66,7 @@ public class Character {
 
     public void load() {
         if (this.player != null && characterMap.containsKey(this.player)) {
-            characterMap.get(this.player).save();
+            get(this.player).save();
         }
 
         File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), this.player.getUniqueId().toString());
@@ -137,6 +137,25 @@ public class Character {
             config.save(characterFile);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    public static Character get(Player player) {
+        return characterMap.get(player);
+    }
+
+    public static void remove(Player player) {
+        characterMap.remove(player);
+    }
+
+    public static void saveAll() {
+        for (Player player : characterMap.keySet()) {
+            if (player.isOnline()) {
+                get(player).save();
+            } else {
+                SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager found an offline player on the characterMap. They have been removed, but this should never happen: " + player.getName());
+                characterMap.remove(player);
+            }
         }
     }
 

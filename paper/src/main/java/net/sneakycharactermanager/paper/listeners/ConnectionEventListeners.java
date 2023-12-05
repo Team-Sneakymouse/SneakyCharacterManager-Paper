@@ -2,6 +2,7 @@ package net.sneakycharactermanager.paper.listeners;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.Character;
 
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -25,6 +26,9 @@ public class ConnectionEventListeners implements Listener {
     public void onPlayerLeave(PlayerQuitEvent event){
         //Un-Nick player who is disconnecting from the server
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(event.getPlayer());
+
+        Character.get(event.getPlayer()).save();
+        Character.remove(event.getPlayer());
     }
 
 }
