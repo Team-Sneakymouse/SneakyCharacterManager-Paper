@@ -1,6 +1,8 @@
 package net.sneakycharactermanager.paper;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -20,6 +22,7 @@ import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
     private static SneakyCharacterManager instance = null;
+    private static Map<Player, Integer> taskIdMap = new HashMap<Player, Integer>();
 
     public NametagManager nametagManager;
 
@@ -45,10 +48,19 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(new ConnectionEventListeners(), this);
 
         for (Player player : getServer().getOnlinePlayers()) {
-            BungeeMessagingUtil.sendByteArray("rebuildCharacterMap", player.getUniqueId());
+            int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
+                if (!player.isOnline() || Character.containsPlayer(player)) {
+                    Bukkit.getScheduler().cancelTask(taskIdMap.get(player));
+                    taskIdMap.remove(player);
+                } else {
+                    BungeeMessagingUtil.sendByteArray("rebuildCharacterMap", player.getUniqueId());
+                }
+            }, 0, 20);
+        
+            taskIdMap.put(player, taskId);
         }
 
-        Bukkit.getScheduler().scheduleSyncRepeatingTask(instance, () -> {
+        Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
             Character.saveAll();
         }, 0, 1200);
     }
