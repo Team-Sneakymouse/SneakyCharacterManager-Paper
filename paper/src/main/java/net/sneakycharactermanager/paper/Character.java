@@ -98,6 +98,10 @@ public class Character {
 
         //TODO: Load skin, apply nickname
 
+        this.map();
+    }
+
+    public void map() {
         characterMap.put(this.player, this);
     }
 
