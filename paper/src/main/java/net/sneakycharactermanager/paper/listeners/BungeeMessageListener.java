@@ -38,6 +38,15 @@ public class BungeeMessageListener implements PluginMessageListener
                 Character character = new Character(playerUUID, characterUUID, characterName, skin);
                 character.load();
                 break;
+            case "rebuildCharacterMap" :
+                playerUUID = in.readUTF();
+                characterUUID = in.readUTF();
+                characterName = in.readUTF();
+                skin = in.readUTF();
+                
+                character = new Character(playerUUID, characterUUID, characterName, skin);
+                character.map();
+                break;
             case "characterSelectionGUI" :
                 playerUUID = in.readUTF();
                 Player pl = Bukkit.getPlayer(UUID.fromString(playerUUID));

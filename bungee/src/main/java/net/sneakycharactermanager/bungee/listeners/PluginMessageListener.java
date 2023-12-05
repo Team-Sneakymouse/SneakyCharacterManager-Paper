@@ -12,6 +12,7 @@ import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
 import net.sneakycharactermanager.bungee.PlayerData;
 import net.sneakycharactermanager.bungee.SneakyCharacterManager;
+import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
 
 public class PluginMessageListener implements Listener {
 
@@ -39,6 +40,11 @@ public class PluginMessageListener implements Listener {
                 String playerUUID = in.readUTF();
                 PlayerData playerData = PlayerData.get(playerUUID);
                 playerData.loadLastPlayedCharacter(serverInfo);
+                break;
+            case "rebuildCharacterMap" :
+                playerUUID = in.readUTF();
+                playerData = PlayerData.get(playerUUID);
+                playerData.rebuildCharacterMap(serverInfo);
                 break;
             case "characterSelectionGUI" :
                 playerUUID = in.readUTF();

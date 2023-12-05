@@ -81,7 +81,7 @@ public class PlayerData {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to load a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
             return;
         } else {
-            character.loadCharacter(serverInfo, this.playerUUID);
+            character.loadCharacter("loadCharacter", serverInfo, this.playerUUID);
         }
 
         if (this.lastPlayedCharacter.equals(characterUUID)) {
@@ -237,6 +237,20 @@ public class PlayerData {
         }
 
         PaperMessagingUtil.sendByteArray(serverInfo, "characterSelectionGUI", this.playerUUID, enabledCharacters);
+    }
+
+    public String getLastPlayedCharacter() {
+        return lastPlayedCharacter;
+    }
+
+    public void rebuildCharacterMap(ServerInfo serverInfo) {
+        Character character = this.characterMap.get(this.lastPlayedCharacter);
+
+        if (character == null) {
+            SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to load a character that does not exist! [" + this.playerUUID + ", " + this.lastPlayedCharacter + "]");
+        } else {
+            character.loadCharacter("rebuildCharacterMap", serverInfo, this.playerUUID);
+        }
     }
 
 }

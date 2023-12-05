@@ -26,8 +26,8 @@ public class Character {
         this.skin = skin;
     }
 
-    public void loadCharacter(ServerInfo serverInfo, String playerUUID) {
-        PaperMessagingUtil.sendByteArray(serverInfo, "loadCharacter", playerUUID, this.uuid, this.name, this.skin);
+    public void loadCharacter(String subChannel, ServerInfo serverInfo, String playerUUID) {
+        PaperMessagingUtil.sendByteArray(serverInfo, subChannel, playerUUID, this.uuid, this.name, this.skin);
     }
 
     public String getUUID() {

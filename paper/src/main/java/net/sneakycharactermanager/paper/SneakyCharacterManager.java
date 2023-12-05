@@ -3,6 +3,7 @@ package net.sneakycharactermanager.paper;
 import java.io.File;
 
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -13,6 +14,7 @@ import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.commands.CommandSkin;
 import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;
 import net.sneakycharactermanager.paper.listeners.ConnectionEventListeners;
+import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 
 public class SneakyCharacterManager extends JavaPlugin implements Listener {
@@ -42,7 +44,9 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
         getServer().getPluginManager().registerEvents(new ConnectionEventListeners(), this);
 
-        //TODO: When the plugin reloads, the characterMap in Character.java needs to be rebuilt
+        for (Player player : getServer().getOnlinePlayers()) {
+            BungeeMessagingUtil.sendByteArray("rebuildCharacterMap", player.getUniqueId());
+        }
 
         Bukkit.getScheduler().scheduleSyncRepeatingTask(instance, () -> {
             Character.saveAll();
