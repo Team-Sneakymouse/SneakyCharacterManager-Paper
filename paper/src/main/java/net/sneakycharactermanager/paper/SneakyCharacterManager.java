@@ -49,7 +49,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
         for (Player player : getServer().getOnlinePlayers()) {
             int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
-                if (!player.isOnline() || Character.containsPlayer(player)) {
+                if (!player.isOnline() || Character.isPlayedMapped(player)) {
                     Bukkit.getScheduler().cancelTask(taskIdMap.get(player));
                     taskIdMap.remove(player);
                 } else {

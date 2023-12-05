@@ -159,4 +159,8 @@ public class Character {
         }
     }
 
+    public static boolean isPlayedMapped(Player player) {
+        return characterMap.containsKey(player);
+    }
+
 }
