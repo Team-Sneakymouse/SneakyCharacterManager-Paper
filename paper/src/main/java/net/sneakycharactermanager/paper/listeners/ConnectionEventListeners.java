@@ -41,11 +41,19 @@ public class ConnectionEventListeners implements Listener {
 
     @EventHandler
     public void onPlayerLeave(PlayerQuitEvent event){
-        //Un-Nick player who is disconnecting from the server
-        SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(event.getPlayer());
+        Player player = event.getPlayer();
 
-        Character.get(event.getPlayer()).save();
-        Character.remove(event.getPlayer());
+        //Un-Nick player who is disconnecting from the server
+        SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
+
+        Character character = Character.get(player);
+
+        if (character == null) {
+            SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager found a player who quit out but wasn't a character. This should never happen: " + player.getName());
+        } else {
+            character.save();
+        }
+        Character.remove(player);
     }
 
 }
