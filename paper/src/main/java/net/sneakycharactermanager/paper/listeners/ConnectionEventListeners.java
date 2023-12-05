@@ -23,7 +23,7 @@ public class ConnectionEventListeners implements Listener {
         Player player = event.getPlayer();
 
         //Loading the nicknames for newly connected player
-        //TODO: This will be moved to the messagelistener where it awaits the correct nickname given by the bungee plugin 
+        //TODO: This will be moved to Character.load()
         SneakyCharacterManager.getInstance().nametagManager.loadNames(player);
 
         // TODO: Fine-tune this delay. 1 tick might already be fine
