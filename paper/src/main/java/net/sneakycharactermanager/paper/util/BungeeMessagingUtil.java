@@ -10,6 +10,7 @@ import org.bukkit.Bukkit;
 
 public class BungeeMessagingUtil {
 
+    //TODO: Currently unused. Consider deleting.
     public static void sendByteArrayDelayed(int delayTicks, String subChannelName, Object... objects) {
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
             sendByteArray(subChannelName, objects);
