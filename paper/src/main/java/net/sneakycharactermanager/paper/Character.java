@@ -89,7 +89,7 @@ public class Character {
         );
         this.player.teleport(playerLocation);
 
-        ItemStack[] inventoryContents = new ItemStack[config.getInt("inventory.size", 36)];
+        ItemStack[] inventoryContents = new ItemStack[config.getInt("inventory.size",  this.player.getInventory().getContents().length)];
         for (String key : config.getConfigurationSection("inventory").getKeys(false)) {
             int slot = Integer.parseInt(key);
             inventoryContents[slot] = config.getItemStack("inventory." + key);
