@@ -11,6 +11,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import net.md_5.bungee.config.Configuration;
+import net.md_5.bungee.config.ConfigurationProvider;
+import net.md_5.bungee.config.YamlConfiguration;
+import org.bukkit.configuration.ConfigurationSection;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
@@ -20,62 +24,74 @@ import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
 
 public class PlayerData {
 
-    private static Map<String, PlayerData> playerDataMap = new HashMap<String, PlayerData>();
+    private static final Map<String, PlayerData> playerDataMap = new HashMap<String, PlayerData>();
+    private static final ConfigurationProvider provider = ConfigurationProvider.getProvider(YamlConfiguration.class);
 
-    private String playerUUID;
+    private final String playerUUID;
+    private Configuration config;
+    private final File playerFile;
     private String lastPlayedCharacter;
-    private Map<String, Character> characterMap = new HashMap<String, Character>();
-    
+    private final Map<String, Character> characterMap = new HashMap<String, Character>();
+
     public PlayerData(String playerUUID) {
         this.playerUUID = playerUUID;
-        File playerFile = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID + ".yml");
+        playerFile = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID + ".yml");
 
-        if (!playerFile.exists()) {
-            Map<String, Object> defaultData = new LinkedHashMap<>();
 
-            String firstCharacterUUID = UUID.randomUUID().toString();
-            defaultData.put("lastPlayedCharacter", firstCharacterUUID);
-
-            Map<String, Object> playerCharacterData = new LinkedHashMap<>();
-            playerCharacterData.put("enabled", true);
-            playerCharacterData.put("name", ProxyServer.getInstance().getPlayer(UUID.fromString(playerUUID)).getName());
-            playerCharacterData.put("skin", "");
-
-            defaultData.put(firstCharacterUUID, playerCharacterData);
-
-            DumperOptions dumperOptions = new DumperOptions();
-            dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
-            Yaml yaml = new Yaml(dumperOptions);
-
-            String yamlContent = yaml.dump(defaultData);
-
-            try (FileWriter writer = new FileWriter(playerFile)) {
-                writer.write(yamlContent);
-            } catch (IOException e) {
-                e.printStackTrace();
+        //Loading YML Configuration
+        try {
+            if(!playerFile.exists()){
+                if(!playerFile.createNewFile()){
+                    throw new IOException("Failed to create player data file!");
+                }
             }
+        } catch(IOException e){
+            e.printStackTrace();
         }
 
-        try (FileReader reader = new FileReader(playerFile)) {
-            Yaml yaml = new Yaml();
-            Map<String, Object> yamlData = yaml.load(reader);
+        loadConfig();
 
-            this.lastPlayedCharacter = (String) yamlData.get("lastPlayedCharacter");
+        this.lastPlayedCharacter = this.config.getString("lastPlayedCharacter");
 
-            yamlData.keySet().stream()
-            .filter(key -> !key.equals("lastPlayedCharacter"))
-            .forEach(key -> {
-                Character character = new Character(key, (Map<String, Object>) yamlData.get(key));
+        if (this.lastPlayedCharacter == null) {
+            String firstCharacterUUID = UUID.randomUUID().toString();
+            this.config.set("lastPlayedCharacter", firstCharacterUUID);
 
-                this.characterMap.put(key, character);
-            });
-        } catch (IOException e) {
+            Configuration section = this.config.getSection(firstCharacterUUID);
+
+            section.set("enabled", true);
+            section.set("name", ProxyServer.getInstance().getPlayer(UUID.fromString(playerUUID)).getName());
+            section.set("skin", "");
+            saveConfig();
+        }
+
+        for(String key : this.config.getKeys()){
+            if(key.equalsIgnoreCase("lastPlayedCharacter")) continue;
+
+            Character character = new Character(key, this.config.getSection(key));
+            this.characterMap.put(key, character);
+        }
+    }
+
+    private void loadConfig(){
+        try {
+            this.config = provider.load(playerFile);
+        } catch(IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    private  void saveConfig(){
+        try{
+            provider.save(this.config, playerFile);
+        } catch(IOException e) {
             e.printStackTrace();
         }
     }
 
     public void loadCharacter(ServerInfo serverInfo, String characterUUID) {
         Character character = this.characterMap.get(characterUUID);
+        loadConfig();
 
         if (character == null) {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to load a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
@@ -84,27 +100,12 @@ public class PlayerData {
             character.loadCharacter("loadCharacter", serverInfo, this.playerUUID);
         }
 
-        if (this.lastPlayedCharacter.equals(characterUUID)) {
+        //Not sure if I misunderstood this, but I'm assuming this is intended to update the last played character if it has changed?
+        if (!this.lastPlayedCharacter.equals(characterUUID)) {
             this.lastPlayedCharacter = characterUUID;
-            File playerFile = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID + ".yml");
 
-            Yaml yaml = new Yaml();
-            Map<String, Object> yamlData;
-        
-            try (FileReader reader = new FileReader(playerFile)) {
-                yamlData = yaml.load(reader);
-            } catch (IOException e) {
-                e.printStackTrace();
-                return;
-            }
-        
-            yamlData.put("lastPlayedCharacter", characterUUID);
-        
-            try (FileWriter writer = new FileWriter(playerFile)) {
-                yaml.dump(yamlData, writer);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            this.config.set("lastPlayedCharacter", character);
+            saveConfig();
         }
     }
 
@@ -123,74 +124,34 @@ public class PlayerData {
     }
 
     public void createNewCharacter(String name, String skin) {
+        loadConfig();
         Character character = new Character(name, skin);
 
         this.characterMap.put(character.getUUID(), character);
-
-        File playerFile = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID + ".yml");
-
-        Map<String, Object> yamlData;
-        if (playerFile.exists()) {
-            Yaml yaml = new Yaml();
-            try (FileReader reader = new FileReader(playerFile)) {
-                yamlData = yaml.load(reader);
-            } catch (IOException e) {
-                e.printStackTrace();
-                return;
-            }
-        } else {
-            SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to access character data that doesn't exist! [" + this.playerUUID + "]");
-            return;
-        }
 
         Map<String, Object> characterData = new LinkedHashMap<>();
         characterData.put("enabled", character.isEnabled());
         characterData.put("name", character.getName());
         characterData.put("skin", character.getSkin());
 
-        yamlData.put(character.getUUID(), characterData);
-        
-        try (FileWriter writer = new FileWriter(playerFile)) {
-            Yaml yaml = new Yaml();
-            yaml.dump(yamlData, writer);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        Configuration section = this.config.getSection(character.getUUID());
+        section.set("enabled", character.isEnabled());
+        section.set("name", character.getName());
+        section.set("skin", character.getSkin());
+
+        saveConfig();
+
     }
 
     private void updateCharacterInYaml(Character character) {
-        File playerFile = new File(SneakyCharacterManager.getCharacterDataFolder(), this.playerUUID + ".yml");
-    
-        Map<String, Object> yamlData;
-        if (playerFile.exists()) {
-            Yaml yaml = new Yaml();
-            try (FileReader reader = new FileReader(playerFile)) {
-                yamlData = yaml.load(reader);
-            } catch (IOException e) {
-                e.printStackTrace();
-                return;
-            }
-        } else {
-            yamlData = new HashMap<>();
-        }
-    
-        if (yamlData.containsKey(character.getUUID())) {
-            Map<String, Object> characterData = (Map<String, Object>) yamlData.get(character.getUUID());
-            characterData.put("enabled", character.isEnabled());
-            characterData.put("name", character.getName());
-            characterData.put("skin", character.getSkin());
-            yamlData.put(character.getUUID(), characterData);
-        } else {
-            SneakyCharacterManager.getInstance().getLogger().severe("Character not found in YAML data! [" + this.playerUUID + ", " + character.getUUID() + "]");
-            return;
-        }
-    
-        try (FileWriter writer = new FileWriter(playerFile)) {
-            Yaml yaml = new Yaml();
-            yaml.dump(yamlData, writer);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        loadConfig();
+        Configuration section = this.config.getSection(character.getUUID());
+
+        section.set("enabled", character.isEnabled());
+        section.set("name", character.getName());
+        section.set("skin", character.getSkin());
+
+        saveConfig();
     }
 
     public void setCharacterEnabled(String characterUUID, boolean enabled) {

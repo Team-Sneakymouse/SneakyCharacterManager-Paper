@@ -2,7 +2,7 @@ package net.sneakycharactermanager.paper.listeners;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
-import net.sneakycharactermanager.paper.Character;
+import net.sneakycharactermanager.paper.handlers.character.Character;
 
 import java.util.HashMap;
 import java.util.Map;

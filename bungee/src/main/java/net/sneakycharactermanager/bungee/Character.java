@@ -4,19 +4,20 @@ import java.util.Map;
 import java.util.UUID;
 
 import net.md_5.bungee.api.config.ServerInfo;
+import net.md_5.bungee.config.Configuration;
 import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
 
 public class Character {
-    private String uuid;
+    private final String uuid;
     private boolean enabled;
     private String name;
     private String skin;
 
-    public Character(String uuid, Map<String, Object> characterData) {
+    public Character(String uuid, Configuration config) {
         this.uuid = uuid;
-        this.enabled = (boolean) characterData.get("enabled");
-        this.name = (String) characterData.get("name");
-        this.skin = (String) characterData.get("skin");
+        this.enabled = config.getBoolean("enabled");
+        this.name = config.getString("name");
+        this.skin = config.getString("skin");
     }
 
     public Character(String name, String skin) {

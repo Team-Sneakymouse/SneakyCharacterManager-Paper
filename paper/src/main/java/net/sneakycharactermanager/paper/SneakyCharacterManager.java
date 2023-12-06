@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
+import net.sneakycharactermanager.paper.handlers.character.Character;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -65,9 +66,9 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         }, 0, 1200);
     }
 
-    @EventHandler
-    public void onPluginDisable(PluginDisableEvent event) {
-        if (event.getPlugin() == this) Character.saveAll();
+    @Override
+    public void onDisable() {
+        Character.saveAll();
     }
 
     public static SneakyCharacterManager getInstance() {

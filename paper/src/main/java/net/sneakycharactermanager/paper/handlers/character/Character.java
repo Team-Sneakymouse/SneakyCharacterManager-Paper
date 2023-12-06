@@ -1,4 +1,4 @@
-package net.sneakycharactermanager.paper;
+package net.sneakycharactermanager.paper.handlers.character;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,6 +6,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.util.InventoryUtility;
+import net.sneakycharactermanager.paper.util.SkinUtility;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -44,12 +47,14 @@ public class Character {
             } else {
                 YamlConfiguration config = new YamlConfiguration();
 
-                config.set("location.world", Bukkit.getWorlds().get(0).getName());
-                config.set("location.x", Bukkit.getWorlds().get(0).getSpawnLocation().getX());
-                config.set("location.y", Bukkit.getWorlds().get(0).getSpawnLocation().getY());
-                config.set("location.z", Bukkit.getWorlds().get(0).getSpawnLocation().getZ());
-                config.set("location.yaw", Bukkit.getWorlds().get(0).getSpawnLocation().getYaw());
-                config.set("location.pitch", Bukkit.getWorlds().get(0).getSpawnLocation().getPitch());
+                config.set("location", player.getLocation());
+
+//                config.set("location.world", Bukkit.getWorlds().get(0).getName());
+//                config.set("location.x", Bukkit.getWorlds().get(0).getSpawnLocation().getX());
+//                config.set("location.y", Bukkit.getWorlds().get(0).getSpawnLocation().getY());
+//                config.set("location.z", Bukkit.getWorlds().get(0).getSpawnLocation().getZ());
+//                config.set("location.yaw", Bukkit.getWorlds().get(0).getSpawnLocation().getYaw());
+//                config.set("location.pitch", Bukkit.getWorlds().get(0).getSpawnLocation().getPitch());
 
                 for (int i = 0; i < this.player.getInventory().getContents().length; i++) {
                     config.set("inventory." + i, new ItemStack(Material.AIR));
@@ -79,30 +84,40 @@ public class Character {
 
         YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
 
-        Location playerLocation = new Location(
-                this.player.getServer().getWorld(config.getString("location.world")),
-                config.getDouble("location.x"),
-                config.getDouble("location.y"),
-                config.getDouble("location.z"),
-                (float) config.getDouble("location.yaw"),
-                (float) config.getDouble("location.pitch")
-        );
+        Location playerLocation = config.getLocation("location");
+        if(playerLocation == null)
+            playerLocation = this.player.getLocation(); //No config location? Leave where they are
         this.player.teleport(playerLocation);
 
-        ItemStack[] inventoryContents = new ItemStack[config.getInt("inventory.size",  this.player.getInventory().getContents().length)];
-        for (String key : config.getConfigurationSection("inventory").getKeys(false)) {
-            int slot = Integer.parseInt(key);
-            inventoryContents[slot] = config.getItemStack("inventory." + key);
-        }
+//        ItemStack[] inventoryContents = new ItemStack[config.getInt("inventory.size",  this.player.getInventory().getContents().length)];
+//        for (String key : config.getConfigurationSection("inventory").getKeys(false)) {
+//            int slot = Integer.parseInt(key);
+//            inventoryContents[slot] = config.getItemStack("inventory." + key);
+//        }
+
+        ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
         this.player.getInventory().setContents(inventoryContents);
 
-        //TODO: Load skin, apply nickname
+        //Loading The Nickname
+        CharacterLoader.loadCharacter(this);
 
         this.map();
     }
 
     public void map() {
         characterMap.put(this.player, this);
+    }
+
+    public Player getPlayer(){
+        return this.player;
+    }
+
+    public String getCharacterName(){
+        return this.name;
+    }
+
+    public String getSkin(){
+        return this.skin;
     }
 
     public void save() {
@@ -117,21 +132,25 @@ public class Character {
         YamlConfiguration config = new YamlConfiguration();
 
         Location playerLocation = this.player.getLocation();
-        config.set("location.world", playerLocation.getWorld().getName());
-        config.set("location.x", playerLocation.getX());
-        config.set("location.y", playerLocation.getY());
-        config.set("location.z", playerLocation.getZ());
-        config.set("location.yaw", playerLocation.getYaw());
-        config.set("location.pitch", playerLocation.getPitch());
+        config.set("location", playerLocation);
+//        config.set("location.world", playerLocation.getWorld().getName());
+//        config.set("location.x", playerLocation.getX());
+//        config.set("location.y", playerLocation.getY());
+//        config.set("location.z", playerLocation.getZ());
+//        config.set("location.yaw", playerLocation.getYaw());
+//        config.set("location.pitch", playerLocation.getPitch());
 
-        ItemStack[] inventoryContents = this.player.getInventory().getContents();
-        for (int i = 0; i < inventoryContents.length; i++) {
-            if (inventoryContents[i] != null) {
-                config.set("inventory." + i, inventoryContents[i]);
-            } else {
-                config.set("inventory." + i, new ItemStack(Material.AIR));
-            }
-        }
+//        ItemStack[] inventoryContents = this.player.getInventory().getContents();
+//        for (int i = 0; i < inventoryContents.length; i++) {
+//            if (inventoryContents[i] != null) {
+//                config.set("inventory." + i, inventoryContents[i]);
+//            } else {
+//                config.set("inventory." + i, new ItemStack(Material.AIR));
+//            }
+//        }
+
+        String inventoryB64 = InventoryUtility.inventoryToBase64(this.player.getInventory());
+        config.set("inventory", inventoryB64);
 
         try {
             config.save(characterFile);

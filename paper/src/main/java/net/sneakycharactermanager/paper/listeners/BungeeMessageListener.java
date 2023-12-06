@@ -13,7 +13,7 @@ import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.Character;
+import net.sneakycharactermanager.paper.handlers.character.Character;
 
 public class BungeeMessageListener implements PluginMessageListener
 {
