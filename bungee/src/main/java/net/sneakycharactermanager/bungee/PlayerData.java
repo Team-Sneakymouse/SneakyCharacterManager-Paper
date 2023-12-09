@@ -106,7 +106,6 @@ public class PlayerData {
             character.loadCharacter("loadCharacter", serverInfo, this.playerUUID);
         }
 
-        //Not sure if I misunderstood this, but I'm assuming this is intended to update the last played character if it has changed?
         if (!this.lastPlayedCharacter.equals(characterUUID)) {
             this.lastPlayedCharacter = characterUUID;
 
