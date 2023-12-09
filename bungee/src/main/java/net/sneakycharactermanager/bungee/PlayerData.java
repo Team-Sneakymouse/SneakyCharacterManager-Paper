@@ -48,14 +48,14 @@ public class PlayerData {
         } catch(IOException e){
             e.printStackTrace();
         }
-
         loadConfig();
 
         this.lastPlayedCharacter = this.config.getString("lastPlayedCharacter");
 
-        if (this.lastPlayedCharacter == null) {
+        if (this.lastPlayedCharacter == null || lastPlayedCharacter.isEmpty()) {
             String firstCharacterUUID = UUID.randomUUID().toString();
             this.config.set("lastPlayedCharacter", firstCharacterUUID);
+            this.lastPlayedCharacter = firstCharacterUUID;
 
             Configuration section = this.config.getSection(firstCharacterUUID);
 
@@ -65,6 +65,11 @@ public class PlayerData {
             saveConfig();
         }
 
+        storeCharacters();
+    }
+
+    private void storeCharacters(){
+        characterMap.clear();
         for(String key : this.config.getKeys()){
             if(key.equalsIgnoreCase("lastPlayedCharacter")) continue;
 
@@ -90,6 +95,7 @@ public class PlayerData {
     }
 
     public void loadCharacter(ServerInfo serverInfo, String characterUUID) {
+        storeCharacters();
         Character character = this.characterMap.get(characterUUID);
         loadConfig();
 
@@ -104,7 +110,7 @@ public class PlayerData {
         if (!this.lastPlayedCharacter.equals(characterUUID)) {
             this.lastPlayedCharacter = characterUUID;
 
-            this.config.set("lastPlayedCharacter", character);
+            this.config.set("lastPlayedCharacter", characterUUID);
             saveConfig();
         }
     }
@@ -191,10 +197,14 @@ public class PlayerData {
     }
 
     public void sendCharacterSelectionGui(ServerInfo serverInfo) {
+        storeCharacters();
         List<Character> enabledCharacters = new ArrayList<Character>();
 
         for (Character character: characterMap.values()) {
-            if (character.isEnabled()) enabledCharacters.add(character);
+            if (character.isEnabled()){
+                enabledCharacters.add(character);
+                System.out.println("Sending: " + character.getName());
+            }
         }
 
         PaperMessagingUtil.sendByteArray(serverInfo, "characterSelectionGUI", this.playerUUID, enabledCharacters);
@@ -204,6 +214,7 @@ public class PlayerData {
         return lastPlayedCharacter;
     }
 
+    //Not sure what this is used for? Since I think it just does the same as the function above?
     public void rebuildCharacterMap(ServerInfo serverInfo) {
         Character character = this.characterMap.get(this.lastPlayedCharacter);
 

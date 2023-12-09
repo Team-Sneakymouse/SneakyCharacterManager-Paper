@@ -68,4 +68,15 @@ public class NametagManager {
         }
     }
 
+
+    /**
+     * Get the players current Nickname!
+     * @return The Players Nickname || The players name if they have no Nickname!
+     * */
+    public String getNickname(Player player){
+        Nickname nickname = nicknames.get(player.getUniqueId().toString());
+        if(nickname == null) return player.getName();
+        return nickname.getNickname();
+    }
+
 }

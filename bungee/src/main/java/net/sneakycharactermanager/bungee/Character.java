@@ -29,6 +29,9 @@ public class Character {
 
     public void loadCharacter(String subChannel, ServerInfo serverInfo, String playerUUID) {
         PaperMessagingUtil.sendByteArray(serverInfo, subChannel, playerUUID, this.uuid, this.name, this.skin);
+        if(this.skin.isEmpty()){
+            PaperMessagingUtil.sendByteArray(serverInfo, "defaultSkin", playerUUID, this.uuid);
+        }
     }
 
     public String getUUID() {

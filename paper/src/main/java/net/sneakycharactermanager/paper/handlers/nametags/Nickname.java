@@ -72,8 +72,15 @@ public class Nickname {
      * @param player Player who needs to load this nickname
      * */
     public void loadNickname(Player player){
+        if(player.getUniqueId().toString().equals(this.uuid)) return; //The player doesn't need to see their own name
         nametag.spawn(player);
     }
+
+    /**
+     * Get the players current Nickname!
+     * @return The Players Nickname
+     * */
+    public String getNickname() { return nickname; }
 
 
 

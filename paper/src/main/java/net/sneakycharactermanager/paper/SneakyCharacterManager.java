@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -26,11 +27,13 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
     private static Map<Player, Integer> taskIdMap = new HashMap<Player, Integer>();
 
     public NametagManager nametagManager;
+    public CharacterSelectionMenu selectionMenu;
 
     @Override
     public void onEnable() {
         instance = this;
         nametagManager = new NametagManager();
+        selectionMenu = new CharacterSelectionMenu();
 
         saveDefaultConfig();
 
@@ -47,6 +50,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
         getServer().getPluginManager().registerEvents(this, this);
         getServer().getPluginManager().registerEvents(new ConnectionEventListeners(), this);
+        getServer().getPluginManager().registerEvents(selectionMenu, this);
 
         for (Player player : getServer().getOnlinePlayers()) {
             int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {

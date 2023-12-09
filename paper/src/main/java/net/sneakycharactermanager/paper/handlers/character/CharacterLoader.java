@@ -10,6 +10,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.profile.PlayerTextures;
 
+import java.net.MalformedURLException;
+import java.net.URL;
+
 public class CharacterLoader {
 
     public static void loadCharacter(Character character){
@@ -39,14 +42,33 @@ public class CharacterLoader {
                     playerProfile.setProperty(property);
                     character.getPlayer().setPlayerProfile(playerProfile);
                     SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(character.getPlayer(), character.getCharacterName());
-                    for(Player target : Bukkit.getOnlinePlayers()){
-                        //target.hidePlayer(SneakyCharacterManager.getInstance(), player);
-                        //target.showPlayer(SneakyCharacterManager.getInstance(), player);
-                    }
                 }
             }, 0);
         });
 
     }
 
+    public static void updateSkin(Player player, String url){
+        //This system may need to change at some point
+        PlayerProfile playerProfile = player.getPlayerProfile();
+        boolean isSlimSkin = playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
+
+        String nickname = SneakyCharacterManager.getInstance().nametagManager.getNickname(player);
+        if(nickname.equals(player.getName())) return;
+
+        Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) ->{
+            SkinData data = new SkinData(url, isSlimSkin);
+            Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () ->{
+                playerProfile.removeProperty("textures");
+                ProfileProperty property = data.getTextureProperty();
+                if(property == null){
+                    player.sendMessage(ChatUtility.convertToComponent("&4Failed to load skin! Something went wrong!"));
+                }else{
+                    playerProfile.setProperty(property);
+                    player.setPlayerProfile(playerProfile);
+                    //SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, nickname);
+                }
+            }, 0);
+        });
+    }
 }

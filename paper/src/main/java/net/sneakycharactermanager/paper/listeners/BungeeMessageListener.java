@@ -4,9 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
+import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
+import org.bukkit.profile.PlayerTextures;
 import org.jetbrains.annotations.NotNull;
 
 import com.google.common.io.ByteArrayDataInput;
@@ -50,8 +53,20 @@ public class BungeeMessageListener implements PluginMessageListener
             case "characterSelectionGUI" :
                 playerUUID = in.readUTF();
                 Player pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+                if(pl == null) return;
                 List<CharacterSnapshot> characterSnapshots = receiveCharacterList(in);
-                // TODO: Open GUI
+                SneakyCharacterManager.getInstance().selectionMenu.updateInventory(pl.getUniqueId().toString(), characterSnapshots);
+                break;
+            case "defaultSkin":
+                playerUUID = in.readUTF();
+                characterUUID = in.readUTF();
+                pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+                if(pl == null) return;
+                PlayerProfile profile = pl.getPlayerProfile();
+                PlayerTextures textures = profile.getTextures();
+                if(textures.getSkin() == null) return;
+                String skinURL = textures.getSkin().toString();
+                BungeeMessagingUtil.sendByteArray("defaultSkin", playerUUID, characterUUID, skinURL);
                 break;
             default:
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
@@ -84,6 +99,7 @@ public class BungeeMessageListener implements PluginMessageListener
         private String uuid;
         private String name;
         private String skin;
+        private boolean isSlim = false; //ToDo: Update readCharacter & Bungee Plugin to send/save a boolean too
 
         public CharacterSnapshot(String uuid, String name, String skin) {
             this.uuid = uuid;
@@ -101,6 +117,10 @@ public class BungeeMessageListener implements PluginMessageListener
     
         public String getSkin() {
             return skin;
+        }
+
+        public boolean isSlim(){
+            return isSlim;
         }
     }
 

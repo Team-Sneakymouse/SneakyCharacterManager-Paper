@@ -26,6 +26,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
 
 public class SkinData {
 
@@ -101,6 +102,7 @@ public class SkinData {
 
             StringEntity skinReq = new StringEntity(requestBodyJson.toString());
             request.addHeader("content-type", "application/json");
+            request.addHeader("Authorization", "Bearer d5ec4e50664ef47655788f4b1409c0a47eaa5489598688a9bffeb865b8884882");
             request.setEntity(skinReq);
             HttpResponse response = httpClient.execute(request);
 
@@ -108,7 +110,27 @@ public class SkinData {
                 InputStream in = response.getEntity().getContent();
                 JSONParser parser = new JSONParser();
                 JSONObject result = (JSONObject) parser.parse(new InputStreamReader(in, StandardCharsets.UTF_8));
+
+                //{"delay":2,"delayInfo":{"seconds":2,"millis":2000},"error":"Too many requests","nextRequest":1.702102172094E9}
+                if(result.containsKey("delay")){
+                    if(result.containsKey("nextRequest")){
+                        TimeUnit.MILLISECONDS.sleep(Integer.parseInt(result.get("nextRequest").toString()
+                                .substring(0, 4).replaceAll("\\.", "")));
+                        Bukkit.getLogger().warning("Sleeping for "
+                                + result.get("nextRequest").toString().substring(0, 4)
+                                + " seconds!");
+                    }else{
+                        TimeUnit.SECONDS.sleep(2);
+                        Bukkit.getLogger().warning("Sleeping for 2 seconds!");
+                    }
+                    convertSkinURL();
+                    return;
+                }
                 JSONObject dataObject = (JSONObject) result.get("data");
+                if(dataObject == null) {
+                    Bukkit.getLogger().severe("Failed to request skin:");
+                    Bukkit.getLogger().info(result.toString());
+                }
                 JSONObject textureObject = (JSONObject) dataObject.get("texture");
 
                 this.texture = (String) textureObject.get("value");
@@ -119,6 +141,8 @@ public class SkinData {
             e.printStackTrace();
             this.isValid = false;
             Bukkit.getLogger().severe("Something went very wrong!");
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
         this.isValid = true;
 

@@ -40,6 +40,7 @@ public class NicknameEntity {
 
         player.addPassenger(mounted.getBukkitEntity());
         for(Player target : Bukkit.getOnlinePlayers()){
+            if(target.getUniqueId().toString().equals(player.getUniqueId().toString())) continue;
             spawn(target);
         }
     }
@@ -50,6 +51,7 @@ public class NicknameEntity {
                 Objects.requireNonNull(mounted.getEntityData().getNonDefaultValues()));
 
         for(Player target : Bukkit.getOnlinePlayers()){
+            if(target.getUniqueId().toString().equals(nmsPlayer.getStringUUID())) continue;
             ((CraftPlayer)target).getHandle().connection.send(dataPacket);
         }
     }
@@ -67,6 +69,7 @@ public class NicknameEntity {
     public void destroy(){
         ClientboundRemoveEntitiesPacket removeEntitiesPacket = new ClientboundRemoveEntitiesPacket(mounted.getId());
         for(Player target : Bukkit.getOnlinePlayers()){
+            if(target.getUniqueId().toString().equals(nmsPlayer.getStringUUID())) continue;
             ((CraftPlayer)target).getHandle().connection.send(removeEntitiesPacket);
         }
     }
