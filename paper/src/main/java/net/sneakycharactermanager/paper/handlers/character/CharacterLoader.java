@@ -2,16 +2,14 @@ package net.sneakycharactermanager.paper.handlers.character;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
+
+import net.sneakycharactermanager.paper.LoadCharacterEvent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.util.ChatUtility;
-import net.sneakycharactermanager.paper.util.SkinUtility;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.profile.PlayerTextures;
-
-import java.net.MalformedURLException;
-import java.net.URL;
 
 public class CharacterLoader {
 
@@ -46,6 +44,8 @@ public class CharacterLoader {
             }, 0);
         });
 
+        Bukkit.getServer().getPluginManager().callEvent(new LoadCharacterEvent(character.getPlayer(), character.isFirstLoad(), character.getCharacterUUID(), character.getCharacterName(), url));
+        character.setFirstLoad(false);
     }
 
     public static void updateSkin(Player player, String url){

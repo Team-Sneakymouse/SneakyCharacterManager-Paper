@@ -8,7 +8,6 @@ import java.util.UUID;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.InventoryUtility;
-import net.sneakycharactermanager.paper.util.SkinUtility;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -24,6 +23,8 @@ public class Character {
     private String characterUUID;
     private String name;
     private String skin;
+
+    private boolean firstLoad = false;
 
     public Character(String playerUUID, String characterUUID, String characterName, String skin) {
         this.player = Bukkit.getPlayer(UUID.fromString(playerUUID));
@@ -42,6 +43,7 @@ public class Character {
         File characterFile = new File(playerDir, this.characterUUID + ".yml");
 
         if (!characterFile.exists()) {
+            this.firstLoad = true;
             if (firstLogin && !SneakyCharacterManager.getInstance().getConfig().getBoolean("deleteCharacterDataOnServerStart")) {
                 this.save();
             } else {
@@ -112,12 +114,24 @@ public class Character {
         return this.player;
     }
 
+    public String getCharacterUUID() {
+        return characterUUID;
+    }
+
     public String getCharacterName(){
         return this.name;
     }
 
     public String getSkin(){
         return this.skin;
+    }
+
+    public void setFirstLoad(boolean firstLoad) {
+        this.firstLoad = firstLoad;
+    }
+    
+    public boolean isFirstLoad() {
+        return firstLoad;
     }
 
     public void save() {
