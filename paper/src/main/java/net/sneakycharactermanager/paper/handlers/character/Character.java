@@ -184,7 +184,8 @@ public class Character {
     public static void saveAll() {
         for (Player player : characterMap.keySet()) {
             if (player.isOnline()) {
-                get(player).save();
+                Character character = get(player);
+                if (character != null) character.save();
             } else {
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager found an offline player on the characterMap. They have been removed, but this should never happen: " + player.getName());
                 characterMap.remove(player);
