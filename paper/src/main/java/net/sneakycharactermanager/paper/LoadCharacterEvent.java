@@ -7,6 +7,8 @@ import org.jetbrains.annotations.NotNull;
 
 public class LoadCharacterEvent extends PlayerEvent {
 
+	protected static final HandlerList handlers = new HandlerList();
+
     private final Boolean firstLoad;
     private final String characterUUID;
     private final String characterName;
@@ -22,7 +24,7 @@ public class LoadCharacterEvent extends PlayerEvent {
 
     @Override
     public @NotNull HandlerList getHandlers() {
-        throw new UnsupportedOperationException("Unimplemented method 'getHandlers'");
+        return handlers;
     }
     
     public Boolean getFirstLoad() {
