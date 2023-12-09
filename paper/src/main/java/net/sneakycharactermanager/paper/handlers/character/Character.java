@@ -49,7 +49,7 @@ public class Character {
             } else {
                 YamlConfiguration config = new YamlConfiguration();
 
-                config.set("location", player.getLocation());
+                config.set("location", Bukkit.getWorlds().get(0).getSpawnLocation());
 
 //                config.set("location.world", Bukkit.getWorlds().get(0).getName());
 //                config.set("location.x", Bukkit.getWorlds().get(0).getSpawnLocation().getX());
