@@ -1,4 +1,4 @@
-package net.sneakycharactermanager.paper;
+package net.sneakycharactermanager.paper.handlers.character;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;

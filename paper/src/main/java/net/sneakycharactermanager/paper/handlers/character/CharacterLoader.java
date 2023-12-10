@@ -3,7 +3,6 @@ package net.sneakycharactermanager.paper.handlers.character;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
-import net.sneakycharactermanager.paper.LoadCharacterEvent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.util.ChatUtility;
