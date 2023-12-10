@@ -45,6 +45,11 @@ public class CommandChar extends Command {
                     sender.sendMessage(ChatUtility.convertToComponent("&aYou tried to confirm a character deletion but you aren't deleting a character right now."));
                 }
                 return true;
+            } else {
+                String name = String.join(" ", args);
+                player.sendMessage(ChatUtility.convertToComponent("&aLoading character `" + name + "`... Please Wait..."));
+                BungeeMessagingUtil.sendByteArray("selectCharacterByName", player.getUniqueId().toString(), name);
+                return true;
             }
         }
 

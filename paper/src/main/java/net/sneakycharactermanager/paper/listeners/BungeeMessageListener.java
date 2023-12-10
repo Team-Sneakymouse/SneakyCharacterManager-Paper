@@ -53,9 +53,18 @@ public class BungeeMessageListener implements PluginMessageListener
                 character = new Character(playerUUID, characterUUID, characterName, skin);
                 character.map();
                 break;
-            case "characterSelectionGUI" :
+            case "selectCharacterByNameFailed" :
                 playerUUID = in.readUTF();
                 Player pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+                if(pl == null) return;
+
+                pl.sendMessage(ChatUtility.convertToComponent("&aNo character found. Loading character menu..."));
+                pl.sendMessage(ChatUtility.convertToComponent("&aPlease wait..."));
+                SneakyCharacterManager.getInstance().selectionMenu.openMenu(pl);
+                break;
+            case "characterSelectionGUI" :
+                playerUUID = in.readUTF();
+                pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
                 if(pl == null) return;
                 List<CharacterSnapshot> characterSnapshots = receiveCharacterList(in);
                 SneakyCharacterManager.getInstance().selectionMenu.updateInventory(pl.getUniqueId().toString(), characterSnapshots);

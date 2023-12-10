@@ -61,6 +61,11 @@ public class PluginMessageListener implements Listener {
                 playerData = PlayerData.get(playerUUID);
                 playerData.loadCharacter(serverInfo, in.readUTF());
                 break;
+            case "selectCharacterByName" :
+                playerUUID = in.readUTF();
+                playerData = PlayerData.get(playerUUID);
+                playerData.loadCharacterByName(serverInfo, in.readUTF());
+                break;
             case "updateCharacter" :
                 playerUUID = in.readUTF();
                 playerData = PlayerData.get(playerUUID);

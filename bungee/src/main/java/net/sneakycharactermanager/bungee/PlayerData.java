@@ -229,4 +229,17 @@ public class PlayerData {
         }
     }
 
+    public void loadCharacterByName(ServerInfo serverInfo, String characterName) {
+        storeCharacters();
+
+        for (Character character: characterMap.values()) {
+            if (character.isEnabled() && !this.lastPlayedCharacter.equals(character.getUUID()) && character.getName().toLowerCase().startsWith(characterName.toLowerCase())) {
+                loadCharacter(serverInfo, character.getUUID());
+                return;
+            }
+        }
+
+        PaperMessagingUtil.sendByteArray(serverInfo, "selectCharacterByNameFailed", this.playerUUID);
+    }
+
 }
