@@ -170,20 +170,22 @@ public class CharacterSelectionMenu implements Listener {
             }
         }
 
-        ItemStack createCharacterButton = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) createCharacterButton.getItemMeta();
-        meta.setPlayerProfile(Bukkit.getPlayer(UUID.fromString(playerUUID)).getPlayerProfile());
+        if (characterSnapshotList.size() < 54) {
+            ItemStack createCharacterButton = new ItemStack(Material.PLAYER_HEAD);
+            SkullMeta meta = (SkullMeta) createCharacterButton.getItemMeta();
+            meta.setPlayerProfile(Bukkit.getPlayer(UUID.fromString(playerUUID)).getPlayerProfile());
 
-        if (maxCharacterSlots > characterSnapshotList.size()) {
-            meta.displayName(CREATE_CHARACTER);
-            meta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Steve")));
-        } else {
-            meta.displayName(CHARACTER_SLOTS_FULL);
-            meta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Zombie")));
+            if (maxCharacterSlots > characterSnapshotList.size()) {
+                meta.displayName(CREATE_CHARACTER);
+                meta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Steve")));
+            } else {
+                meta.displayName(CHARACTER_SLOTS_FULL);
+                meta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Zombie")));
+            }
+
+            createCharacterButton.setItemMeta(meta);
+            holder.getInventory().setItem((int) Math.floor(characterSnapshotList.size() / 9) * 9 + 8, createCharacterButton);
         }
-
-        createCharacterButton.setItemMeta(meta);
-        holder.getInventory().setItem(characterSnapshotList.size(), createCharacterButton);
     }
 
 
