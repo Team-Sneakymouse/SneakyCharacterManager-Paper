@@ -126,7 +126,16 @@ public class CharacterSelectionMenu implements Listener {
             }
 
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
-            if(characterUUID == null) return;
+
+            Character currentChar = Character.get(player);
+
+            if (currentChar == null) return;
+
+            if (characterUUID == null) return;
+            if (characterUUID.equals(currentChar.getCharacterUUID())) {
+                player.sendMessage(ChatUtility.convertToComponent("&aYou are already playing that character."));
+                return;
+            }
 
             player.sendMessage(ChatUtility.convertToComponent("&aLoading your character... Please Wait..."));
             player.closeInventory();
