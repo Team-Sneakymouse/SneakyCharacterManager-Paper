@@ -3,9 +3,9 @@ package net.sneakycharactermanager.paper.commands;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
+import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -61,6 +61,11 @@ public class CommandChar extends Command {
 
         SneakyCharacterManager.getInstance().selectionMenu.openMenu(player);
         return true;
+    }
+
+    @Override
+    public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
+        return new ArrayList<String>();
     }
     
 }
