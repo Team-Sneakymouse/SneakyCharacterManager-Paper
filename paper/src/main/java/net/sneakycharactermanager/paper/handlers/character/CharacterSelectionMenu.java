@@ -3,7 +3,9 @@ package net.sneakycharactermanager.paper.handlers.character;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
@@ -14,6 +16,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryInteractEvent;
@@ -76,7 +79,9 @@ public class CharacterSelectionMenu implements Listener {
 
             skullMeta.displayName(ChatUtility.convertToComponent("&e" + snapshot.getName()));
             List<Component> lore = new ArrayList<>();
-            lore.add(ChatUtility.convertToComponent("&5" + snapshot.getUUID()));
+            lore.add(ChatUtility.convertToComponent("&eL-Click: &bSelect character."));
+            lore.add(ChatUtility.convertToComponent("&eMiddle-Click: &bBegin character deletion. You will be asked to confirm."));
+            //lore.add(ChatUtility.convertToComponent("&5" + snapshot.getUUID()));
             skullMeta.lore(lore);
 
             skullMeta.getPersistentDataContainer().set(characterKey, PersistentDataType.STRING, snapshot.getUUID());
@@ -126,6 +131,34 @@ public class CharacterSelectionMenu implements Listener {
             player.sendMessage(ChatUtility.convertToComponent("&aLoading your character... Please Wait..."));
             player.closeInventory();
             BungeeMessagingUtil.sendByteArray("selectCharacter", playerUUID, characterUUID);
+        }
+
+        
+        private void middleClickedItem(ItemStack clickedItem) {
+            if(!clickedItem.getType().equals(Material.PLAYER_HEAD)) return;
+
+            Player player = Bukkit.getPlayer(UUID.fromString(playerUUID));
+            if(player == null) return;
+
+            SkullMeta meta = (SkullMeta) clickedItem.getItemMeta();
+
+            if (meta.displayName().equals(CREATE_CHARACTER) || meta.displayName().equals(CHARACTER_SLOTS_FULL)) return;
+
+            String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
+
+            Character currentChar = Character.get(player);
+
+            if (currentChar == null) return;
+
+            if (characterUUID == null) return;
+            if (characterUUID.equals(currentChar.getCharacterUUID())) {
+                player.sendMessage(ChatUtility.convertToComponent("&aYou cannot delete the character that you are currently playing."));
+                return;
+            }
+
+            player.sendMessage(ChatUtility.convertToComponent("&aDeleting character '" + ((TextComponent) meta.displayName()).content() + "'. Type '/char confirm' within 10 seconds to confirm deletion."));
+            player.closeInventory();
+            CommandChar.deleteConfirmationMap.put(player, System.currentTimeMillis() + ";" +characterUUID);
         }
 
         @Override
@@ -205,7 +238,9 @@ public class CharacterSelectionMenu implements Listener {
 
         ItemStack clickedItem = event.getCurrentItem();
         if(clickedItem == null) return;
-        characterMenuHolder.clickedItem(clickedItem);
+
+        if (event.getClick().equals(ClickType.LEFT)) characterMenuHolder.clickedItem(clickedItem);
+        else if (event.getClick().equals(ClickType.MIDDLE)) characterMenuHolder.middleClickedItem(clickedItem);
     }
 
     @EventHandler
