@@ -1,5 +1,6 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -14,6 +15,8 @@ import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.io.BukkitObjectOutputStream;
+import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
 public class Character {
 
@@ -58,8 +61,22 @@ public class Character {
 //                config.set("location.yaw", Bukkit.getWorlds().get(0).getSpawnLocation().getYaw());
 //                config.set("location.pitch", Bukkit.getWorlds().get(0).getSpawnLocation().getPitch());
 
-                for (int i = 0; i < this.player.getInventory().getContents().length; i++) {
-                    config.set("inventory." + i, new ItemStack(Material.AIR));
+                try {
+                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                    BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream);
+
+                    dataOutput.writeInt(this.player.getInventory().getSize());
+
+                    for (int i = 0; i < this.player.getInventory().getSize(); i++) {
+                        dataOutput.writeObject(new ItemStack(Material.AIR));
+                    }
+
+                    dataOutput.close();
+                    config.set("inventory", Base64Coder.encodeLines(outputStream.toByteArray()));
+
+                    //Converts the inventory and its contents to base64, This also saves item meta-data and inventory type
+                } catch (Exception e) {
+                    throw new IllegalStateException("Could not convert inventory to base64.", e);
                 }
 
                 try {
