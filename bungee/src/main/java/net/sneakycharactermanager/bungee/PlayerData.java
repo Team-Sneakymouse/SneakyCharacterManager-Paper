@@ -128,6 +128,10 @@ public class PlayerData {
         }
     }
 
+    public Character getCharacter(String characterUUID) {
+        return characterMap.get(characterUUID);
+    }
+
     public String createNewCharacter(String name, String skin) {
         loadConfig();
         Character character = new Character(name, skin);

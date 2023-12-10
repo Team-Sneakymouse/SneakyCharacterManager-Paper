@@ -13,9 +13,11 @@ import net.md_5.bungee.api.connection.Server;
 import net.md_5.bungee.api.event.PluginMessageEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
+
 import net.sneakycharactermanager.bungee.PlayerData;
 import net.sneakycharactermanager.bungee.SneakyCharacterManager;
 import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
+import net.sneakycharactermanager.bungee.Character;
 
 public class PluginMessageListener implements Listener {
 
@@ -71,9 +73,6 @@ public class PluginMessageListener implements Listener {
                     case 2: //Updating Name
                         playerData.setCharacterName(lastPlayed, in.readUTF());
                         break;
-                    case 3: //Updating Enabled
-                        playerData.setCharacterEnabled(lastPlayed, in.readBoolean());
-                        break;
                 }
                 break;
             case "defaultSkin":
@@ -87,6 +86,21 @@ public class PluginMessageListener implements Listener {
                 playerUUID = in.readUTF();
                 playerData = PlayerData.get(playerUUID);
                 playerData.loadCharacter(serverInfo, playerData.createNewCharacter(ProxyServer.getInstance().getPlayer(UUID.fromString(playerUUID)).getName(), ""));
+                break;
+            case "deleteCharacter" :
+                playerUUID = in.readUTF();
+                characterUUID = in.readUTF();
+                playerData = PlayerData.get(playerUUID);
+
+                Character character = playerData.getCharacter(characterUUID);
+
+                if (character == null) {
+                    SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager tried to delete a character that does not exist.");
+                    return;
+                }
+
+                playerData.setCharacterEnabled(characterUUID, false);
+                PaperMessagingUtil.sendByteArray(serverInfo, "deleteConfirmed", playerUUID, character.getName(), characterUUID);
                 break;
             default:
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);

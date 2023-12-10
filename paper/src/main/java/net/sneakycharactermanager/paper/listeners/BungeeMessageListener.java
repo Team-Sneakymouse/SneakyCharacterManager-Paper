@@ -6,6 +6,8 @@ import java.util.UUID;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ChatUtility;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
@@ -15,6 +17,7 @@ import org.jetbrains.annotations.NotNull;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
+import net.kyori.adventure.text.TextComponent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 
@@ -57,7 +60,7 @@ public class BungeeMessageListener implements PluginMessageListener
                 List<CharacterSnapshot> characterSnapshots = receiveCharacterList(in);
                 SneakyCharacterManager.getInstance().selectionMenu.updateInventory(pl.getUniqueId().toString(), characterSnapshots);
                 break;
-            case "defaultSkin":
+            case "defaultSkin" :
                 playerUUID = in.readUTF();
                 characterUUID = in.readUTF();
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
@@ -68,6 +71,10 @@ public class BungeeMessageListener implements PluginMessageListener
                 String skinURL = textures.getSkin().toString();
                 BungeeMessagingUtil.sendByteArray("defaultSkin", playerUUID, characterUUID, skinURL);
                 break;
+            case "deleteConfirmed" :
+                playerUUID = in.readUTF();
+                pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+                pl.sendMessage(ChatUtility.convertToComponent("&aThe following character has been deleted: `" + in.readUTF() + "` (" + in.readUTF() + ")"));
             default:
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
                 break;

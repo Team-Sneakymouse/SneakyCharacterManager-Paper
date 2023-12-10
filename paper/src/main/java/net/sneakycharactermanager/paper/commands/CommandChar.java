@@ -34,8 +34,8 @@ public class CommandChar extends Command {
                 if (deleteConfirmationMap.containsKey(player)) {
                     String[] s = deleteConfirmationMap.get(player).split(";");
                     if (System.currentTimeMillis() < Long.valueOf(s[0]) + 10000) {
-                        BungeeMessagingUtil.sendByteArray("updateCharacter", player.getUniqueId().toString(), 3, false);
-                        sender.sendMessage(ChatUtility.convertToComponent("&aThe following character has been deleted: " + s[1]));
+                        BungeeMessagingUtil.sendByteArray("deleteCharacter", player.getUniqueId().toString(), s[1]);
+                        sender.sendMessage(ChatUtility.convertToComponent("&aDeleting character..."));
                         deleteConfirmationMap.remove(player);
                     } else {
                         sender.sendMessage(ChatUtility.convertToComponent("&aYou tried to confirm a character deletion but it appears that you took more than 10 seconds to confirm. Please start over."));
