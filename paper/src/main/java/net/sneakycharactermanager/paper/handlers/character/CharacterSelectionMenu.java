@@ -209,8 +209,8 @@ public class CharacterSelectionMenu implements Listener {
 
         for (PermissionAttachmentInfo permission : Bukkit.getPlayer(UUID.fromString(playerUUID)).getEffectivePermissions()) {
             if (permission.getPermission().startsWith(CHARACTER_SLOTS_PERMISSION_NODE)) {
-                maxCharacterSlots = Integer.valueOf(permission.getPermission().replace(CHARACTER_SLOTS_PERMISSION_NODE, ""));
-                break;
+                int value = Integer.valueOf(permission.getPermission().replace(CHARACTER_SLOTS_PERMISSION_NODE, ""));
+                if (value > maxCharacterSlots) maxCharacterSlots = value;
             }
         }
 
