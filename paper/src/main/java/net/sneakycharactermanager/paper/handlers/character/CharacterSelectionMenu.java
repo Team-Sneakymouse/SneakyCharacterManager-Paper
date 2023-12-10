@@ -171,14 +171,15 @@ public class CharacterSelectionMenu implements Listener {
         }
 
         ItemStack createCharacterButton = new ItemStack(Material.PLAYER_HEAD);
-        ItemMeta meta = createCharacterButton.getItemMeta();
+        SkullMeta meta = (SkullMeta) createCharacterButton.getItemMeta();
+        meta.setPlayerProfile(Bukkit.getPlayer(UUID.fromString(playerUUID)).getPlayerProfile());
 
         if (maxCharacterSlots > characterSnapshotList.size()) {
             meta.displayName(CREATE_CHARACTER);
-            // TODO: Set owner with a plus sign head
+            meta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Steve")));
         } else {
             meta.displayName(CHARACTER_SLOTS_FULL);
-            // TODO: Set owner with a cross sign head
+            meta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Zombie")));
         }
 
         createCharacterButton.setItemMeta(meta);
