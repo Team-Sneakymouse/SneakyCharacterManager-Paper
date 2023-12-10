@@ -128,7 +128,7 @@ public class PlayerData {
         }
     }
 
-    public void createNewCharacter(String name, String skin) {
+    public String createNewCharacter(String name, String skin) {
         loadConfig();
         Character character = new Character(name, skin);
 
@@ -146,6 +146,7 @@ public class PlayerData {
 
         saveConfig();
 
+        return character.getUUID();
     }
 
     private void updateCharacterInYaml(Character character) {

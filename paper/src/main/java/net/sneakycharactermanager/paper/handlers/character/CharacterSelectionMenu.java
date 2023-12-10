@@ -20,7 +20,9 @@ import org.bukkit.event.inventory.InventoryInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.profile.PlayerTextures;
 import org.jetbrains.annotations.NotNull;
@@ -34,6 +36,10 @@ public class CharacterSelectionMenu implements Listener {
     Map<String, CharacterMenuHolder> activeMenus;
 
     protected NamespacedKey characterKey;
+
+    private static final String CHARACTER_SLOTS_PERMISSION_NODE = "sneakycharacters.characterslots.";
+    private static final Component CREATE_CHARACTER = ChatUtility.convertToComponent("&2Create Character");
+    private static final Component CHARACTER_SLOTS_FULL = ChatUtility.convertToComponent("&4No Character Slots Remaining");
 
     public class CharacterMenuHolder implements InventoryHolder {
 
@@ -104,6 +110,14 @@ public class CharacterSelectionMenu implements Listener {
             if(player == null) return;
 
             SkullMeta meta = (SkullMeta) clickedItem.getItemMeta();
+
+            if (meta.displayName().equals(CREATE_CHARACTER)) {
+                BungeeMessagingUtil.sendByteArray("createNewCharacter", playerUUID);
+                return;
+            } else if (meta.displayName().equals(CHARACTER_SLOTS_FULL)) {
+                return;
+            }
+
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
             if(characterUUID == null) return;
 
@@ -146,6 +160,29 @@ public class CharacterSelectionMenu implements Listener {
         CharacterMenuHolder holder = activeMenus.get(playerUUID);
         if(holder == null) return; //Also should be possible
         holder.receivedCharacterList(characterSnapshotList);
+
+        int maxCharacterSlots = 0;
+
+        for (PermissionAttachmentInfo permission : Bukkit.getPlayer(UUID.fromString(playerUUID)).getEffectivePermissions()) {
+            if (permission.getPermission().startsWith(CHARACTER_SLOTS_PERMISSION_NODE)) {
+                maxCharacterSlots = Integer.valueOf(permission.getPermission().replace(CHARACTER_SLOTS_PERMISSION_NODE, ""));
+                break;
+            }
+        }
+
+        ItemStack createCharacterButton = new ItemStack(Material.PLAYER_HEAD);
+        ItemMeta meta = createCharacterButton.getItemMeta();
+
+        if (maxCharacterSlots > characterSnapshotList.size()) {
+            meta.displayName(CREATE_CHARACTER);
+            // TODO: Set owner with a plus sign head
+        } else {
+            meta.displayName(CHARACTER_SLOTS_FULL);
+            // TODO: Set owner with a cross sign head
+        }
+
+        createCharacterButton.setItemMeta(meta);
+        holder.getInventory().setItem(characterSnapshotList.size(), createCharacterButton);
     }
 
 
