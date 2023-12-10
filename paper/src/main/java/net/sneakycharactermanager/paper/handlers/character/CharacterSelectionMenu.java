@@ -113,6 +113,8 @@ public class CharacterSelectionMenu implements Listener {
 
             if (meta.displayName().equals(CREATE_CHARACTER)) {
                 BungeeMessagingUtil.sendByteArray("createNewCharacter", playerUUID);
+                player.sendMessage(ChatUtility.convertToComponent("&aCreating a new character... Please Wait..."));
+                player.sendMessage(ChatUtility.convertToComponent("&aOnce the character is created, use the /nick and /skin command to customize it!"));
                 return;
             } else if (meta.displayName().equals(CHARACTER_SLOTS_FULL)) {
                 return;
