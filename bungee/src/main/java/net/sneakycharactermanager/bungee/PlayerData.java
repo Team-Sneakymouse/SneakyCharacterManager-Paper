@@ -249,7 +249,7 @@ public class PlayerData {
         List<String> enabledCharacterNames = new ArrayList<String>();
 
         for (Character character: characterMap.values()) {
-            if (character.isEnabled() && !this.lastPlayedCharacter.equals(character.getUUID()) && !enabledCharacterNames.contains(character.getName())){
+            if (character.isEnabled() && !this.lastPlayedCharacter.equals(character.getUUID())) {
                 enabledCharacterNames.add(character.getName());
             }
         }

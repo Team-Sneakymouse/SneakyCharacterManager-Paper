@@ -66,7 +66,13 @@ public class CommandChar extends Command {
     @Override
     public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
         if (tabCompleteMap.containsKey(sender)) {
-            return tabCompleteMap.get(sender);
+            List<String> names = new ArrayList<String>();
+
+            for (String name : tabCompleteMap.get(sender)) {
+                if (!names.contains(name)) names.add(name);
+            }
+
+            return names;
         } else {
             return new ArrayList<String>();
         }
