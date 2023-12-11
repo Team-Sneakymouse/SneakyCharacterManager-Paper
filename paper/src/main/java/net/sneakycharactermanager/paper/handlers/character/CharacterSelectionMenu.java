@@ -55,7 +55,14 @@ public class CharacterSelectionMenu implements Listener {
             this.playerUUID = playerUUID;
             Player player = Bukkit.getPlayer(UUID.fromString(playerUUID));
             if(player == null) return;
-            inventory = Bukkit.createInventory(this, 54,
+
+            int size = 54;
+
+            if (CommandChar.tabCompleteMap.containsKey(player)) {
+                size = Math.min((int) Math.floor((CommandChar.tabCompleteMap.get(player).size() + 1) / 9) * 9 + 9, 54);
+            }
+
+            inventory = Bukkit.createInventory(this, size,
                     ChatUtility.convertToComponent("&e" + player.getName() + "'s Characters")
             );
             requestCharacterList();
