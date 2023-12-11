@@ -50,6 +50,7 @@ public class PluginMessageListener implements Listener {
                 playerUUID = in.readUTF();
                 playerData = PlayerData.get(playerUUID);
                 playerData.rebuildCharacterMap(serverInfo);
+                playerData.updateCharacterList(serverInfo);
                 break;
             case "characterSelectionGUI" :
                 playerUUID = in.readUTF();
@@ -77,6 +78,7 @@ public class PluginMessageListener implements Listener {
                         break;
                     case 2: //Updating Name
                         playerData.setCharacterName(lastPlayed, in.readUTF());
+                        playerData.updateCharacterList(serverInfo);
                         break;
                 }
                 break;
@@ -106,6 +108,7 @@ public class PluginMessageListener implements Listener {
 
                 playerData.setCharacterEnabled(characterUUID, false);
                 PaperMessagingUtil.sendByteArray(serverInfo, "deleteConfirmed", playerUUID, character.getName(), characterUUID);
+                playerData.updateCharacterList(serverInfo);
                 break;
             default:
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);

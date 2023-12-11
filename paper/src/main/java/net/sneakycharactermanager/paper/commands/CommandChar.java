@@ -9,7 +9,6 @@ import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-
 import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
@@ -17,6 +16,7 @@ import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 public class CommandChar extends Command {
 
     public static Map<Player, String> deleteConfirmationMap = new HashMap<Player, String>();
+    public static Map<Player, List<String>> tabCompleteMap = new HashMap<Player, List<String>>();
 
     public CommandChar() {
         super("char");
@@ -65,7 +65,11 @@ public class CommandChar extends Command {
 
     @Override
     public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
-        return new ArrayList<String>();
+        if (tabCompleteMap.containsKey(sender)) {
+            return tabCompleteMap.get(sender);
+        } else {
+            return new ArrayList<String>();
+        }
     }
     
 }

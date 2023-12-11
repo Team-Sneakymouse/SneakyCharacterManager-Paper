@@ -1,6 +1,7 @@
 package net.sneakycharactermanager.paper.listeners;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 
@@ -45,6 +46,7 @@ public class ConnectionEventListeners implements Listener {
 
         //Un-Nick player who is disconnecting from the server
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
+        CommandChar.tabCompleteMap.remove(player);
 
         Character character = Character.get(player);
 

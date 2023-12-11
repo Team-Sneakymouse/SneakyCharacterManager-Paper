@@ -112,6 +112,8 @@ public class PlayerData {
             this.config.set("lastPlayedCharacter", characterUUID);
             saveConfig();
         }
+
+        this.updateCharacterList(serverInfo);
     }
 
     public void loadLastPlayedCharacter(ServerInfo serverInfo) {
@@ -240,6 +242,19 @@ public class PlayerData {
         }
 
         PaperMessagingUtil.sendByteArray(serverInfo, "selectCharacterByNameFailed", this.playerUUID);
+    }
+
+    public void updateCharacterList(ServerInfo serverInfo) {
+        storeCharacters();
+        List<String> enabledCharacterNames = new ArrayList<String>();
+
+        for (Character character: characterMap.values()) {
+            if (character.isEnabled() && !this.lastPlayedCharacter.equals(character.getUUID()) && !enabledCharacterNames.contains(character.getName())){
+                enabledCharacterNames.add(character.getName());
+            }
+        }
+
+        PaperMessagingUtil.sendByteArray(serverInfo, "updateCharacterList", this.playerUUID, enabledCharacterNames);
     }
 
 }

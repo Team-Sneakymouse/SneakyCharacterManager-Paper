@@ -67,8 +67,13 @@ public class BungeeMessageListener implements PluginMessageListener
                 playerUUID = in.readUTF();
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
                 if(pl == null) return;
-                List<CharacterSnapshot> characterSnapshots = receiveCharacterList(in);
+                List<CharacterSnapshot> characterSnapshots = readCharacterList(in);
                 SneakyCharacterManager.getInstance().selectionMenu.updateInventory(pl.getUniqueId().toString(), characterSnapshots);
+                break;
+            case "updateCharacterList" :
+                playerUUID = in.readUTF();
+                pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+                CommandChar.tabCompleteMap.put(pl, readStringList(in));
                 break;
             case "defaultSkin" :
                 playerUUID = in.readUTF();
@@ -92,8 +97,19 @@ public class BungeeMessageListener implements PluginMessageListener
         }
     }
 
+    public static List<String> readStringList(ByteArrayDataInput in) {
+        int size = in.readInt();
+
+        List<String> strings = new ArrayList<>();
+        while (strings.size() < size) {
+            strings.add(in.readUTF());
+        }
+
+        return strings;
+    }
+
     // This function is used to deserialize a character list from a ByteArrayDataInput, in order to build the character selection GUI
-    public static List<CharacterSnapshot> receiveCharacterList(ByteArrayDataInput in) {
+    public static List<CharacterSnapshot> readCharacterList(ByteArrayDataInput in) {
         int size = in.readInt();
 
         List<CharacterSnapshot> characters = new ArrayList<>();

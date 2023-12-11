@@ -36,6 +36,8 @@ public class PaperMessagingUtil {
                 out.writeUTF((String) object);
             else if (object instanceof List && ((List<?>) object).get(0) instanceof Character)
                 writeCharacterList(out, (List<Character>) object);
+            else if (object instanceof List && ((List<?>) object).get(0) instanceof String)
+                writeStringList(out, (List<String>) object);
             else SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager attempted to write an unidentified object to a ByteArray!");
         }
 
@@ -49,6 +51,13 @@ public class PaperMessagingUtil {
             out.writeUTF(character.getUUID());
             out.writeUTF(character.getName());
             out.writeUTF(character.getSkin());
+        }
+    }
+
+    private static void writeStringList(ByteArrayDataOutput out, List<String> strings) {
+        out.writeInt(strings.size());
+        for (String string : strings) {
+            out.writeUTF(string);
         }
     }
 
