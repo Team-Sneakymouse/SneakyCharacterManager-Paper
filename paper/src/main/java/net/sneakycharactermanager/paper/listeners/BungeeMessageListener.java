@@ -19,6 +19,7 @@ import com.google.common.io.ByteStreams;
 
 import net.kyori.adventure.text.TextComponent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 
 public class BungeeMessageListener implements PluginMessageListener
@@ -84,6 +85,7 @@ public class BungeeMessageListener implements PluginMessageListener
                 playerUUID = in.readUTF();
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
                 pl.sendMessage(ChatUtility.convertToComponent("&aThe following character has been deleted: `" + in.readUTF() + "` (" + in.readUTF() + ")"));
+                break;
             default:
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
                 break;
