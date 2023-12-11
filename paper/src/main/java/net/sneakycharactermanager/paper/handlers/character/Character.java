@@ -3,9 +3,7 @@ package net.sneakycharactermanager.paper.handlers.character;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.InventoryUtility;
@@ -13,6 +11,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.io.BukkitObjectOutputStream;
@@ -106,7 +106,33 @@ public class Character {
         Location playerLocation = config.getLocation("location");
         if(playerLocation == null)
             playerLocation = this.player.getLocation(); //No config location? Leave where they are
+
+        Entity vehicle = this.player.getVehicle();
+
+        if (vehicle != null) {
+            vehicle.removePassenger(this.player);
+        }
+
+        List<Entity> passengers = this.player.getPassengers();
+        List<Entity> textDisplays = new ArrayList<Entity>();
+
+        if (passengers.size() > 0) {
+            for (Entity passenger : passengers) {
+                if (passenger.getType() != EntityType.TEXT_DISPLAY) {
+                    this.player.removePassenger(passenger);
+                } else {
+                    textDisplays.add(passenger);
+                    this.player.removePassenger(passenger);
+                }
+            }
+        }
+
         this.player.teleport(playerLocation);
+
+        for (Entity entity : textDisplays) {
+            entity.teleport(playerLocation);
+            this.player.addPassenger(entity);
+        }
 
 //        ItemStack[] inventoryContents = new ItemStack[config.getInt("inventory.size",  this.player.getInventory().getContents().length)];
 //        for (String key : config.getConfigurationSection("inventory").getKeys(false)) {
