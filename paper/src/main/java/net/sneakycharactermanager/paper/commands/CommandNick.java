@@ -41,9 +41,9 @@ public class CommandNick extends Command {
         return false;
     }
 
-    
     @Override
     public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
         return new ArrayList<String>();
     }
+
 }
