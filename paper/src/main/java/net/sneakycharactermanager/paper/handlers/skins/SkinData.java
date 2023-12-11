@@ -130,6 +130,7 @@ public class SkinData {
                 if(dataObject == null) {
                     Bukkit.getLogger().severe("Failed to request skin:");
                     Bukkit.getLogger().info(result.toString());
+                    return;
                 }
                 JSONObject textureObject = (JSONObject) dataObject.get("texture");
 
