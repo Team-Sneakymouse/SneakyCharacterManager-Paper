@@ -28,7 +28,7 @@ public class NicknameEntity {
         nmsPlayer = ((CraftPlayer)player).getHandle();
         mounted = new Display.TextDisplay(EntityType.TEXT_DISPLAY, nmsPlayer.level());
 
-        mounted.setBillboardConstraints(Display.BillboardConstraints.CENTER);
+        mounted.setBillboardConstraints(Display.BillboardConstraints.VERTICAL);
         byte flagBytes = mounted.getFlags();
         flagBytes = (byte) (flagBytes | 2);
         flagBytes = (byte) (flagBytes | 4);
