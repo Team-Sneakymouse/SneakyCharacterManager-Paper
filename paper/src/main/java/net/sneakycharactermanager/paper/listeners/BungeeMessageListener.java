@@ -60,7 +60,7 @@ public class BungeeMessageListener implements PluginMessageListener
                 if(pl == null) return;
 
                 pl.sendMessage(ChatUtility.convertToComponent("&aNo character found. Loading character menu..."));
-                pl.sendMessage(ChatUtility.convertToComponent("&aPlease wait..."));
+                //pl.sendMessage(ChatUtility.convertToComponent("&aPlease wait..."));
                 SneakyCharacterManager.getInstance().selectionMenu.openMenu(pl);
                 break;
             case "characterSelectionGUI" :
