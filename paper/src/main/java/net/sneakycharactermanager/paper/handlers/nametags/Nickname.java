@@ -1,5 +1,6 @@
 package net.sneakycharactermanager.paper.handlers.nametags;
 
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -65,6 +66,19 @@ public class Nickname {
      * */
     public void unNick(){
         nametag.destroy();
+    }
+
+    /**
+     * Set the nametag hidden state for the requester
+     * @param requester Player who wants to hide names
+     * @param state To hide or show the name
+     * */
+    public void hideName(Player requester, boolean state){
+        if(state){
+            nametag.setLocalizedName(Component.text(""), requester);
+        }else{
+            nametag.setLocalizedName(MiniMessage.miniMessage().deserialize(this.nickname), requester);
+        }
     }
 
     /**

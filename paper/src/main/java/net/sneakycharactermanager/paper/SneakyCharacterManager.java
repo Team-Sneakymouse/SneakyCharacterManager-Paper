@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
+import net.sneakycharactermanager.paper.commands.*;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
 import org.bukkit.Bukkit;
@@ -12,10 +13,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import net.sneakycharactermanager.paper.commands.CommandTesting;
 import net.md_5.bungee.event.EventHandler;
-import net.sneakycharactermanager.paper.commands.CommandChar;
-import net.sneakycharactermanager.paper.commands.CommandSkin;
 import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;
 import net.sneakycharactermanager.paper.listeners.ConnectionEventListeners;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
@@ -44,6 +42,8 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getCommandMap().register("sneakycharactermanager", new CommandChar());
         getServer().getCommandMap().register("sneakycharactermanager", new CommandSkin());
         getServer().getCommandMap().register("sneakycharactermanager", new CommandTesting());
+        getServer().getCommandMap().register("sneakycharactermanager", new CommandNames());
+        getServer().getCommandMap().register("sneakycharactermanager", new CommandNick());
 
         getServer().getMessenger().registerIncomingPluginChannel(this, "sneakymouse:sneakycharactermanager", new BungeeMessageListener());
         getServer().getMessenger().registerOutgoingPluginChannel(this, "sneakymouse:sneakycharactermanager");

@@ -1,9 +1,9 @@
 package net.sneakycharactermanager.paper.handlers.nametags;
 
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 
 /**
@@ -11,10 +11,15 @@ import java.util.Map;
  * */
 public class NametagManager {
 
+    private final HashMap<String, Boolean> isShowingNameplates;
+    private final List<String> showingRealNames;
+
     private final Map<String, Nickname> nicknames;
 
     public NametagManager(){
         nicknames = new HashMap<>();
+        isShowingNameplates = new HashMap<>();
+        showingRealNames = new ArrayList<>();
     }
 
     /**
@@ -23,12 +28,30 @@ public class NametagManager {
      * @param nickname Nickname to set onto the player
      * */
     public void nicknamePlayer(Player player, String nickname){
-        if(nickname.equals(player.getName())) return;
         if(!nicknames.containsKey(player.getUniqueId().toString())){
             nicknames.put(player.getUniqueId().toString(), new Nickname(player, nickname));
         }else{
             nicknames.get(player.getUniqueId().toString()).setNickname(nickname);
         }
+
+        for(String uuid : showingRealNames){
+            Player requester = Bukkit.getPlayer(UUID.fromString(uuid));
+            if (requester == null || ! requester.isOnline()) continue;
+            for(Nickname name : nicknames.values()){
+                name.showRealName(requester, true);
+            }
+        }
+
+        for(Map.Entry<String, Boolean> showingNameplates : isShowingNameplates.entrySet()){
+            Player requester = Bukkit.getPlayer(UUID.fromString(showingNameplates.getKey()));
+            if(requester == null || !requester.isOnline()) continue;
+            if(!showingNameplates.getValue()){
+                for(Nickname name : nicknames.values()){
+                    name.hideName(requester, true);
+                }
+            }
+        }
+
     }
 
     /**
@@ -41,6 +64,11 @@ public class NametagManager {
      * */
     @Deprecated
     public void createLocalized(Player requester, boolean enabled){
+        if(enabled){
+            showingRealNames.add(requester.getUniqueId().toString());
+        }else{
+            showingRealNames.remove(requester.getUniqueId().toString());
+        }
         for(Nickname name : nicknames.values()){
             name.showRealName(requester, enabled);
         }
@@ -58,6 +86,24 @@ public class NametagManager {
     }
 
     /**
+     * Hide nametags for the requested player
+     * @param requester Player who wishes to change hidden name state
+     * @param state State of hidden names
+     * */
+    public void hideNames(Player requester, boolean state){
+        if(state){
+            isShowingNameplates.put(requester.getUniqueId().toString(), false);
+            showingRealNames.remove(requester.getUniqueId().toString());
+        }
+        else {
+            isShowingNameplates.put(requester.getUniqueId().toString(), true);
+        }
+        for(Nickname nickname : nicknames.values()){
+            nickname.hideName(requester, state);
+        }
+    }
+
+    /**
      * Load all active nicknames for a player.
      * Required because the nickname entities are fake, they do not exist on player connect
      * @param player Player to load names for
@@ -65,6 +111,15 @@ public class NametagManager {
     public void loadNames(Player player){
         for(Nickname name : nicknames.values()){
             name.loadNickname(player);
+        }
+
+        if(isShowingNameplates.containsKey(player.getUniqueId().toString()) &&
+                !isShowingNameplates.get(player.getUniqueId().toString())){
+            hideNames(player, true);
+        }
+
+        if(showingRealNames.contains(player.getUniqueId().toString())){
+            createLocalized(player, true);
         }
     }
 

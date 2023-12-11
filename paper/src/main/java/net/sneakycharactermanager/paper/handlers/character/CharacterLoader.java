@@ -15,11 +15,12 @@ public class CharacterLoader {
     public static void loadCharacter(Character character){
         String url = character.getSkin();
 
-        if(url == null || url.isEmpty()) return;
-
-        //Not using invalid urls:
-        if(!url.startsWith("http")){
+        //No Invalid URL for skin loading
+        if(url == null || url.isEmpty() || !url.startsWith("http")) {
             SneakyCharacterManager.getInstance().getLogger().warning("Invalid Skin URL Received? Was this our fault?");
+            if(character.getCharacterName() == null || character.getCharacterName().isEmpty()) return;
+            //On players first join they have no Skin url but we still want to load a nickname plate so we can modify it
+            SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(character.getPlayer(), character.getCharacterName());
             return;
         }
 
