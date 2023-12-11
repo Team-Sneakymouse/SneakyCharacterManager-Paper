@@ -1,10 +1,12 @@
 package net.sneakycharactermanager.paper.commands;
 
-import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.CharacterLoader;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
-import org.bukkit.Bukkit;
+
+import java.util.*;
+
+import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -40,6 +42,11 @@ public class CommandSkin extends Command {
         CharacterLoader.updateSkin(player, url);
 
         return true;
+    }
+
+    @Override
+    public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
+        return new ArrayList<String>();
     }
     
 }

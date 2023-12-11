@@ -3,6 +3,10 @@ package net.sneakycharactermanager.paper.commands;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
+
+import java.util.*;
+
+import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -35,5 +39,11 @@ public class CommandNick extends Command {
         BungeeMessagingUtil.sendByteArray("updateCharacter", player.getUniqueId().toString(), 2, nickname);
         player.sendMessage(ChatUtility.convertToComponent("&eName updated to: " + nickname));
         return false;
+    }
+
+    
+    @Override
+    public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
+        return new ArrayList<String>();
     }
 }
