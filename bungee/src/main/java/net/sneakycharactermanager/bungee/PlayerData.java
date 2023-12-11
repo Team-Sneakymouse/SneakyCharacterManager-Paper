@@ -1,23 +1,12 @@
 package net.sneakycharactermanager.bungee;
 
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import net.md_5.bungee.config.Configuration;
 import net.md_5.bungee.config.ConfigurationProvider;
 import net.md_5.bungee.config.YamlConfiguration;
-import org.bukkit.configuration.ConfigurationSection;
-import org.yaml.snakeyaml.DumperOptions;
-import org.yaml.snakeyaml.Yaml;
-
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
@@ -31,7 +20,7 @@ public class PlayerData {
     private Configuration config;
     private final File playerFile;
     private String lastPlayedCharacter;
-    private final Map<String, Character> characterMap = new HashMap<String, Character>();
+    private final Map<String, Character> characterMap = new LinkedHashMap<String, Character>();
 
     public PlayerData(String playerUUID) {
         this.playerUUID = playerUUID;

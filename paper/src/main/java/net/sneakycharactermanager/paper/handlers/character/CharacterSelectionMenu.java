@@ -74,13 +74,17 @@ public class CharacterSelectionMenu implements Listener {
 
         public void receivedCharacterList(List<BungeeMessageListener.CharacterSnapshot> characterSnapshotList){
             if(updated) return;
-            for(BungeeMessageListener.CharacterSnapshot snapshot : characterSnapshotList){
-                addItem(this.getInventory(), snapshot);
+
+            for (int i = 0; i < characterSnapshotList.size(); i++) {
+                addItem(this.getInventory(), characterSnapshotList.get(i), i);
             }
+
             updated = true;
         }
 
-        private void addItem(Inventory inventory, BungeeMessageListener.CharacterSnapshot snapshot){
+        private void addItem(Inventory inventory, BungeeMessageListener.CharacterSnapshot snapshot, int index){
+            if (index > 54) return;
+
             ItemStack characterHead = new ItemStack(Material.PLAYER_HEAD);
             SkullMeta skullMeta = (SkullMeta) characterHead.getItemMeta();
 
@@ -110,7 +114,7 @@ public class CharacterSelectionMenu implements Listener {
 
                     skullMeta.setPlayerProfile(profile);
                     characterHead.setItemMeta(skullMeta);
-                    inventory.addItem(characterHead);
+                    inventory.setItem(index, characterHead);
                 });
             });
         }
