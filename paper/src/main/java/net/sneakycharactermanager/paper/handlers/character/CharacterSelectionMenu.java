@@ -96,14 +96,16 @@ public class CharacterSelectionMenu implements Listener {
             skullMeta.lore(lore);
 
             skullMeta.getPersistentDataContainer().set(characterKey, PersistentDataType.STRING, snapshot.getUUID());
-
+            skullMeta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Alex")));
             characterHead.setItemMeta(skullMeta);
+            
+            inventory.setItem(index, characterHead);
 
             Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) ->{
                 SkinData data = new SkinData(snapshot.getSkin(), snapshot.isSlim());
                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () ->{
-                    ProfileProperty property = data.getTextureProperty();
                     PlayerProfile profile = Bukkit.getPlayer(UUID.fromString(playerUUID)).getPlayerProfile();
+                    ProfileProperty property = data.getTextureProperty();
                     if(property == null) return;
 
                     profile.setProperty(property);
