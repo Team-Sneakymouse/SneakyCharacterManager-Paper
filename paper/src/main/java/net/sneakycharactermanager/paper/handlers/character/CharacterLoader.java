@@ -5,6 +5,7 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
+import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -29,19 +30,34 @@ public class CharacterLoader {
         boolean isSlimSkin = playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
         //Might need a setting for Is-Slim Skin? For now, defaulting to the characters base model type
 
+        SkinData data = new SkinData(url, isSlimSkin);
+        SkinQueue.add(data, 1);
+        SkinQueue.start();
+
         Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) ->{
-            SkinData data = new SkinData(url, isSlimSkin);
-            Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () ->{
-                playerProfile.removeProperty("textures");
-                ProfileProperty property = data.getTextureProperty();
-                if(property == null){
-                    character.getPlayer().sendMessage(ChatUtility.convertToComponent("&4Failed to load skin! Something went wrong!"));
-                }else{
-                    playerProfile.setProperty(property);
-                    character.getPlayer().setPlayerProfile(playerProfile);
-                    SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(character.getPlayer(), character.getCharacterName());
+            while (true) {
+                if (data.isProcessed()) {
+                    if (data.isValid()) {
+                        Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () ->{
+                            playerProfile.removeProperty("textures");
+                            ProfileProperty property = data.getTextureProperty();
+                            if(property == null){
+                                character.getPlayer().sendMessage(ChatUtility.convertToComponent("&4Failed to load skin! Something went wrong!"));
+                            }else{
+                                playerProfile.setProperty(property);
+                                character.getPlayer().setPlayerProfile(playerProfile);
+                                SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(character.getPlayer(), character.getCharacterName());
+                            }
+                        }, 0);
+                    }
+                    break;
                 }
-            }, 0);
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         });
 
         Bukkit.getServer().getPluginManager().callEvent(new LoadCharacterEvent(character.getPlayer(), character.isFirstLoad(), character.getCharacterUUID(), character.getCharacterName(), url));
@@ -56,19 +72,34 @@ public class CharacterLoader {
         String nickname = SneakyCharacterManager.getInstance().nametagManager.getNickname(player);
         if(nickname.equals(player.getName())) return;
 
-        Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) ->{
-            SkinData data = new SkinData(url, isSlimSkin);
-            Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () ->{
-                playerProfile.removeProperty("textures");
-                ProfileProperty property = data.getTextureProperty();
-                if(property == null){
-                    player.sendMessage(ChatUtility.convertToComponent("&4Failed to load skin! Something went wrong!"));
-                }else{
-                    playerProfile.setProperty(property);
-                    player.setPlayerProfile(playerProfile);
-                    //SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, nickname);
+        SkinData data = new SkinData(url, isSlimSkin);
+        SkinQueue.add(data, 1);
+        SkinQueue.start();
+
+        Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
+            while (true) {
+                if (data.isProcessed()) {
+                    if (data.isValid()) {
+                        Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () ->{
+                            playerProfile.removeProperty("textures");
+                            ProfileProperty property = data.getTextureProperty();
+                            if(property == null){
+                                player.sendMessage(ChatUtility.convertToComponent("&4Failed to load skin! Something went wrong!"));
+                            }else{
+                                playerProfile.setProperty(property);
+                                player.setPlayerProfile(playerProfile);
+                                //SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, nickname);
+                            }
+                        }, 0);
+                    }
+                    break;
                 }
-            }, 0);
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         });
     }
 }

@@ -60,7 +60,8 @@ public class SkinData {
 
     private String texture;
     private String signature;
-    private boolean isValid;
+    private boolean isValid = false;
+    private int attempts = 0;
 
     private static final String MINESKIN_API_URL = "https://api.mineskin.org/generate/url";
 
@@ -78,7 +79,7 @@ public class SkinData {
         this.url = url;
         this.isSlim = isSlim;
 
-        convertSkinURL();
+        //convertSkinURL();
 
         //ToDo: Maybe local cache of the skins to save for the future?
     }
@@ -88,7 +89,8 @@ public class SkinData {
      * Minecraft does not allow external URLs as skin textures so making use of
      * MineSkin's API is the best way to convert the data!
      * */
-    private void convertSkinURL() {
+    public void convertSkinURL() {
+        this.attempts++;
         //Make a request to MineSkin to change skin data!
 
         try(CloseableHttpClient httpClient = HttpClientBuilder.create().build()){
@@ -113,17 +115,17 @@ public class SkinData {
 
                 //{"delay":2,"delayInfo":{"seconds":2,"millis":2000},"error":"Too many requests","nextRequest":1.702102172094E9}
                 if(result.containsKey("delay")){
-                    if(result.containsKey("nextRequest")){
-                        TimeUnit.MILLISECONDS.sleep(Integer.parseInt(result.get("nextRequest").toString()
-                                .substring(0, 4).replaceAll("\\.", "")));
-                        Bukkit.getLogger().warning("Sleeping for "
-                                + result.get("nextRequest").toString().substring(0, 4)
-                                + " seconds!");
-                    }else{
-                        TimeUnit.SECONDS.sleep(2);
-                        Bukkit.getLogger().warning("Sleeping for 2 seconds!");
-                    }
-                    convertSkinURL();
+                    // if(result.containsKey("nextRequest")){
+                    //     TimeUnit.MILLISECONDS.sleep(Integer.parseInt(result.get("nextRequest").toString()
+                    //             .substring(0, 4).replaceAll("\\.", "")));
+                    //     Bukkit.getLogger().warning("Sleeping for "
+                    //             + result.get("nextRequest").toString().substring(0, 4)
+                    //             + " seconds!");
+                    // }else{
+                    //     TimeUnit.SECONDS.sleep(2);
+                    //     Bukkit.getLogger().warning("Sleeping for 2 seconds!");
+                    // }
+                    // convertSkinURL();
                     return;
                 }
                 JSONObject dataObject = (JSONObject) result.get("data");
@@ -137,16 +139,15 @@ public class SkinData {
                 this.texture = (String) textureObject.get("value");
                 this.signature = (String) textureObject.get("signature");
             }
-
         } catch (IOException | URISyntaxException | ParseException e){
             e.printStackTrace();
-            this.isValid = false;
             Bukkit.getLogger().severe("Something went very wrong!");
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            return;
         }
+        // } catch (InterruptedException e) {
+        //     throw new RuntimeException(e);
+        // }
         this.isValid = true;
-
     }
 
     /**
@@ -156,6 +157,14 @@ public class SkinData {
     public @Nullable ProfileProperty getTextureProperty(){
         if(!isValid) return null;
         return new ProfileProperty("textures", texture, signature);
+    }
+
+    public boolean isValid() {
+        return isValid;
+    }
+
+    public boolean isProcessed() {
+        return (isValid() || this.attempts > 100);
     }
 
 }

@@ -7,6 +7,7 @@ import net.kyori.adventure.text.TextComponent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
+import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
@@ -101,23 +102,38 @@ public class CharacterSelectionMenu implements Listener {
             
             inventory.setItem(index, characterHead);
 
-            Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) ->{
-                SkinData data = new SkinData(snapshot.getSkin(), snapshot.isSlim());
-                Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () ->{
-                    PlayerProfile profile = Bukkit.getPlayer(UUID.fromString(playerUUID)).getPlayerProfile();
-                    ProfileProperty property = data.getTextureProperty();
-                    if(property == null) return;
+            SkinData data = new SkinData(snapshot.getSkin(), snapshot.isSlim());
+            SkinQueue.add(data, 0);
+            SkinQueue.start();
 
-                    profile.setProperty(property);
+            Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
+                while (true) {
+                    if (data.isProcessed()) {
+                        if (data.isValid()) {
+                            Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+                                PlayerProfile profile = Bukkit.getPlayer(UUID.fromString(playerUUID)).getPlayerProfile();
+                                ProfileProperty property = data.getTextureProperty();
+                                if(property == null) return;
 
-                    //Updating Skin URL with Mojang URL
-                    BungeeMessagingUtil.sendByteArray("updateCharacter",
-                            playerUUID, 1, profile.getTextures().getSkin().toString());
+                                profile.setProperty(property);
 
-                    skullMeta.setPlayerProfile(profile);
-                    characterHead.setItemMeta(skullMeta);
-                    inventory.setItem(index, characterHead);
-                });
+                                //Updating Skin URL with Mojang URL
+                                BungeeMessagingUtil.sendByteArray("updateCharacter",
+                                        playerUUID, 1, profile.getTextures().getSkin().toString());
+
+                                skullMeta.setPlayerProfile(profile);
+                                characterHead.setItemMeta(skullMeta);
+                                inventory.setItem(index, characterHead);
+                            });
+                        }
+                        break;
+                    }
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
             });
         }
 
