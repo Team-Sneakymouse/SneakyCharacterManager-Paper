@@ -118,8 +118,8 @@ public class CharacterSelectionMenu implements Listener {
                                 profile.setProperty(property);
 
                                 //Updating Skin URL with Mojang URL
-                                BungeeMessagingUtil.sendByteArray("updateCharacter",
-                                        playerUUID, 1, profile.getTextures().getSkin().toString());
+                                // BungeeMessagingUtil.sendByteArray("updateCharacter",
+                                //         playerUUID, 1, profile.getTextures().getSkin().toString());
 
                                 skullMeta.setPlayerProfile(profile);
                                 characterHead.setItemMeta(skullMeta);
