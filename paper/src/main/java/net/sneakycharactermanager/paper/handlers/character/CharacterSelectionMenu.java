@@ -1,16 +1,11 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
-import com.destroystokyo.paper.profile.PlayerProfile;
-import com.destroystokyo.paper.profile.ProfileProperty;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
-import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.commands.CommandChar;
-import net.sneakycharactermanager.paper.handlers.skins.SkinData;
-import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
-import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -24,16 +19,23 @@ import org.bukkit.event.inventory.InventoryInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.profile.PlayerTextures;
 import org.jetbrains.annotations.NotNull;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.*;
+import com.destroystokyo.paper.profile.PlayerProfile;
+import com.destroystokyo.paper.profile.ProfileProperty;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.commands.CommandChar;
+import net.sneakycharactermanager.paper.handlers.skins.SkinData;
+import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
+import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;
+import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ChatUtility;
 
 public class CharacterSelectionMenu implements Listener {
 
@@ -49,6 +51,7 @@ public class CharacterSelectionMenu implements Listener {
 
         private final String playerUUID;
         private Inventory inventory;
+        private List<SkinData> queuedDatas = new ArrayList<SkinData>();
 
         boolean updated = false;
 
@@ -103,12 +106,14 @@ public class CharacterSelectionMenu implements Listener {
             inventory.setItem(index, characterHead);
 
             SkinData data = new SkinData(snapshot.getSkin(), snapshot.isSlim());
+            queuedDatas.add(data);
             SkinQueue.add(data, 0);
             SkinQueue.start();
 
             Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
                 while (true) {
                     if (data.isProcessed()) {
+                        queuedDatas.remove(data);
                         if (data.isValid()) {
                             Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
                                 PlayerProfile profile = Bukkit.getPlayer(UUID.fromString(playerUUID)).getPlayerProfile();
@@ -203,6 +208,12 @@ public class CharacterSelectionMenu implements Listener {
         public @NotNull Inventory getInventory() {
             return inventory;
         }
+
+        public void cleanup() {
+            for (SkinData skinData : queuedDatas) {
+                skinData.cancel();
+            }
+        }
     }
 
     public CharacterSelectionMenu(){
@@ -293,6 +304,7 @@ public class CharacterSelectionMenu implements Listener {
         Inventory inventory = event.getInventory();
         Player player = (Player) event.getPlayer();
         if(!(inventory.getHolder() instanceof CharacterMenuHolder)) return;
+        activeMenus.get(player.getUniqueId().toString()).cleanup();
         activeMenus.remove(player.getUniqueId().toString()); //Remove holder to save memory
     }
 

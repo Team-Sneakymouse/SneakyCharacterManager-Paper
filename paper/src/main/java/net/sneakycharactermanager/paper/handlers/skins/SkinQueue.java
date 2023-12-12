@@ -18,7 +18,7 @@ public class SkinQueue {
         }
     }
 
-    private static void remove(SkinData skinData) {
+    public static void remove(SkinData skinData) {
         processing.remove(skinData);
         for (Entry<Integer, List<SkinData>> entry : queue.entrySet()) {
             entry.getValue().remove(skinData);

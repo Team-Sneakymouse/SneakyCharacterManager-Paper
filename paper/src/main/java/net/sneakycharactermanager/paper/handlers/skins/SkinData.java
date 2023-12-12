@@ -61,6 +61,7 @@ public class SkinData {
     private String texture;
     private String signature;
     private boolean isValid = false;
+    private boolean cancelled = false;
     private int attempts = 0;
 
     private static final String MINESKIN_API_URL = "https://api.mineskin.org/generate/url";
@@ -160,11 +161,16 @@ public class SkinData {
     }
 
     public boolean isValid() {
-        return isValid;
+        return (isValid && !cancelled);
     }
 
     public boolean isProcessed() {
         return (isValid() || this.attempts > 100);
+    }
+
+    public void cancel() {
+        this.cancelled = true;
+        SkinQueue.remove(this);
     }
 
 }
