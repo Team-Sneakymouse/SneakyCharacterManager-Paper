@@ -92,7 +92,6 @@ public class CharacterSelectionMenu implements Listener {
             List<Component> lore = new ArrayList<>();
             lore.add(ChatUtility.convertToComponent("&eL-Click: &bSelect character."));
             lore.add(ChatUtility.convertToComponent("&eMiddle-Click: &bBegin character deletion. You will be asked to confirm."));
-            // lore.add(ChatUtility.convertToComponent("&5" + snapshot.getUUID()));
             skullMeta.lore(lore);
 
             skullMeta.getPersistentDataContainer().set(characterKey, PersistentDataType.STRING, snapshot.getUUID());

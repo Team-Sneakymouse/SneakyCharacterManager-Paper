@@ -57,13 +57,6 @@ public class Character {
 
                 config.set("location", Bukkit.getWorlds().get(0).getSpawnLocation());
 
-//                config.set("location.world", Bukkit.getWorlds().get(0).getName());
-//                config.set("location.x", Bukkit.getWorlds().get(0).getSpawnLocation().getX());
-//                config.set("location.y", Bukkit.getWorlds().get(0).getSpawnLocation().getY());
-//                config.set("location.z", Bukkit.getWorlds().get(0).getSpawnLocation().getZ());
-//                config.set("location.yaw", Bukkit.getWorlds().get(0).getSpawnLocation().getYaw());
-//                config.set("location.pitch", Bukkit.getWorlds().get(0).getSpawnLocation().getPitch());
-
                 try {
                     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
                     BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream);
@@ -137,12 +130,6 @@ public class Character {
             this.player.addPassenger(entity);
         }
 
-//        ItemStack[] inventoryContents = new ItemStack[config.getInt("inventory.size",  this.player.getInventory().getContents().length)];
-//        for (String key : config.getConfigurationSection("inventory").getKeys(false)) {
-//            int slot = Integer.parseInt(key);
-//            inventoryContents[slot] = config.getItemStack("inventory." + key);
-//        }
-
         ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
         this.player.getInventory().setContents(inventoryContents);
 
@@ -197,21 +184,6 @@ public class Character {
 
         Location playerLocation = this.player.getLocation();
         config.set("location", playerLocation);
-//        config.set("location.world", playerLocation.getWorld().getName());
-//        config.set("location.x", playerLocation.getX());
-//        config.set("location.y", playerLocation.getY());
-//        config.set("location.z", playerLocation.getZ());
-//        config.set("location.yaw", playerLocation.getYaw());
-//        config.set("location.pitch", playerLocation.getPitch());
-
-//        ItemStack[] inventoryContents = this.player.getInventory().getContents();
-//        for (int i = 0; i < inventoryContents.length; i++) {
-//            if (inventoryContents[i] != null) {
-//                config.set("inventory." + i, inventoryContents[i]);
-//            } else {
-//                config.set("inventory." + i, new ItemStack(Material.AIR));
-//            }
-//        }
 
         String inventoryB64 = InventoryUtility.inventoryToBase64(this.player.getInventory());
         config.set("inventory", inventoryB64);

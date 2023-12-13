@@ -74,10 +74,6 @@ public class SkinData {
     public SkinData(@NotNull String url, boolean isSlim){
         this.url = url;
         this.isSlim = isSlim;
-
-        //convertSkinURL();
-
-        //ToDo: Maybe local cache of the skins to save for the future?
     }
 
     /**
@@ -109,19 +105,7 @@ public class SkinData {
                 JSONParser parser = new JSONParser();
                 JSONObject result = (JSONObject) parser.parse(new InputStreamReader(in, StandardCharsets.UTF_8));
 
-                //{"delay":2,"delayInfo":{"seconds":2,"millis":2000},"error":"Too many requests","nextRequest":1.702102172094E9}
                 if(result.containsKey("delay")){
-                    // if(result.containsKey("nextRequest")){
-                    //     TimeUnit.MILLISECONDS.sleep(Integer.parseInt(result.get("nextRequest").toString()
-                    //             .substring(0, 4).replaceAll("\\.", "")));
-                    //     Bukkit.getLogger().warning("Sleeping for "
-                    //             + result.get("nextRequest").toString().substring(0, 4)
-                    //             + " seconds!");
-                    // }else{
-                    //     TimeUnit.SECONDS.sleep(2);
-                    //     Bukkit.getLogger().warning("Sleeping for 2 seconds!");
-                    // }
-                    // convertSkinURL();
                     return;
                 }
                 JSONObject dataObject = (JSONObject) result.get("data");
@@ -140,9 +124,6 @@ public class SkinData {
             Bukkit.getLogger().severe("Something went very wrong!");
             return;
         }
-        // } catch (InterruptedException e) {
-        //     throw new RuntimeException(e);
-        // }
         this.isValid = true;
     }
 

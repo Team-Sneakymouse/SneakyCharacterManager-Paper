@@ -56,7 +56,6 @@ public class CommandChar extends Command {
         }
 
         player.sendMessage(ChatUtility.convertToComponent("&aLoading character menu..."));
-        //player.sendMessage(ChatUtility.convertToComponent("&aPlease wait..."));
 
         SneakyCharacterManager.getInstance().selectionMenu.openMenu(player);
         return true;

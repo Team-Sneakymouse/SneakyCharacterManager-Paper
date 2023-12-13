@@ -92,7 +92,6 @@ public class InventoryUtility {
             return items;
         } catch (ClassNotFoundException | IOException e) {
             e.printStackTrace();
-            //throw new IOException("Could not decode inventory.", e);
         }
         return null;
     }
