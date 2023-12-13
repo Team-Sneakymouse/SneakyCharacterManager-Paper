@@ -63,7 +63,7 @@ public class CharacterSelectionMenu implements Listener {
             int size = 54;
 
             if (CommandChar.tabCompleteMap.containsKey(player)) {
-                size = Math.min((int) Math.floor((CommandChar.tabCompleteMap.get(player).size() + 1) / 9) * 9 + 9, 54);
+                size = Math.min((int) Math.floor((CommandChar.tabCompleteMap.get(player).size() + 1) / 9) * 9 + 9, 9);
             }
 
             inventory = Bukkit.createInventory(this, size,
@@ -87,7 +87,7 @@ public class CharacterSelectionMenu implements Listener {
         }
 
         private void addItem(Inventory inventory, BungeeMessageListener.CharacterSnapshot snapshot, int index){
-            if (index > 54) return;
+            if (index > inventory.getSize()) return;
 
             ItemStack characterHead = new ItemStack(Material.PLAYER_HEAD);
             SkullMeta skullMeta = (SkullMeta) characterHead.getItemMeta();
