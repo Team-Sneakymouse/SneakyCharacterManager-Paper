@@ -31,6 +31,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.commands.CommandChar;
+import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;
@@ -99,47 +100,59 @@ public class CharacterSelectionMenu implements Listener {
             //lore.add(ChatUtility.convertToComponent("&5" + snapshot.getUUID()));
             skullMeta.lore(lore);
 
-            skullMeta.getPersistentDataContainer().set(characterKey, PersistentDataType.STRING, snapshot.getUUID());
-            skullMeta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Alex")));
-            characterHead.setItemMeta(skullMeta);
-            
-            inventory.setItem(index, characterHead);
+            ProfileProperty p = SkinCache.get(playerUUID, snapshot.getSkin());
 
-            SkinData data = new SkinData(snapshot.getSkin(), snapshot.isSlim());
-            queuedDatas.add(data);
-            SkinQueue.add(data, 0);
-            SkinQueue.start();
+            if (p == null) {
+                skullMeta.getPersistentDataContainer().set(characterKey, PersistentDataType.STRING, snapshot.getUUID());
+                skullMeta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Alex")));
+                characterHead.setItemMeta(skullMeta);
+                
+                inventory.setItem(index, characterHead);
 
-            Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
-                while (true) {
-                    if (data.isProcessed()) {
-                        queuedDatas.remove(data);
-                        if (data.isValid()) {
-                            Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                                PlayerProfile profile = Bukkit.getPlayer(UUID.fromString(playerUUID)).getPlayerProfile();
-                                ProfileProperty property = data.getTextureProperty();
-                                if(property == null) return;
+                SkinData data = new SkinData(snapshot.getSkin(), snapshot.isSlim());
+                queuedDatas.add(data);
+                SkinQueue.add(data, 0);
+                SkinQueue.start();
 
-                                profile.setProperty(property);
+                Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
+                    while (true) {
+                        if (data.isProcessed()) {
+                            queuedDatas.remove(data);
+                            if (data.isValid()) {
+                                Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+                                    PlayerProfile profile = Bukkit.getPlayer(UUID.fromString(playerUUID)).getPlayerProfile();
+                                    ProfileProperty property = data.getTextureProperty();
+                                    if(property == null) return;
 
-                                //Updating Skin URL with Mojang URL
-                                // BungeeMessagingUtil.sendByteArray("updateCharacter",
-                                //         playerUUID, 1, profile.getTextures().getSkin().toString());
+                                    SkinCache.put(playerUUID, snapshot.getSkin(), property);
+                                    profile.setProperty(property);
 
-                                skullMeta.setPlayerProfile(profile);
-                                characterHead.setItemMeta(skullMeta);
-                                inventory.setItem(index, characterHead);
-                            });
+                                    skullMeta.setPlayerProfile(profile);
+                                    characterHead.setItemMeta(skullMeta);
+                                    inventory.setItem(index, characterHead);
+                                });
+                            }
+                            break;
                         }
-                        break;
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                     }
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
+                });
+            } else {
+                PlayerProfile profile = Bukkit.getPlayer(UUID.fromString(playerUUID)).getPlayerProfile();
+
+                SkinCache.put(playerUUID, snapshot.getSkin(), p);
+                profile.setProperty(p);
+
+                skullMeta.setPlayerProfile(profile);
+                characterHead.setItemMeta(skullMeta);
+                inventory.setItem(index, characterHead);
+            }
+
+
         }
 
         private void clickedItem(ItemStack clickedItem){

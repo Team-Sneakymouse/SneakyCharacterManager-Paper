@@ -36,7 +36,6 @@ public class CommandSkin extends Command {
             return true;
         }
 
-        BungeeMessagingUtil.sendByteArray("updateCharacter", player.getUniqueId().toString(), 1, url);
         player.sendMessage(ChatUtility.convertToComponent("&aUpdating your skin!"));
 
         CharacterLoader.updateSkin(player, url);

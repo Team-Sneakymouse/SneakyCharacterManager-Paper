@@ -4,6 +4,8 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
+import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,12 +24,7 @@ public class ConnectionEventListeners implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-
-        //Loading the nicknames for newly connected player
-        //TODO: This will be moved to Character.load()
-        SneakyCharacterManager.getInstance().nametagManager.loadNames(player);
-
-        // TODO: Fine-tune this delay. 1 tick might already be fine
+        
         int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(SneakyCharacterManager.getInstance(), () -> {
             if (!player.isOnline() || Character.isPlayedMapped(player)) {
                 Bukkit.getScheduler().cancelTask(taskIdMap.get(player));
@@ -47,6 +44,7 @@ public class ConnectionEventListeners implements Listener {
         //Un-Nick player who is disconnecting from the server
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
         CommandChar.tabCompleteMap.remove(player);
+        SkinCache.remove(player.getUniqueId().toString());
 
         Character character = Character.get(player);
 
