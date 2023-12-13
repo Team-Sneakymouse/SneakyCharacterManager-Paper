@@ -60,10 +60,10 @@ public class CharacterSelectionMenu implements Listener {
             Player player = Bukkit.getPlayer(UUID.fromString(playerUUID));
             if(player == null) return;
 
-            int size = 54;
+            int size = 9;
 
             if (CommandChar.tabCompleteMap.containsKey(player)) {
-                size = Math.min((int) Math.floor((CommandChar.tabCompleteMap.get(player).size() + 1) / 9) * 9 + 9, 9);
+                size = Math.min((int) Math.floor((CommandChar.tabCompleteMap.get(player).size() + 1) / 9) * 9 + 9, 54);
             }
 
             inventory = Bukkit.createInventory(this, size,
@@ -254,7 +254,7 @@ public class CharacterSelectionMenu implements Listener {
             }
         }
 
-        if (characterSnapshotList.size() < 54) {
+        if (characterSnapshotList.size() < holder.getInventory().getSize()) {
             ItemStack createCharacterButton = new ItemStack(Material.PLAYER_HEAD);
             SkullMeta meta = (SkullMeta) createCharacterButton.getItemMeta();
             meta.setPlayerProfile(Bukkit.getPlayer(UUID.fromString(playerUUID)).getPlayerProfile());
