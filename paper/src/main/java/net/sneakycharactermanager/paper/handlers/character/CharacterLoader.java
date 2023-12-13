@@ -16,7 +16,6 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
-import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
@@ -80,7 +79,7 @@ public class CharacterLoader {
             SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(character.getPlayer(), character.getCharacterName());
         }
 
-        Bukkit.getServer().getPluginManager().callEvent(new LoadCharacterEvent(character.getPlayer(), character.isFirstLoad(), character.getCharacterUUID(), character.getCharacterName(), url));
+        Bukkit.getServer().getPluginManager().callEvent(new LoadCharacterEvent(character.getPlayer(), character.isFirstLoad(), character.getCharacterUUID(), character.getCharacterName(), url, character.isSlim()));
         character.setFirstLoad(false);
     }
 
