@@ -208,7 +208,6 @@ public class PlayerData {
         return lastPlayedCharacter;
     }
 
-    //Not sure what this is used for? Since I think it just does the same as the function above?
     public void rebuildCharacterMap(ServerInfo serverInfo) {
         Character character = this.characterMap.get(this.lastPlayedCharacter);
 
