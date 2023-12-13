@@ -4,20 +4,22 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-import net.sneakycharactermanager.paper.commands.*;
-import net.sneakycharactermanager.paper.handlers.character.Character;
-import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
-import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import net.md_5.bungee.event.EventHandler;
+import net.sneakycharactermanager.paper.commands.CommandChar;
+import net.sneakycharactermanager.paper.commands.CommandNames;
+import net.sneakycharactermanager.paper.commands.CommandNick;
+import net.sneakycharactermanager.paper.commands.CommandSkin;
+import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
+import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
+import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;
 import net.sneakycharactermanager.paper.listeners.ConnectionEventListeners;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
-import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 
 public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
@@ -26,12 +28,14 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
     public NametagManager nametagManager;
     public CharacterSelectionMenu selectionMenu;
+    public SkinQueue skinQueue;
 
     @Override
     public void onEnable() {
         instance = this;
         nametagManager = new NametagManager();
         selectionMenu = new CharacterSelectionMenu();
+        skinQueue = new SkinQueue();
 
         saveDefaultConfig();
 

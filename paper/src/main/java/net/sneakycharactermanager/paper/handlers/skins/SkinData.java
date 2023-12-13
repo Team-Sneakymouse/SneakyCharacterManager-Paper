@@ -1,6 +1,9 @@
 package net.sneakycharactermanager.paper.handlers.skins;
 
 import com.destroystokyo.paper.profile.ProfileProperty;
+
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -174,7 +177,7 @@ public class SkinData {
 
     public void cancel() {
         this.cancelled = true;
-        SkinQueue.remove(this);
+        SneakyCharacterManager.getInstance().skinQueue.remove(this);
     }
 
 }

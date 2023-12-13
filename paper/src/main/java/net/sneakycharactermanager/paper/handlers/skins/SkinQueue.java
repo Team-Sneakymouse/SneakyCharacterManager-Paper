@@ -2,85 +2,65 @@ package net.sneakycharactermanager.paper.handlers.skins;
 
 import java.util.*;
 import java.util.Map.Entry;
+
 import org.bukkit.Bukkit;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
+
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 
-public class SkinQueue {
-    private static Map<Integer, List<SkinData>> queue = new LinkedHashMap<Integer, List<SkinData>>();
-    private static List<SkinData> processing = new ArrayList<SkinData>();
-    private static boolean running = false;
+public class SkinQueue extends BukkitRunnable {
 
-    public static void add(SkinData skinData, int priority) {
-        if (queue.containsKey(priority)) {
-            queue.get(priority).add(skinData);
-        } else {
-            queue.put(priority, new ArrayList<SkinData>(Arrays.asList(new SkinData[]{skinData})));
-        }
+    private Map<Integer, List<SkinData>> queue = new LinkedHashMap<>();
+    private BukkitTask task = null;
+    private boolean busy = false;
+
+    public synchronized void add(SkinData skinData, int priority) {
+        this.queue.computeIfAbsent(priority, k -> new ArrayList<>()).add(skinData);
+        this.start();
     }
 
-    public static void remove(SkinData skinData) {
-        processing.remove(skinData);
-        for (Entry<Integer, List<SkinData>> entry : queue.entrySet()) {
-            entry.getValue().remove(skinData);
-        }
+    public synchronized void remove(SkinData skinData) {
+        this.queue.values().forEach(list -> list.removeIf(s -> s.equals(skinData)));
     }
 
-    private static List<SkinData> getNext(int amount) {
-        List<SkinData> next = new ArrayList<SkinData>();
-
-        while (next.size() < amount) {
-            int highestPriority = -1;
-
-            for (Entry<Integer, List<SkinData>> entry : queue.entrySet()) {
-                if (entry.getKey() < highestPriority) continue;
-
-                for (SkinData skinData : entry.getValue()) {
-                    if (!processing.contains(skinData)) {
-                        highestPriority = entry.getKey();
-                        break;
-                    }
-                }
-            }
-
-            if (highestPriority == -1) break;
-
-            for (SkinData skinData : queue.get(highestPriority)) {
-                if (!next.contains(skinData)) {
-                    next.add(skinData);
-                    processing.add(skinData);
-                    break;
-                }
-            }
-        }
-
-        return next;
-    }
-
-    public static void start() {
-        if (running) return;
-        running = true;
-        run(getNext(5));
-    }
-
-    private static void run(List<SkinData> list) {
-        if (processing.size() < 1) {
-            running = false;
-            return;
-        };
-
-        for (SkinData skinData : list) {
-            Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) ->{
-                skinData.convertSkinURL();
-                Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () ->{
-                    if (skinData.isProcessed()) {
-                        remove(skinData);
-                    } else {
-                        processing.remove(skinData);
-                    }
-                    run(getNext(1));
-                }, 0);
-            });
-        }
-    }
+    private synchronized SkinData getNext() {
+        Optional<Entry<Integer, List<SkinData>>> maxEntry = this.queue.entrySet().stream()
+                .filter(entry -> !entry.getValue().isEmpty())
+                .max(Comparator.comparingInt(Entry::getKey));
     
+        return maxEntry.map(entry -> entry.getValue().get(0)).orElse(null);
+    }
+
+    private synchronized void start() {
+        if (this.task != null) return;
+        this.task = runTaskTimerAsynchronously(SneakyCharacterManager.getInstance(), 0, 1);
+    }
+
+    private synchronized void stop() {
+        this.task.cancel();
+        SneakyCharacterManager.getInstance().skinQueue = new SkinQueue();
+    }
+
+    @Override
+    public synchronized void run() {
+        if (this.busy) {
+            return;
+        }
+
+        SkinData next = this.getNext();
+
+        if (next == null) {
+            this.stop();
+        } else {
+            this.busy = true;
+            next.convertSkinURL();
+            Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
+                if (next.isProcessed()) {
+                    this.remove(next);
+                }
+                this.busy = false;
+            }, 0);
+        }
+    }
 }

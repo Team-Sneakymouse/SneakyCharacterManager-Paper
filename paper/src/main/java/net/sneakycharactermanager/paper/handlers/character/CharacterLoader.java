@@ -44,8 +44,7 @@ public class CharacterLoader {
             PlayerProfile playerProfile = character.getPlayer().getPlayerProfile();
 
             SkinData data = new SkinData(url, character.isSlim());
-            SkinQueue.add(data, 1);
-            SkinQueue.start();
+            SneakyCharacterManager.getInstance().skinQueue.add(data, 1);
 
             Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) ->{
                 while (true) {
@@ -105,8 +104,7 @@ public class CharacterLoader {
         // if(nickname.equals(player.getName())) return;
 
         SkinData data = new SkinData(url, isSlimSkin);
-        SkinQueue.add(data, 1);
-        SkinQueue.start();
+        SneakyCharacterManager.getInstance().skinQueue.add(data, 1);
 
         Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
             while (true) {

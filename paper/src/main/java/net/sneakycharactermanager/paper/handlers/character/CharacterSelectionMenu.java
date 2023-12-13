@@ -111,8 +111,7 @@ public class CharacterSelectionMenu implements Listener {
 
                 SkinData data = new SkinData(snapshot.getSkin(), snapshot.isSlim());
                 queuedDatas.add(data);
-                SkinQueue.add(data, 0);
-                SkinQueue.start();
+                SneakyCharacterManager.getInstance().skinQueue.add(data, 0);
 
                 Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
                     while (true) {
