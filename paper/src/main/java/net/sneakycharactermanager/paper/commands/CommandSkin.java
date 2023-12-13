@@ -1,7 +1,6 @@
 package net.sneakycharactermanager.paper.commands;
 
 import net.sneakycharactermanager.paper.handlers.character.CharacterLoader;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
 import java.util.*;

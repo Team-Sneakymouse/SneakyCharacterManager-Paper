@@ -160,6 +160,10 @@ public class SkinData {
         return new ProfileProperty("textures", texture, signature);
     }
 
+    public boolean isSlim() {
+        return isSlim;
+    }
+
     public boolean isValid() {
         return (isValid && !cancelled);
     }

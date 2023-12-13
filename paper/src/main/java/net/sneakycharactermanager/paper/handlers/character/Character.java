@@ -26,14 +26,16 @@ public class Character {
     private String characterUUID;
     private String name;
     private String skin;
+    private boolean slim;
 
     private boolean firstLoad = false;
 
-    public Character(String playerUUID, String characterUUID, String characterName, String skin) {
+    public Character(String playerUUID, String characterUUID, String characterName, String skin, Boolean slim) {
         this.player = Bukkit.getPlayer(UUID.fromString(playerUUID));
         this.characterUUID = characterUUID;
         this.name = characterName;
         this.skin = skin;
+        this.slim = slim;
 
         File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID);
         boolean firstLogin = false;
@@ -167,6 +169,10 @@ public class Character {
 
     public String getSkin(){
         return this.skin;
+    }
+
+    public boolean isSlim() {
+        return this.slim;
     }
 
     public void setFirstLoad(boolean firstLoad) {

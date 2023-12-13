@@ -34,6 +34,8 @@ public class PaperMessagingUtil {
                 out.writeShort((int) object);
             else if (object.getClass() == String.class)
                 out.writeUTF((String) object);
+            else if (object.getClass() == Character.class)
+                writeCharacter(out, (Character) object);
             else if (object instanceof List && ((List<?>) object).get(0) instanceof Character)
                 writeCharacterList(out, (List<Character>) object);
             else if (object instanceof List && ((List<?>) object).get(0) instanceof String)
@@ -48,10 +50,15 @@ public class PaperMessagingUtil {
     private static void writeCharacterList(ByteArrayDataOutput out, List<Character> characters) {
         out.writeInt(characters.size());
         for (Character character : characters) {
-            out.writeUTF(character.getUUID());
-            out.writeUTF(character.getName());
-            out.writeUTF(character.getSkin());
+            writeCharacter(out, character);
         }
+    }
+
+    private static void writeCharacter(ByteArrayDataOutput out, Character character) {
+        out.writeUTF(character.getUUID());
+        out.writeUTF(character.getName());
+        out.writeUTF(character.getSkin());
+        out.writeBoolean(character.isSlim());
     }
 
     private static void writeStringList(ByteArrayDataOutput out, List<String> strings) {

@@ -41,8 +41,9 @@ public class BungeeMessageListener implements PluginMessageListener
                 String characterUUID = in.readUTF();
                 String characterName = in.readUTF();
                 String skin = in.readUTF();
+                boolean slim = in.readBoolean();
                 
-                Character character = new Character(playerUUID, characterUUID, characterName, skin);
+                Character character = new Character(playerUUID, characterUUID, characterName, skin, slim);
                 character.load();
                 break;
             case "rebuildCharacterMap" :
@@ -50,8 +51,9 @@ public class BungeeMessageListener implements PluginMessageListener
                 characterUUID = in.readUTF();
                 characterName = in.readUTF();
                 skin = in.readUTF();
+                slim = in.readBoolean();
                 
-                character = new Character(playerUUID, characterUUID, characterName, skin);
+                character = new Character(playerUUID, characterUUID, characterName, skin, slim);
                 character.map();
                 break;
             case "selectCharacterByNameFailed" :
@@ -84,7 +86,9 @@ public class BungeeMessageListener implements PluginMessageListener
                 PlayerTextures textures = profile.getTextures();
                 if(textures.getSkin() == null) return;
                 String skinURL = textures.getSkin().toString();
-                BungeeMessagingUtil.sendByteArray("defaultSkin", playerUUID, characterUUID, skinURL);
+                slim = textures.getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
+
+                BungeeMessagingUtil.sendByteArray("defaultSkin", playerUUID, characterUUID, skinURL, slim);
                 break;
             case "deleteConfirmed" :
                 playerUUID = in.readUTF();
@@ -124,8 +128,9 @@ public class BungeeMessageListener implements PluginMessageListener
         String uuid = in.readUTF();
         String name = in.readUTF();
         String skin = in.readUTF();
+        boolean slim = in.readBoolean();
 
-        return new CharacterSnapshot(uuid, name, skin);
+        return new CharacterSnapshot(uuid, name, skin, slim);
     }
 
     // This subclass is a heavily simplified version of the bungee side Character class. This allows us to deserialize a ByteArrayDataInput into the List<Character> that we need to build the GUI, without actually accessing the bungee-side Character class.
@@ -133,12 +138,13 @@ public class BungeeMessageListener implements PluginMessageListener
         private String uuid;
         private String name;
         private String skin;
-        private boolean isSlim = false; //ToDo: Update readCharacter & Bungee Plugin to send/save a boolean too
+        private boolean slim;
 
-        public CharacterSnapshot(String uuid, String name, String skin) {
+        public CharacterSnapshot(String uuid, String name, String skin, Boolean slim) {
             this.uuid = uuid;
             this.name = name;
             this.skin = skin;
+            this.slim = slim;
         }
     
         public String getUUID() {
@@ -154,7 +160,7 @@ public class BungeeMessageListener implements PluginMessageListener
         }
 
         public boolean isSlim(){
-            return isSlim;
+            return slim;
         }
     }
 

@@ -51,6 +51,7 @@ public class PlayerData {
             section.set("enabled", true);
             section.set("name", ProxyServer.getInstance().getPlayer(UUID.fromString(playerUUID)).getName());
             section.set("skin", "");
+            section.set("slim", false);
             saveConfig();
         }
 
@@ -123,21 +124,24 @@ public class PlayerData {
         return characterMap.get(characterUUID);
     }
 
-    public String createNewCharacter(String name, String skin) {
+    public String createNewCharacter(String name) {
         loadConfig();
-        Character character = new Character(name, skin);
+        Character character = new Character(name);
 
         this.characterMap.put(character.getUUID(), character);
 
+        // TODO: What is this for?
         Map<String, Object> characterData = new LinkedHashMap<>();
         characterData.put("enabled", character.isEnabled());
         characterData.put("name", character.getName());
         characterData.put("skin", character.getSkin());
+        characterData.put("slim", character.isSlim());
 
         Configuration section = this.config.getSection(character.getUUID());
         section.set("enabled", character.isEnabled());
         section.set("name", character.getName());
         section.set("skin", character.getSkin());
+        section.set("slim", character.isSlim());
 
         saveConfig();
 
@@ -151,6 +155,7 @@ public class PlayerData {
         section.set("enabled", character.isEnabled());
         section.set("name", character.getName());
         section.set("skin", character.getSkin());
+        section.set("slim", character.isSlim());
 
         saveConfig();
     }
@@ -179,13 +184,14 @@ public class PlayerData {
         }
     }
 
-    public void setCharacterSkin(String characterUUID, String skin) {
+    public void setCharacterSkin(String characterUUID, String skin, boolean slim) {
         Character character = this.characterMap.get(characterUUID);
 
         if (character == null) {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to reskin a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
         } else {
             character.setSkin(skin);
+            character.setSlim(slim);
             this.characterMap.put(characterUUID, character);
             this.updateCharacterInYaml(character);
         }

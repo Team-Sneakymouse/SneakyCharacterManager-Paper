@@ -1,7 +1,6 @@
 package net.sneakycharactermanager.bungee;
 
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.config.Configuration;
@@ -12,23 +11,26 @@ public class Character {
     private boolean enabled;
     private String name;
     private String skin;
+    private boolean slim;
 
     public Character(String uuid, Configuration config) {
         this.uuid = uuid;
         this.enabled = config.getBoolean("enabled");
         this.name = config.getString("name");
         this.skin = config.getString("skin");
+        this.slim = config.getBoolean("slim");
     }
 
-    public Character(String name, String skin) {
+    public Character(String name) {
         this.uuid = UUID.randomUUID().toString();
         this.enabled = true;
         this.name = name;
-        this.skin = skin;
+        this.skin = "";
+        this.slim = false;
     }
 
     public void loadCharacter(String subChannel, ServerInfo serverInfo, String playerUUID) {
-        PaperMessagingUtil.sendByteArray(serverInfo, subChannel, playerUUID, this.uuid, this.name, this.skin);
+        PaperMessagingUtil.sendByteArray(serverInfo, subChannel, playerUUID, this);
         if(this.skin.isEmpty()){
             PaperMessagingUtil.sendByteArray(serverInfo, "defaultSkin", playerUUID, this.uuid);
         }
@@ -60,6 +62,14 @@ public class Character {
 
     public void setSkin(String skin) {
         this.skin = skin;
+    }
+
+    public boolean isSlim() {
+        return slim;
+    }
+
+    public void setSlim(boolean slim) {
+        this.slim = slim;
     }
     
 }

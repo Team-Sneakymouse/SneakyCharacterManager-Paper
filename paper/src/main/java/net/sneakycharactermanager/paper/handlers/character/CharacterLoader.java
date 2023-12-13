@@ -1,5 +1,15 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+
+import javax.imageio.ImageIO;
+
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
@@ -9,9 +19,6 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
-import org.bukkit.profile.PlayerTextures;
 
 public class CharacterLoader {
 
@@ -34,10 +41,8 @@ public class CharacterLoader {
 
             //This system may need to change at some point
             PlayerProfile playerProfile = character.getPlayer().getPlayerProfile();
-            boolean isSlimSkin = playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
-            //Might need a setting for Is-Slim Skin? For now, defaulting to the characters base model type
 
-            SkinData data = new SkinData(url, isSlimSkin);
+            SkinData data = new SkinData(url, character.isSlim());
             SkinQueue.add(data, 1);
             SkinQueue.start();
 
@@ -82,7 +87,18 @@ public class CharacterLoader {
     public static void updateSkin(Player player, String url){
         //This system may need to change at some point
         PlayerProfile playerProfile = player.getPlayerProfile();
-        boolean isSlimSkin = playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
+        boolean isSlimSkin = false;
+
+        try (InputStream inputStream = new URL(url).openStream()) {
+            BufferedImage image = ImageIO.read(inputStream);
+            int pixel = image.getRGB(55, 20);
+
+            int alpha = (pixel >> 24) & 0xFF;
+    
+            isSlimSkin = alpha == 0;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         // String nickname = SneakyCharacterManager.getInstance().nametagManager.getNickname(player);
         // if(nickname.equals(player.getName())) return;
@@ -105,7 +121,7 @@ public class CharacterLoader {
                                 playerProfile.setProperty(property);
                                 player.setPlayerProfile(playerProfile);
                                 //SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, nickname);
-                                BungeeMessagingUtil.sendByteArray("updateCharacter", player.getUniqueId().toString(), 1, url);
+                                BungeeMessagingUtil.sendByteArray("updateCharacter", player.getUniqueId().toString(), 1, url, data.isSlim());
                             }
                         }, 0);
                     }
