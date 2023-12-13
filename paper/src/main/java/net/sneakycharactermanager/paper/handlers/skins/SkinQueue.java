@@ -55,6 +55,7 @@ public class SkinQueue extends BukkitRunnable {
         } else {
             this.busy = true;
             next.convertSkinURL();
+            //TODO: I don't think that this is neccesary
             Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
                 if (next.isProcessed()) {
                     this.remove(next);
