@@ -99,7 +99,7 @@ public class SkinUtil {
     
     public static void handleCachedSkin(Character character, ProfileProperty profileProperty) {
         Player player = character.getPlayer();
-        PlayerProfile playerProfile = applyProcessedSkin(player, profileProperty, character.getSkin());
+        PlayerProfile playerProfile = applyProcessedSkin(player, profileProperty);
 
         if (playerProfile == null) return;
 
@@ -110,7 +110,7 @@ public class SkinUtil {
 
     public static void handleCachedSkin(BungeeMessageListener.CharacterSnapshot character, ProfileProperty profileProperty, Inventory inventory, int index) {
         Player player = character.getPlayer();
-        PlayerProfile playerProfile = applyProcessedSkin(player, profileProperty, character.getSkin());
+        PlayerProfile playerProfile = applyProcessedSkin(player, profileProperty);
 
         if (playerProfile == null) return;
 
@@ -121,7 +121,7 @@ public class SkinUtil {
         inventory.setItem(index, character.getHeadItem());
     }
     
-    private static PlayerProfile applyProcessedSkin(Player player, ProfileProperty profileProperty, String url) {
+    private static PlayerProfile applyProcessedSkin(Player player, ProfileProperty profileProperty) {
         PlayerProfile playerProfile = player.getPlayerProfile();
         playerProfile.removeProperty("textures");
     
@@ -129,7 +129,6 @@ public class SkinUtil {
             player.sendMessage(ChatUtility.convertToComponent("&4Failed to load skin! Something went wrong!"));
             return null;
         } else {
-            SkinCache.put(player.getUniqueId().toString(), url, profileProperty);
             playerProfile.setProperty(profileProperty);
             return playerProfile;
         }
