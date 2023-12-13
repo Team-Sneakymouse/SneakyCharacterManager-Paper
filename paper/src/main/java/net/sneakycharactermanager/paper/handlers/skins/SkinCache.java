@@ -1,12 +1,13 @@
 package net.sneakycharactermanager.paper.handlers.skins;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.destroystokyo.paper.profile.ProfileProperty;
 
 public class SkinCache {
 
-    private static Map<String, Map<String, ProfileProperty>> skinCache = new HashMap<String,Map<String,ProfileProperty>>();
+    private static Map<String, Map<String, ProfileProperty>> skinCache = new ConcurrentHashMap<>();
 
     public static ProfileProperty get(String playerUUID, String url) {
         if (skinCache.containsKey(playerUUID)) {
