@@ -243,7 +243,7 @@ public class PlayerData {
             }
         }
 
-        PaperMessagingUtil.sendByteArray(serverInfo, "updateCharacterList", this.playerUUID, enabledCharacterNames);
+        if (enabledCharacterNames.size() > 0 ) PaperMessagingUtil.sendByteArray(serverInfo, "updateCharacterList", this.playerUUID, enabledCharacterNames);
     }
 
 }
