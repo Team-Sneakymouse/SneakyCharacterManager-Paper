@@ -197,7 +197,6 @@ public class PlayerData {
         for (Character character: characterMap.values()) {
             if (character.isEnabled()){
                 enabledCharacters.add(character);
-                System.out.println("Sending: " + character.getName());
             }
         }
 
