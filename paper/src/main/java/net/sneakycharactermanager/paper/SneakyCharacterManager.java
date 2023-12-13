@@ -23,7 +23,7 @@ import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
     private static SneakyCharacterManager instance = null;
-    private static Map<Player, Integer> taskIdMap = new HashMap<Player, Integer>();
+    private static Map<Player, Integer> taskIdMap = new HashMap<>();
 
     public NametagManager nametagManager;
     public CharacterSelectionMenu selectionMenu;

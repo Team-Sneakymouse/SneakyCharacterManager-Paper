@@ -21,7 +21,7 @@ import net.sneakycharactermanager.paper.util.InventoryUtility;
 
 public class Character {
 
-    private static Map<Player, Character> characterMap = new HashMap<Player, Character>();
+    private static Map<Player, Character> characterMap = new HashMap<>();
 
     private Player player;
     private String characterUUID;
@@ -110,7 +110,7 @@ public class Character {
         }
 
         List<Entity> passengers = this.player.getPassengers();
-        List<Entity> textDisplays = new ArrayList<Entity>();
+        List<Entity> textDisplays = new ArrayList<>();
 
         if (passengers.size() > 0) {
             for (Entity passenger : passengers) {

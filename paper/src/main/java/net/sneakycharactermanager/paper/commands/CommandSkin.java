@@ -44,7 +44,7 @@ public class CommandSkin extends Command {
 
     @Override
     public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
-        return new ArrayList<String>();
+        return new ArrayList<>();
     }
     
 }

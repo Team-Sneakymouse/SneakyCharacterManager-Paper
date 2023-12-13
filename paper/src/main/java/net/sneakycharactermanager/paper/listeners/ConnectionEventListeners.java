@@ -17,7 +17,7 @@ import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 
 public class ConnectionEventListeners implements Listener {
 
-    private static Map<Player, Integer> taskIdMap = new HashMap<Player, Integer>();
+    private static Map<Player, Integer> taskIdMap = new HashMap<>();
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {

@@ -13,14 +13,14 @@ import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
 
 public class PlayerData {
 
-    private static final Map<String, PlayerData> playerDataMap = new HashMap<String, PlayerData>();
+    private static final Map<String, PlayerData> playerDataMap = new HashMap<>();
     private static final ConfigurationProvider provider = ConfigurationProvider.getProvider(YamlConfiguration.class);
 
     private final String playerUUID;
     private Configuration config;
     private final File playerFile;
     private String lastPlayedCharacter;
-    private final Map<String, Character> characterMap = new LinkedHashMap<String, Character>();
+    private final Map<String, Character> characterMap = new LinkedHashMap<>();
 
     public PlayerData(String playerUUID) {
         this.playerUUID = playerUUID;
@@ -192,7 +192,7 @@ public class PlayerData {
 
     public void sendCharacterSelectionGui(ServerInfo serverInfo) {
         storeCharacters();
-        List<Character> enabledCharacters = new ArrayList<Character>();
+        List<Character> enabledCharacters = new ArrayList<>();
 
         for (Character character: characterMap.values()) {
             if (character.isEnabled()){
@@ -232,7 +232,7 @@ public class PlayerData {
 
     public void updateCharacterList(ServerInfo serverInfo) {
         storeCharacters();
-        List<String> enabledCharacterNames = new ArrayList<String>();
+        List<String> enabledCharacterNames = new ArrayList<>();
 
         for (Character character: characterMap.values()) {
             if (character.isEnabled() && !this.lastPlayedCharacter.equals(character.getUUID())) {

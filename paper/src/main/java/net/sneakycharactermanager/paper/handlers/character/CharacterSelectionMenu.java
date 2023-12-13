@@ -47,7 +47,7 @@ public class CharacterSelectionMenu implements Listener {
 
         private final String playerUUID;
         private Inventory inventory;
-        private List<SkinData> queuedDatas = new ArrayList<SkinData>();
+        private List<SkinData> queuedDatas = new ArrayList<>();
 
         boolean updated = false;
 
