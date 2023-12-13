@@ -75,6 +75,10 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        for (int taskID : taskIdMap.values()) {
+            Bukkit.getScheduler().cancelTask(taskID);
+        }
+
         Character.saveAll();
     }
 
