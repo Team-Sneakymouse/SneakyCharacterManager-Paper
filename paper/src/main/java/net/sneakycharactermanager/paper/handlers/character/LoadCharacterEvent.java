@@ -15,7 +15,7 @@ public class LoadCharacterEvent extends PlayerEvent {
     private final String skin;
     private final boolean slim;
 
-    public LoadCharacterEvent(@NotNull Player player, Boolean firstLoad, String characterUUID, String characterName, String skin, boolean slim) {
+    public LoadCharacterEvent(@NotNull Player player, boolean firstLoad, String characterUUID, String characterName, String skin, boolean slim) {
         super(player);
         this.firstLoad = firstLoad;
         this.characterUUID = characterUUID;
@@ -29,7 +29,7 @@ public class LoadCharacterEvent extends PlayerEvent {
         return handlers;
     }
     
-    public Boolean getFirstLoad() {
+    public boolean getFirstLoad() {
         return firstLoad;
     }
 

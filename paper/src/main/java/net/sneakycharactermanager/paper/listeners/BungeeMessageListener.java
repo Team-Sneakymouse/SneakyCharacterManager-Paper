@@ -139,7 +139,7 @@ public class BungeeMessageListener implements PluginMessageListener
         private boolean slim;
         private ItemStack headItem;
 
-        public CharacterSnapshot(Player player, String uuid, String name, String skin, Boolean slim) {
+        public CharacterSnapshot(Player player, String uuid, String name, String skin, boolean slim) {
             this.player = player;
             this.uuid = uuid;
             this.name = name;

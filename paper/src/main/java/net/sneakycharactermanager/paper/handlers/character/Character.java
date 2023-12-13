@@ -31,7 +31,7 @@ public class Character {
 
     private boolean firstLoad = false;
 
-    public Character(String playerUUID, String characterUUID, String characterName, String skin, Boolean slim) {
+    public Character(String playerUUID, String characterUUID, String characterName, String skin, boolean slim) {
         this.player = Bukkit.getPlayer(UUID.fromString(playerUUID));
         this.characterUUID = characterUUID;
         this.name = characterName;
