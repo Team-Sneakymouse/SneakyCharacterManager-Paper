@@ -36,7 +36,7 @@ public class PluginMessageListener implements Listener {
             serverInfo = server.getInfo();
         }
 
-        ByteArrayDataInput in = ByteStreams.newDataInput( event.getData() );
+        ByteArrayDataInput in = ByteStreams.newDataInput(event.getData());
         String subChannel = in.readUTF();
 
         switch (subChannel) {
@@ -71,7 +71,7 @@ public class PluginMessageListener implements Listener {
                 playerData = PlayerData.get(playerUUID);
                 String lastPlayed = playerData.getLastPlayedCharacter();
                 int type = in.readInt();
-                switch (type){
+                switch (type) {
                     case 1: //Updating Skin
                         playerData.setCharacterSkin(lastPlayed, in.readUTF(), in.readBoolean());
                         break;

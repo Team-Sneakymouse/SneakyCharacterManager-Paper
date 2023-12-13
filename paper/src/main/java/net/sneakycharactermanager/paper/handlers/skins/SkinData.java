@@ -37,7 +37,7 @@ public class SkinData {
                     profile.setProperty(data.getTextureProperty());
                     player.setPlayerProfile(profile);
 
-                    for(Player target : Bukkit.getOnlinePlayers()){
+                    for(Player target : Bukkit.getOnlinePlayers()) {
                         target.hidePlayer(SneakyCharacterManager.getInstance(), player);
                         target.showPlayer(SneakyCharacterManager.getInstance(), player);
                     }
@@ -71,7 +71,7 @@ public class SkinData {
      * @param url URL to download the skin from
      * @param isSlim True if it is a slim skin, false if it is a classic skin
      * */
-    public SkinData(@NotNull String url, boolean isSlim){
+    public SkinData(@NotNull String url, boolean isSlim) {
         this.url = url;
         this.isSlim = isSlim;
     }
@@ -85,7 +85,7 @@ public class SkinData {
         this.attempts++;
         //Make a request to MineSkin to change skin data!
 
-        try(CloseableHttpClient httpClient = HttpClientBuilder.create().build()){
+        try(CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
             URL url = new URL(MINESKIN_API_URL);
             HttpPost request = new HttpPost(url.toURI());
             JSONObject requestBodyJson = new JSONObject();
@@ -100,16 +100,16 @@ public class SkinData {
             request.setEntity(skinReq);
             HttpResponse response = httpClient.execute(request);
 
-            if(response != null){
+            if (response != null) {
                 InputStream in = response.getEntity().getContent();
                 JSONParser parser = new JSONParser();
                 JSONObject result = (JSONObject) parser.parse(new InputStreamReader(in, StandardCharsets.UTF_8));
 
-                if(result.containsKey("delay")){
+                if (result.containsKey("delay")) {
                     return;
                 }
                 JSONObject dataObject = (JSONObject) result.get("data");
-                if(dataObject == null) {
+                if (dataObject == null) {
                     Bukkit.getLogger().severe("Failed to request skin:");
                     Bukkit.getLogger().info(result.toString());
                     return;
@@ -119,7 +119,7 @@ public class SkinData {
                 this.texture = (String) textureObject.get("value");
                 this.signature = (String) textureObject.get("signature");
             }
-        } catch (IOException | URISyntaxException | ParseException e){
+        } catch (IOException | URISyntaxException | ParseException e) {
             e.printStackTrace();
             Bukkit.getLogger().severe("Something went very wrong!");
             return;
@@ -131,8 +131,8 @@ public class SkinData {
      * Get the ProfileProperty for the skin textures.
      * @return ProfileProperty with the new skin data | Null if skin failed to load!
      * */
-    public @Nullable ProfileProperty getTextureProperty(){
-        if(!isValid) return null;
+    public @Nullable ProfileProperty getTextureProperty() {
+        if (!isValid) return null;
         return new ProfileProperty("textures", texture, signature);
     }
 

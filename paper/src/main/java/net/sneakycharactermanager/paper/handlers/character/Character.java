@@ -100,7 +100,7 @@ public class Character {
         YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
 
         Location playerLocation = config.getLocation("location");
-        if(playerLocation == null)
+        if (playerLocation == null)
             playerLocation = this.player.getLocation(); //No config location? Leave where they are
 
         Entity vehicle = this.player.getVehicle();
@@ -143,7 +143,7 @@ public class Character {
         characterMap.put(this.player, this);
     }
 
-    public Player getPlayer(){
+    public Player getPlayer() {
         return this.player;
     }
 
@@ -151,11 +151,11 @@ public class Character {
         return characterUUID;
     }
 
-    public String getCharacterName(){
+    public String getCharacterName() {
         return this.name;
     }
 
-    public String getSkin(){
+    public String getSkin() {
         return this.skin;
     }
 

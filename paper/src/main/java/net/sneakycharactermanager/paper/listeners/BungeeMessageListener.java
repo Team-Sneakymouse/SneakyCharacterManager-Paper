@@ -57,7 +57,7 @@ public class BungeeMessageListener implements PluginMessageListener
             case "selectCharacterByNameFailed" :
                 playerUUID = in.readUTF();
                 Player pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-                if(pl == null) return;
+                if (pl == null) return;
 
                 pl.sendMessage(ChatUtility.convertToComponent("&aNo character found. Loading character menu..."));
                 SneakyCharacterManager.getInstance().selectionMenu.openMenu(pl);
@@ -65,7 +65,7 @@ public class BungeeMessageListener implements PluginMessageListener
             case "characterSelectionGUI" :
                 playerUUID = in.readUTF();
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-                if(pl == null) return;
+                if (pl == null) return;
                 List<CharacterSnapshot> characterSnapshots = readCharacterList(pl, in);
                 SneakyCharacterManager.getInstance().selectionMenu.updateInventory(pl.getUniqueId().toString(), characterSnapshots);
                 break;
@@ -78,10 +78,10 @@ public class BungeeMessageListener implements PluginMessageListener
                 playerUUID = in.readUTF();
                 characterUUID = in.readUTF();
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-                if(pl == null) return;
+                if (pl == null) return;
                 PlayerProfile profile = pl.getPlayerProfile();
                 PlayerTextures textures = profile.getTextures();
-                if(textures.getSkin() == null) return;
+                if (textures.getSkin() == null) return;
                 String skinURL = textures.getSkin().toString();
                 slim = textures.getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
 
@@ -164,7 +164,7 @@ public class BungeeMessageListener implements PluginMessageListener
             return skin;
         }
 
-        public boolean isSlim(){
+        public boolean isSlim() {
             return slim;
         }
 

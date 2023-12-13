@@ -36,7 +36,7 @@ public class ConnectionEventListeners implements Listener {
     }
 
     @EventHandler
-    public void onPlayerLeave(PlayerQuitEvent event){
+    public void onPlayerLeave(PlayerQuitEvent event) {
         Player player = event.getPlayer();
 
         //Un-Nick player who is disconnecting from the server

@@ -23,15 +23,15 @@ public class CommandNick extends Command {
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 
-        if(!(sender instanceof Player player)) return false;
+        if (!(sender instanceof Player player)) return false;
 
-        if(args.length == 0){
+        if (args.length == 0) {
             player.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.usageMessage));
             return false;
         }
 
         StringBuilder builder = new StringBuilder();
-        for(String word : args){
+        for(String word : args) {
             builder.append(word).append(" ");
         }
         String nickname = builder.substring(0, builder.length()-1);

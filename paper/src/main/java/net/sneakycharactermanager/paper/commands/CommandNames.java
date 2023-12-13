@@ -22,23 +22,23 @@ public class CommandNames extends Command {
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 
-        if(!(sender instanceof Player player)) return false;
+        if (!(sender instanceof Player player)) return false;
 
-        if(args.length != 1) {
+        if (args.length != 1) {
             player.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.usageMessage));
             return false;
         }
 
-        if(args[0].equalsIgnoreCase("on")){
+        if (args[0].equalsIgnoreCase("on")) {
             SneakyCharacterManager.getInstance().nametagManager.hideNames(player, false);
             SneakyCharacterManager.getInstance().nametagManager.createLocalized(player, true);
             player.sendMessage(ChatUtility.convertToComponent("&eNow showing nicknames & real names!"));
         }
-        else if(args[0].equalsIgnoreCase("off")) {
+        else if (args[0].equalsIgnoreCase("off")) {
             SneakyCharacterManager.getInstance().nametagManager.hideNames(player, true);
             player.sendMessage(ChatUtility.convertToComponent("&eNow hiding names!"));
         }
-        else if(args[0].equalsIgnoreCase("character")) {
+        else if (args[0].equalsIgnoreCase("character")) {
             SneakyCharacterManager.getInstance().nametagManager.hideNames(player, false);
             SneakyCharacterManager.getInstance().nametagManager.createLocalized(player, false);
             player.sendMessage(ChatUtility.convertToComponent("&eNow showing nicknames & Hiding real names!"));

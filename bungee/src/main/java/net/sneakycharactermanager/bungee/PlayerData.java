@@ -29,12 +29,12 @@ public class PlayerData {
 
         //Loading YML Configuration
         try {
-            if(!playerFile.exists()){
-                if(!playerFile.createNewFile()){
+            if (!playerFile.exists()) {
+                if (!playerFile.createNewFile()) {
                     throw new IOException("Failed to create player data file!");
                 }
             }
-        } catch(IOException e){
+        } catch(IOException e) {
             e.printStackTrace();
         }
         loadConfig();
@@ -58,25 +58,25 @@ public class PlayerData {
         storeCharacters();
     }
 
-    private void storeCharacters(){
+    private void storeCharacters() {
         characterMap.clear();
-        for(String key : this.config.getKeys()){
-            if(key.equalsIgnoreCase("lastPlayedCharacter")) continue;
+        for(String key : this.config.getKeys()) {
+            if (key.equalsIgnoreCase("lastPlayedCharacter")) continue;
 
             Character character = new Character(key, this.config.getSection(key));
             this.characterMap.put(key, character);
         }
     }
 
-    private void loadConfig(){
+    private void loadConfig() {
         try {
             this.config = provider.load(playerFile);
-        } catch(IOException e){
+        } catch(IOException e) {
             e.printStackTrace();
         }
     }
 
-    private  void saveConfig(){
+    private  void saveConfig() {
         try{
             provider.save(this.config, playerFile);
         } catch(IOException e) {
@@ -195,7 +195,7 @@ public class PlayerData {
         List<Character> enabledCharacters = new ArrayList<>();
 
         for (Character character: characterMap.values()) {
-            if (character.isEnabled()){
+            if (character.isEnabled()) {
                 enabledCharacters.add(character);
             }
         }
@@ -240,7 +240,7 @@ public class PlayerData {
             }
         }
 
-        if (enabledCharacterNames.size() > 0 ) PaperMessagingUtil.sendByteArray(serverInfo, "updateCharacterList", this.playerUUID, enabledCharacterNames);
+        if (enabledCharacterNames.size() > 0) PaperMessagingUtil.sendByteArray(serverInfo, "updateCharacterList", this.playerUUID, enabledCharacterNames);
     }
 
 }

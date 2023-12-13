@@ -22,15 +22,15 @@ public class CommandSkin extends Command {
 
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
-        if(!(sender instanceof Player player)) return true;
+        if (!(sender instanceof Player player)) return true;
 
-        if(args.length != 1){
+        if (args.length != 1) {
             player.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
             return true;
         }
 
         String url = args[0];
-        if(!url.startsWith("http")){
+        if (!url.startsWith("http")) {
             player.sendMessage(ChatUtility.convertToComponent("&4Invalid URL.. Please make sure it starts with HTTP(s)"));
             return true;
         }

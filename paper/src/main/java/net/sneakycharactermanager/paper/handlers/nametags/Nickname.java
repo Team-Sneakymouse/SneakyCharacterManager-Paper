@@ -20,7 +20,7 @@ public class Nickname {
      * @param player Player this nickname is owned by
      * @param nickname Starter nickname for the player
      * */
-    public Nickname(Player player, String nickname){
+    public Nickname(Player player, String nickname) {
         this.nametag = new NicknameEntity(player);
         this.uuid = player.getUniqueId().toString();
         this.realName = player.getName();
@@ -34,10 +34,10 @@ public class Nickname {
      * @see MiniMessage
      * @param nickname New nickname to set.
      * */
-    public void setNickname(String nickname){
+    public void setNickname(String nickname) {
         Player player = Bukkit.getPlayer(UUID.fromString(this.uuid));
-        if(player == null) return;
-        if(!player.hasPermission("sneakycharacters.colournames")){
+        if (player == null) return;
+        if (!player.hasPermission("sneakycharacters.colournames")) {
             nickname = MiniMessage.miniMessage().escapeTags(nickname);
         }
         this.nickname = nickname;
@@ -50,8 +50,8 @@ public class Nickname {
      * @param requester Player who requested to see the real name of this player
      * @param enabled Are they turning the feature on or off
      * */
-    public void showRealName(Player requester, boolean enabled){
-        if(enabled){
+    public void showRealName(Player requester, boolean enabled) {
+        if (enabled) {
             nametag.setLocalizedName(MiniMessage.miniMessage().deserialize(
                     "<white>" + this.nickname + "<newline><gray>[" + this.realName + "]"
             ), requester);
@@ -65,7 +65,7 @@ public class Nickname {
      * Remove the nickname of a player.
      * This destroys the fake nameplate
      * */
-    public void unNick(){
+    public void unNick() {
         nametag.destroy();
     }
 
@@ -74,8 +74,8 @@ public class Nickname {
      * @param requester Player who wants to hide names
      * @param state To hide or show the name
      * */
-    public void hideName(Player requester, boolean state){
-        if(state){
+    public void hideName(Player requester, boolean state) {
+        if (state) {
             nametag.setLocalizedName(Component.text(""), requester);
         }else{
             nametag.setLocalizedName(MiniMessage.miniMessage().deserialize(this.nickname), requester);
@@ -86,8 +86,8 @@ public class Nickname {
      * Load the nickname for the player.
      * @param player Player who needs to load this nickname
      * */
-    public void loadNickname(Player player){
-        if(player.getUniqueId().toString().equals(this.uuid)) return; //The player doesn't need to see their own name
+    public void loadNickname(Player player) {
+        if (player.getUniqueId().toString().equals(this.uuid)) return; //The player doesn't need to see their own name
         nametag.spawn(player);
     }
 

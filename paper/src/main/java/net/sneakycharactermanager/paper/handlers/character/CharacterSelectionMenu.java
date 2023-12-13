@@ -51,10 +51,10 @@ public class CharacterSelectionMenu implements Listener {
 
         boolean updated = false;
 
-        public CharacterMenuHolder(String playerUUID){
+        public CharacterMenuHolder(String playerUUID) {
             this.playerUUID = playerUUID;
             Player player = Bukkit.getPlayer(UUID.fromString(playerUUID));
-            if(player == null) return;
+            if (player == null) return;
 
             int size = 9;
 
@@ -68,12 +68,12 @@ public class CharacterSelectionMenu implements Listener {
             requestCharacterList();
         }
 
-        private void requestCharacterList(){
+        private void requestCharacterList() {
             BungeeMessagingUtil.sendByteArray("characterSelectionGUI", playerUUID);
         }
 
-        public void receivedCharacterList(List<BungeeMessageListener.CharacterSnapshot> characterSnapshotList){
-            if(updated) return;
+        public void receivedCharacterList(List<BungeeMessageListener.CharacterSnapshot> characterSnapshotList) {
+            if (updated) return;
 
             for (int i = 0; i < characterSnapshotList.size(); i++) {
                 addItem(this.getInventory(), characterSnapshotList.get(i), i);
@@ -114,11 +114,11 @@ public class CharacterSelectionMenu implements Listener {
             }
         }
 
-        private void clickedItem(ItemStack clickedItem){
-            if(!clickedItem.getType().equals(Material.PLAYER_HEAD)) return;
+        private void clickedItem(ItemStack clickedItem) {
+            if (!clickedItem.getType().equals(Material.PLAYER_HEAD)) return;
 
             Player player = Bukkit.getPlayer(UUID.fromString(playerUUID));
-            if(player == null) return;
+            if (player == null) return;
 
             SkullMeta meta = (SkullMeta) clickedItem.getItemMeta();
 
@@ -150,10 +150,10 @@ public class CharacterSelectionMenu implements Listener {
 
         
         private void middleClickedItem(ItemStack clickedItem) {
-            if(!clickedItem.getType().equals(Material.PLAYER_HEAD)) return;
+            if (!clickedItem.getType().equals(Material.PLAYER_HEAD)) return;
 
             Player player = Bukkit.getPlayer(UUID.fromString(playerUUID));
-            if(player == null) return;
+            if (player == null) return;
 
             SkullMeta meta = (SkullMeta) clickedItem.getItemMeta();
 
@@ -188,17 +188,17 @@ public class CharacterSelectionMenu implements Listener {
         }
     }
 
-    public CharacterSelectionMenu(){
+    public CharacterSelectionMenu() {
         activeMenus = new HashMap<>();
         characterKey = NamespacedKey.fromString("character", SneakyCharacterManager.getInstance());
     }
 
-    private boolean menuExists(String uuid){
+    private boolean menuExists(String uuid) {
         return activeMenus.containsKey(uuid);
     }
 
-    public void openMenu(Player player){
-        if(!menuExists(player.getUniqueId().toString())){
+    public void openMenu(Player player) {
+        if (!menuExists(player.getUniqueId().toString())) {
             CharacterMenuHolder holder = new CharacterMenuHolder(player.getUniqueId().toString());
             player.openInventory(holder.getInventory());
             activeMenus.put(player.getUniqueId().toString(), holder);
@@ -208,13 +208,13 @@ public class CharacterSelectionMenu implements Listener {
         }
     }
 
-    public void updateInventory(String playerUUID, List<BungeeMessageListener.CharacterSnapshot> characterSnapshotList){
-        if(!menuExists(playerUUID)){
+    public void updateInventory(String playerUUID, List<BungeeMessageListener.CharacterSnapshot> characterSnapshotList) {
+        if (!menuExists(playerUUID)) {
             SneakyCharacterManager.getInstance().getLogger().warning("Attempted to update invalid inventory!");
             return;
         }
         CharacterMenuHolder holder = activeMenus.get(playerUUID);
-        if(holder == null) return; //Also should be possible
+        if (holder == null) return; //Also should be possible
         holder.receivedCharacterList(characterSnapshotList);
 
         int maxCharacterSlots = 0;
@@ -246,36 +246,36 @@ public class CharacterSelectionMenu implements Listener {
 
 
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event){
-        if(event.getClickedInventory() == null) return;
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (event.getClickedInventory() == null) return;
 
-        if(event.getView().getTopInventory().getHolder() instanceof CharacterMenuHolder){
+        if (event.getView().getTopInventory().getHolder() instanceof CharacterMenuHolder) {
             event.setCancelled(true);
         }
 
         Inventory inventory = event.getClickedInventory();
 
-        if(!(inventory.getHolder() instanceof CharacterMenuHolder characterMenuHolder)) return;
+        if (!(inventory.getHolder() instanceof CharacterMenuHolder characterMenuHolder)) return;
 
         ItemStack clickedItem = event.getCurrentItem();
-        if(clickedItem == null) return;
+        if (clickedItem == null) return;
 
         if (event.getClick().equals(ClickType.LEFT)) characterMenuHolder.clickedItem(clickedItem);
         else if (event.getClick().equals(ClickType.MIDDLE)) characterMenuHolder.middleClickedItem(clickedItem);
     }
 
     @EventHandler
-    public void onInventoryInteract(InventoryInteractEvent event){
+    public void onInventoryInteract(InventoryInteractEvent event) {
         Inventory inventory = event.getView().getTopInventory();
-        if(!(inventory.getHolder() instanceof CharacterMenuHolder characterMenuHolder)) return;
+        if (!(inventory.getHolder() instanceof CharacterMenuHolder characterMenuHolder)) return;
         event.setCancelled(true); //Shouldnt be able to interact with anything if they are in Character Selection
     }
 
     @EventHandler
-    public void onClose(InventoryCloseEvent event){
+    public void onClose(InventoryCloseEvent event) {
         Inventory inventory = event.getInventory();
         Player player = (Player) event.getPlayer();
-        if(!(inventory.getHolder() instanceof CharacterMenuHolder)) return;
+        if (!(inventory.getHolder() instanceof CharacterMenuHolder)) return;
         activeMenus.get(player.getUniqueId().toString()).cleanup();
         activeMenus.remove(player.getUniqueId().toString()); //Remove holder to save memory
     }

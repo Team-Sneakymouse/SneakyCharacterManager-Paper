@@ -25,7 +25,7 @@ public class NicknameEntity {
     private Display.TextDisplay mounted;
     private final ServerPlayer nmsPlayer;
 
-    public NicknameEntity(Player player){
+    public NicknameEntity(Player player) {
         nmsPlayer = ((CraftPlayer)player).getHandle();
         mounted = new Display.TextDisplay(EntityType.TEXT_DISPLAY, nmsPlayer.level());
 
@@ -40,25 +40,25 @@ public class NicknameEntity {
                 new Quaternionf(), null, null));
 
         player.addPassenger(mounted.getBukkitEntity());
-        for(Player target : Bukkit.getOnlinePlayers()){
-            if(target.getUniqueId().toString().equals(player.getUniqueId().toString())) continue;
+        for(Player target : Bukkit.getOnlinePlayers()) {
+            if (target.getUniqueId().toString().equals(player.getUniqueId().toString())) continue;
             spawn(target);
         }
     }
 
-    public void setName(Component nickname){
+    public void setName(Component nickname) {
         mounted.setText(PaperAdventure.asVanilla(nickname));
         ClientboundSetEntityDataPacket dataPacket = new ClientboundSetEntityDataPacket(mounted.getId(),
                 Objects.requireNonNull(mounted.getEntityData().getNonDefaultValues()));
 
-        for(Player target : Bukkit.getOnlinePlayers()){
-            if(target.getUniqueId().toString().equals(nmsPlayer.getStringUUID())) continue;
+        for(Player target : Bukkit.getOnlinePlayers()) {
+            if (target.getUniqueId().toString().equals(nmsPlayer.getStringUUID())) continue;
             ((CraftPlayer)target).getHandle().connection.send(dataPacket);
         }
     }
 
 
-    public void setLocalizedName(Component name, Player requester){
+    public void setLocalizedName(Component name, Player requester) {
         net.minecraft.network.chat.Component ogComponent = mounted.getText();
         mounted.setText(PaperAdventure.asVanilla(name));
         ClientboundSetEntityDataPacket dataPacket = new ClientboundSetEntityDataPacket(mounted.getId(),
@@ -67,15 +67,15 @@ public class NicknameEntity {
         mounted.setText(ogComponent);
     }
 
-    public void destroy(){
+    public void destroy() {
         ClientboundRemoveEntitiesPacket removeEntitiesPacket = new ClientboundRemoveEntitiesPacket(mounted.getId());
-        for(Player target : Bukkit.getOnlinePlayers()){
-            if(target.getUniqueId().toString().equals(nmsPlayer.getStringUUID())) continue;
+        for(Player target : Bukkit.getOnlinePlayers()) {
+            if (target.getUniqueId().toString().equals(nmsPlayer.getStringUUID())) continue;
             ((CraftPlayer)target).getHandle().connection.send(removeEntitiesPacket);
         }
     }
 
-    public void spawn(Player player){
+    public void spawn(Player player) {
         ServerPlayer nmsTarget = ((CraftPlayer)player).getHandle();
         ClientboundAddEntityPacket addEntityPacket = new ClientboundAddEntityPacket(mounted);
         ClientboundSetEntityDataPacket entityDataPacket = new ClientboundSetEntityDataPacket(mounted.getId(), Objects.requireNonNull(mounted.getEntityData().getNonDefaultValues()));
