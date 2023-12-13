@@ -1,7 +1,5 @@
 package net.sneakycharactermanager.paper.util;
 
-import java.util.UUID;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -11,10 +9,10 @@ import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
-import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;
-import net.sneakycharactermanager.paper.handlers.character.Character;;
+import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;;
 
 public class SkinUtil {
 

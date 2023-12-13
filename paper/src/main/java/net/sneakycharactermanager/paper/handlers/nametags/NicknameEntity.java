@@ -1,7 +1,15 @@
 package net.sneakycharactermanager.paper.handlers.nametags;
 
+import java.util.Objects;
+
+import org.bukkit.Bukkit;
+import org.bukkit.craftbukkit.v1_20_R2.entity.CraftPlayer;
+import org.bukkit.entity.Player;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import com.mojang.math.Transformation;
+
 import io.papermc.paper.adventure.PaperAdventure;
 import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
@@ -11,13 +19,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Brightness;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.EntityType;
-import org.bukkit.Bukkit;
-import org.bukkit.craftbukkit.v1_20_R2.entity.CraftPlayer;
-import org.bukkit.entity.Player;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
-
-import java.util.Objects;
 
 public class NicknameEntity {
 

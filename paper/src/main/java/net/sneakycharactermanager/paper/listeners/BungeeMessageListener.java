@@ -1,12 +1,6 @@
 package net.sneakycharactermanager.paper.listeners;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
-import com.destroystokyo.paper.profile.PlayerProfile;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import java.util.*;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -16,13 +10,15 @@ import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.bukkit.profile.PlayerTextures;
 import org.jetbrains.annotations.NotNull;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
-import net.kyori.adventure.text.TextComponent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ChatUtility;
 
 public class BungeeMessageListener implements PluginMessageListener
 {

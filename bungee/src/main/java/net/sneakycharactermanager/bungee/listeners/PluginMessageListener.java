@@ -13,11 +13,10 @@ import net.md_5.bungee.api.connection.Server;
 import net.md_5.bungee.api.event.PluginMessageEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
-
+import net.sneakycharactermanager.bungee.Character;
 import net.sneakycharactermanager.bungee.PlayerData;
 import net.sneakycharactermanager.bungee.SneakyCharacterManager;
 import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
-import net.sneakycharactermanager.bungee.Character;
 
 public class PluginMessageListener implements Listener {
 

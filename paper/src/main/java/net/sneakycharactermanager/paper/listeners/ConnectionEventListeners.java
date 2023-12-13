@@ -1,14 +1,6 @@
 package net.sneakycharactermanager.paper.listeners;
 
-import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.commands.CommandChar;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
-import net.sneakycharactermanager.paper.handlers.character.Character;
-import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
-import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
-
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -16,6 +8,12 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.commands.CommandChar;
+import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
+import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 
 public class ConnectionEventListeners implements Listener {
 

@@ -6,9 +6,8 @@ import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 
 import net.md_5.bungee.api.config.ServerInfo;
-
-import net.sneakycharactermanager.bungee.SneakyCharacterManager;
 import net.sneakycharactermanager.bungee.Character;
+import net.sneakycharactermanager.bungee.SneakyCharacterManager;
 
 public class PaperMessagingUtil {
 

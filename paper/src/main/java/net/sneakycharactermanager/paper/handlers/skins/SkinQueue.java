@@ -3,7 +3,6 @@ package net.sneakycharactermanager.paper.handlers.skins;
 import java.util.*;
 import java.util.Map.Entry;
 
-import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 

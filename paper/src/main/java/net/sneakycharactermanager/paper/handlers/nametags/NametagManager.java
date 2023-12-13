@@ -1,9 +1,9 @@
 package net.sneakycharactermanager.paper.handlers.nametags;
 
+import java.util.*;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-
-import java.util.*;
 
 
 /**

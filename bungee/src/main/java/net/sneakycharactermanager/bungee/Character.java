@@ -1,6 +1,6 @@
 package net.sneakycharactermanager.bungee;
 
-import java.util.*;
+import java.util.UUID;
 
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.config.Configuration;

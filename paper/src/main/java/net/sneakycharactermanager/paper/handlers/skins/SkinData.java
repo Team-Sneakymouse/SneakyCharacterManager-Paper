@@ -1,35 +1,27 @@
 package net.sneakycharactermanager.paper.handlers.skins;
 
-import com.destroystokyo.paper.profile.ProfileProperty;
-
-import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.http.HttpResponse;
-import org.apache.http.StatusLine;
-import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.bukkit.Bukkit;
-import org.bukkit.craftbukkit.v1_20_R2.profile.CraftPlayerTextures;
-import org.bukkit.profile.PlayerTextures;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
+import com.destroystokyo.paper.profile.ProfileProperty;
+
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
 
 public class SkinData {
 

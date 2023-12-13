@@ -1,8 +1,5 @@
 package net.sneakycharactermanager.paper.commands;
 
-import net.sneakycharactermanager.paper.handlers.character.CharacterLoader;
-import net.sneakycharactermanager.paper.util.ChatUtility;
-
 import java.util.*;
 
 import org.bukkit.Location;
@@ -10,6 +7,9 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+
+import net.sneakycharactermanager.paper.handlers.character.CharacterLoader;
+import net.sneakycharactermanager.paper.util.ChatUtility;
 
 public class CommandSkin extends Command {
 

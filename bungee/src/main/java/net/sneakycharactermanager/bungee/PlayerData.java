@@ -4,11 +4,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
+import net.md_5.bungee.api.ProxyServer;
+import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.config.Configuration;
 import net.md_5.bungee.config.ConfigurationProvider;
 import net.md_5.bungee.config.YamlConfiguration;
-import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.config.ServerInfo;
 import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
 
 public class PlayerData {
