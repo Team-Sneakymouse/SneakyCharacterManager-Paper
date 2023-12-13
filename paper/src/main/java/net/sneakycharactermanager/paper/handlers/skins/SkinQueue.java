@@ -20,7 +20,7 @@ public class SkinQueue extends BukkitRunnable {
     }
 
     public synchronized void remove(SkinData skinData) {
-        this.queue.values().forEach(list -> list.removeif (s -> s.equals(skinData)));
+        this.queue.values().forEach(list -> list.removeIf(s -> s.equals(skinData)));
     }
 
     private synchronized SkinData getNext() {
