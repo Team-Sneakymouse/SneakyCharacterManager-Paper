@@ -6,16 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.bukkit.Bukkit;
-
 public class BungeeMessagingUtil {
-
-    //TODO: Currently unused. Consider deleting.
-    public static void sendByteArrayDelayed(int delayTicks, String subChannelName, Object... objects) {
-        Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
-            sendByteArray(subChannelName, objects);
-        }, delayTicks);
-    }
 
     public static void sendByteArray(String subChannelName, Object... objects) {
         try (ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
