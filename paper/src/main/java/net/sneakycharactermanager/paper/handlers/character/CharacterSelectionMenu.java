@@ -218,13 +218,22 @@ public class CharacterSelectionMenu implements Listener {
         holder.receivedCharacterList(characterSnapshotList);
 
         int maxCharacterSlots = 0;
-
         for (PermissionAttachmentInfo permission : Bukkit.getPlayer(UUID.fromString(playerUUID)).getEffectivePermissions()) {
             if (permission.getPermission().startsWith(CHARACTER_SLOTS_PERMISSION_NODE)) {
-                int value = Integer.valueOf(permission.getPermission().replace(CHARACTER_SLOTS_PERMISSION_NODE, ""));
+                String valueString = permission.getPermission().replace(CHARACTER_SLOTS_PERMISSION_NODE, "");
+
+                if (valueString.equals("*")) {
+                    maxCharacterSlots = 54;
+                    break;
+                }
+
+                try {
+                    int value = Integer.parseInt(valueString);
                 if (value > maxCharacterSlots) maxCharacterSlots = value;
+                } catch (NumberFormatException e) {}
             }
         }
+        maxCharacterSlots = Math.min(maxCharacterSlots, 54);
 
         if (characterSnapshotList.size() < holder.getInventory().getSize()) {
             ItemStack createCharacterButton = new ItemStack(Material.PLAYER_HEAD);

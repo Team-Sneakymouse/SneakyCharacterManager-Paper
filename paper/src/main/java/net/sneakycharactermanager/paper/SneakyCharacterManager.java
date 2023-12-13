@@ -6,18 +6,15 @@ import java.util.*;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
+import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import net.sneakycharactermanager.paper.commands.CommandChar;
-import net.sneakycharactermanager.paper.commands.CommandNames;
-import net.sneakycharactermanager.paper.commands.CommandNick;
-import net.sneakycharactermanager.paper.commands.CommandSkin;
+import net.sneakycharactermanager.paper.commands.*;
+import net.sneakycharactermanager.paper.listeners.*;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
-import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;
-import net.sneakycharactermanager.paper.listeners.ConnectionEventListeners;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 
 public class SneakyCharacterManager extends JavaPlugin implements Listener {
@@ -53,6 +50,8 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
         getServer().getPluginManager().registerEvents(new ConnectionEventListeners(), this);
         getServer().getPluginManager().registerEvents(selectionMenu, this);
+
+        getServer().getPluginManager().addPermission(new Permission("sneakycharacters.characterslots.*"));
 
         for (Player player : getServer().getOnlinePlayers()) {
             int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
