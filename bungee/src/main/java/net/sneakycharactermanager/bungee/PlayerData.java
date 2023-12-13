@@ -130,13 +130,6 @@ public class PlayerData {
 
         this.characterMap.put(character.getUUID(), character);
 
-        // TODO: What is this for?
-        Map<String, Object> characterData = new LinkedHashMap<>();
-        characterData.put("enabled", character.isEnabled());
-        characterData.put("name", character.getName());
-        characterData.put("skin", character.getSkin());
-        characterData.put("slim", character.isSlim());
-
         Configuration section = this.config.getSection(character.getUUID());
         section.set("enabled", character.isEnabled());
         section.set("name", character.getName());
