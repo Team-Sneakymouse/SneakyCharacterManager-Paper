@@ -87,6 +87,7 @@ public class SkinData {
      * */
     public void convertSkinURL() {
         this.attempts++;
+        SneakyCharacterManager.getInstance().skinPreloader.requestsThisMinute++;
         //Make a request to MineSkin to change skin data!
 
         try(CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
@@ -149,7 +150,7 @@ public class SkinData {
     }
 
     public boolean isProcessed() {
-        return (isValid() || this.attempts > 100);
+        return (isValid() || this.attempts > 5);
     }
 
     public void cancel() {

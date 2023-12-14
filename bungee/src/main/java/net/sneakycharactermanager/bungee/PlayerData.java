@@ -184,7 +184,7 @@ public class PlayerData {
         }
     }
 
-    public void sendCharacterSelectionGui(ServerInfo serverInfo) {
+    public void sendEnabledCharacters(ServerInfo serverInfo, String subChannel) {
         storeCharacters();
         List<Character> enabledCharacters = new ArrayList<>();
 
@@ -194,7 +194,7 @@ public class PlayerData {
             }
         }
 
-        PaperMessagingUtil.sendByteArray(serverInfo, "characterSelectionGUI", this.playerUUID, enabledCharacters);
+        PaperMessagingUtil.sendByteArray(serverInfo, subChannel, this.playerUUID, enabledCharacters);
     }
 
     public String getLastPlayedCharacter() {

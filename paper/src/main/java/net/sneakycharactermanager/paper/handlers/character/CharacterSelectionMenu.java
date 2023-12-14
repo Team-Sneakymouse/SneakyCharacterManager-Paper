@@ -103,6 +103,7 @@ public class CharacterSelectionMenu implements Listener {
                 inventory.setItem(index, characterHead);
 
                 SkinData data = SkinData.getOrCreate(character.getSkin(), character.isSlim(), 1);
+                this.queuedDatas.add(data);
 
                 Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
                     SkinUtil.waitForSkinProcessing(data, character);
@@ -110,6 +111,8 @@ public class CharacterSelectionMenu implements Listener {
                         ProfileProperty p = SkinCache.get(playerUUID, character.getSkin());
                         if (p != null) {
                             updateHead(skullMeta, this.player, p, characterHead, inventory, index);
+                            this.queuedDatas.remove(data);
+                            if (this.queuedDatas.isEmpty()) SneakyCharacterManager.getInstance().skinPreloader.preLoadedPlayers.add(this.player);
                         }
                     });
                 });

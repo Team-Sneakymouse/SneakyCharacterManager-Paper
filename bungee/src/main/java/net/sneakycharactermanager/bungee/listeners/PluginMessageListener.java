@@ -54,7 +54,12 @@ public class PluginMessageListener implements Listener {
             case "characterSelectionGUI" :
                 playerUUID = in.readUTF();
                 playerData = PlayerData.get(playerUUID);
-                playerData.sendCharacterSelectionGui(serverInfo);;
+                playerData.sendEnabledCharacters(serverInfo, subChannel);
+                break;
+            case "preloadSkins" :
+                playerUUID = in.readUTF();
+                playerData = PlayerData.get(playerUUID);
+                playerData.sendEnabledCharacters(serverInfo, subChannel);
                 break;
             case "selectCharacter" :
                 playerUUID = in.readUTF();

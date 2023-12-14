@@ -14,6 +14,7 @@ import net.sneakycharactermanager.paper.listeners.*;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
+import net.sneakycharactermanager.paper.handlers.skins.SkinPreloader;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 
@@ -25,6 +26,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
     public NametagManager nametagManager;
     public CharacterSelectionMenu selectionMenu;
     public SkinQueue skinQueue;
+    public SkinPreloader skinPreloader;
 
     @Override
     public void onEnable() {
@@ -32,6 +34,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         nametagManager = new NametagManager();
         selectionMenu = new CharacterSelectionMenu();
         skinQueue = new SkinQueue();
+        skinPreloader = new SkinPreloader();
 
         saveDefaultConfig();
 

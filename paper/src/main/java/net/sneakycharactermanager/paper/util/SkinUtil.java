@@ -25,6 +25,7 @@ public class SkinUtil {
                         SkinCache.put(character.getPlayer().getUniqueId().toString(), character.getSkin(), property);
                     });
                 }
+                break;
             }
             try {
                 Thread.sleep(100);

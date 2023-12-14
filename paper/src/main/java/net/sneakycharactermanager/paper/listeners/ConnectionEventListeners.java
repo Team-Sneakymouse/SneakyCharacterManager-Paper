@@ -37,6 +37,9 @@ public class ConnectionEventListeners implements Listener {
     
         taskIdMap.put(player, taskId);
 
+        Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
+            SneakyCharacterManager.getInstance().skinPreloader.preload(player);
+        }, 5);
     }
 
     @EventHandler
@@ -45,8 +48,10 @@ public class ConnectionEventListeners implements Listener {
 
         //Un-Nick player who is disconnecting from the server
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
+
         CommandChar.tabCompleteMap.remove(player);
         SkinCache.remove(player.getUniqueId().toString());
+        SneakyCharacterManager.getInstance().skinPreloader.preLoadedPlayers.remove(player);
 
         Character character = Character.get(player);
 

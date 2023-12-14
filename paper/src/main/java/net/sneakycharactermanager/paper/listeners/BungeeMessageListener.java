@@ -9,14 +9,18 @@ import org.bukkit.profile.PlayerTextures;
 import org.jetbrains.annotations.NotNull;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
+import com.destroystokyo.paper.profile.ProfileProperty;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
+import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
+import net.sneakycharactermanager.paper.util.SkinUtil;
 
 public class BungeeMessageListener implements PluginMessageListener
 {
@@ -66,6 +70,24 @@ public class BungeeMessageListener implements PluginMessageListener
                 if (pl == null) return;
                 List<Character> characters = readCharacterList(pl, in);
                 SneakyCharacterManager.getInstance().selectionMenu.updateInventory(pl.getUniqueId().toString(), characters);
+                break;
+            case "preloadSkins" :
+                playerUUID = in.readUTF();
+                pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+                if (pl == null) return;
+                characters = readCharacterList(pl, in);
+
+                for (Character c : characters) {
+                    ProfileProperty p = SkinCache.get(playerUUID, c.getSkin());
+
+                    if (p == null) {
+                        SkinData data = SkinData.getOrCreate(c.getSkin(), c.isSlim(), 0);
+
+                        Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
+                            SkinUtil.waitForSkinProcessing(data, c);
+                        });
+                    }
+                }
                 break;
             case "updateCharacterList" :
                 playerUUID = in.readUTF();
