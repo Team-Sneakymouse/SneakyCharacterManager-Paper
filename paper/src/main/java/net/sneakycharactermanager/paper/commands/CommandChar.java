@@ -21,7 +21,7 @@ public class CommandChar extends Command {
         super("char");
         this.description = "Switch between your different characters!";
         this.setUsage("/char (Character Name. The name is not case sensitive, and just the first characters is enough)");
-        this.setPermission("sneakycharacters.char");
+        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".command." + this.getName());
     }
 
     @Override

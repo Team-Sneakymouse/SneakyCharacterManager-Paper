@@ -37,7 +37,7 @@ public class CharacterSelectionMenu implements Listener {
 
     protected NamespacedKey characterKey;
 
-    private static final String CHARACTER_SLOTS_PERMISSION_NODE = "sneakycharacters.characterslots.";
+    private static final String CHARACTER_SLOTS_PERMISSION_NODE = SneakyCharacterManager.IDENTIFIER + ".characterslots.";
     private static final Component CREATE_CHARACTER = ChatUtility.convertToComponent("&2Create Character");
     private static final Component CHARACTER_SLOTS_FULL = ChatUtility.convertToComponent("&4No Character Slots Remaining");
 

@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
 
 public class Nickname {
 
@@ -37,7 +38,7 @@ public class Nickname {
     public void setNickname(String nickname) {
         Player player = Bukkit.getPlayer(UUID.fromString(this.uuid));
         if (player == null) return;
-        if (!player.hasPermission("sneakycharacters.colournames")) {
+        if (!player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".colournames")) {
             nickname = MiniMessage.miniMessage().escapeTags(nickname);
         }
         this.nickname = nickname;

@@ -8,6 +8,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.CharacterLoader;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
@@ -17,7 +18,7 @@ public class CommandSkin extends Command {
         super("skin");
         this.description = "Change your skin!";
         this.setUsage("/skin <URL (Must be direct image)>");
-        this.setPermission("sneakycharacters.skin");
+        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".command." + this.getName());
     }
 
     @Override

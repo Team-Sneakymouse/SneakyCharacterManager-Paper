@@ -7,13 +7,15 @@ import net.sneakycharactermanager.bungee.listeners.PluginMessageListener;
 
 public class SneakyCharacterManager extends Plugin {
 
+    public static final String IDENTIFIER = "sneakycharacters";
+
     private static SneakyCharacterManager instance;
 
     @Override
     public void onEnable() {
         instance = this;
 
-        getProxy().registerChannel("sneakymouse:sneakycharactermanager");
+        getProxy().registerChannel("sneakymouse:" + IDENTIFIER);
         getProxy().getPluginManager().registerListener(this, new PluginMessageListener());
     }
 

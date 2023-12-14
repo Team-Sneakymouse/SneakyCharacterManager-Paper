@@ -42,7 +42,7 @@ public class PaperMessagingUtil {
             else SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager attempted to write an unidentified object to a ByteArray!");
         }
 
-        server.sendData("sneakymouse:sneakycharactermanager", out.toByteArray());
+        server.sendData("sneakymouse:" + SneakyCharacterManager.IDENTIFIER, out.toByteArray());
     }
 
     // This function is used to serialize a List<Character>, in order to send over all the data required to build the character selection GUI

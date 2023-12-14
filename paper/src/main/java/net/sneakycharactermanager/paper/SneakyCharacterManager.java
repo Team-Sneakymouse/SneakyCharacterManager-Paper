@@ -47,19 +47,19 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
             deleteFolderContents(getCharacterDataFolder());
         }
 
-        getServer().getCommandMap().register("sneakycharactermanager", new CommandChar());
-        getServer().getCommandMap().register("sneakycharactermanager", new CommandSkin());
-        getServer().getCommandMap().register("sneakycharactermanager", new CommandNames());
-        getServer().getCommandMap().register("sneakycharactermanager", new CommandNick());
+        getServer().getCommandMap().register(IDENTIFIER, new CommandChar());
+        getServer().getCommandMap().register(IDENTIFIER, new CommandSkin());
+        getServer().getCommandMap().register(IDENTIFIER, new CommandNames());
+        getServer().getCommandMap().register(IDENTIFIER, new CommandNick());
 
-        getServer().getMessenger().registerIncomingPluginChannel(this, "sneakymouse:sneakycharactermanager", new BungeeMessageListener());
-        getServer().getMessenger().registerOutgoingPluginChannel(this, "sneakymouse:sneakycharactermanager");
+        getServer().getMessenger().registerIncomingPluginChannel(this, "sneakymouse:" + IDENTIFIER, new BungeeMessageListener());
+        getServer().getMessenger().registerOutgoingPluginChannel(this, "sneakymouse:" + IDENTIFIER);
 
         getServer().getPluginManager().registerEvents(this, this);
         getServer().getPluginManager().registerEvents(new ConnectionEventListeners(), this);
         getServer().getPluginManager().registerEvents(selectionMenu, this);
 
-        getServer().getPluginManager().addPermission(new Permission("sneakycharacters.characterslots.*"));
+        getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".characterslots.*"));
 
         if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new Placeholders().register();
