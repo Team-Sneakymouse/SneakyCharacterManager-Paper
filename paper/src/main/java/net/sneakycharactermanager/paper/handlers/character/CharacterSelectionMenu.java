@@ -19,13 +19,16 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.commands.CommandChar;
+import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.listeners.BungeeMessageListener;
@@ -46,6 +49,7 @@ public class CharacterSelectionMenu implements Listener {
     public class CharacterMenuHolder implements InventoryHolder {
 
         private final String playerUUID;
+        private final Player player;
         private Inventory inventory;
         private List<SkinData> queuedDatas = new ArrayList<>();
 
@@ -53,17 +57,17 @@ public class CharacterSelectionMenu implements Listener {
 
         public CharacterMenuHolder(String playerUUID) {
             this.playerUUID = playerUUID;
-            Player player = Bukkit.getPlayer(UUID.fromString(playerUUID));
-            if (player == null) return;
+            this.player = Bukkit.getPlayer(UUID.fromString(playerUUID));
+            if (this.player == null) return;
 
             int size = 9;
 
-            if (CommandChar.tabCompleteMap.containsKey(player)) {
-                size = Math.min((int) Math.floor((CommandChar.tabCompleteMap.get(player).size() + 1) / 9) * 9 + 9, 54);
+            if (CommandChar.tabCompleteMap.containsKey(this.player)) {
+                size = Math.min((int) Math.floor((CommandChar.tabCompleteMap.get(this.player).size() + 1) / 9) * 9 + 9, 54);
             }
 
             inventory = Bukkit.createInventory(this, size,
-                    ChatUtility.convertToComponent("&e" + player.getName() + "'s Characters")
+                    ChatUtility.convertToComponent("&e" + this.player.getName() + "'s Characters")
             );
             requestCharacterList();
         }
@@ -72,46 +76,58 @@ public class CharacterSelectionMenu implements Listener {
             BungeeMessagingUtil.sendByteArray("characterSelectionGUI", playerUUID);
         }
 
-        public void receivedCharacterList(List<BungeeMessageListener.CharacterSnapshot> characterSnapshotList) {
+        public void receivedCharacterList(List<Character> characters) {
             if (updated) return;
 
-            for (int i = 0; i < characterSnapshotList.size(); i++) {
-                addItem(this.getInventory(), characterSnapshotList.get(i), i);
+            for (int i = 0; i < characters.size(); i++) {
+                addItem(this.getInventory(), characters.get(i), i);
             }
 
             updated = true;
         }
 
-        private void addItem(Inventory inventory, BungeeMessageListener.CharacterSnapshot snapshot, int index) {
+        private void addItem(Inventory inventory, Character character, int index) {
             if (index > inventory.getSize()) return;
 
-            ItemStack characterHead = snapshot.getHeadItem();
+            ItemStack characterHead = new ItemStack(Material.PLAYER_HEAD);
             SkullMeta skullMeta = (SkullMeta) characterHead.getItemMeta();
 
-            skullMeta.displayName(ChatUtility.convertToComponent("&e" + snapshot.getName()));
+            skullMeta.displayName(ChatUtility.convertToComponent("&e" + character.getName()));
             List<Component> lore = new ArrayList<>();
             lore.add(ChatUtility.convertToComponent("&eL-Click: &bSelect character."));
             lore.add(ChatUtility.convertToComponent("&eMiddle-Click: &bBegin character deletion. You will be asked to confirm."));
             skullMeta.lore(lore);
 
-            skullMeta.getPersistentDataContainer().set(characterKey, PersistentDataType.STRING, snapshot.getUUID());
+            skullMeta.getPersistentDataContainer().set(characterKey, PersistentDataType.STRING, character.getCharacterUUID());
             skullMeta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Alex")));
             characterHead.setItemMeta(skullMeta);
 
-            ProfileProperty profileProperty = SkinCache.get(playerUUID, snapshot.getSkin());
+            ProfileProperty profileProperty = SkinCache.get(playerUUID, character.getSkin());
 
             if (profileProperty == null) {
                 inventory.setItem(index, characterHead);
 
-                SkinData data = new SkinData(snapshot.getSkin(), snapshot.isSlim());
+                SkinData data = new SkinData(character.getSkin(), character.isSlim());
                 SneakyCharacterManager.getInstance().skinQueue.add(data, 0);
 
                 Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
-                    SkinUtil.waitForSkinProcessing(data, snapshot, inventory, index);
+                    SkinUtil.waitForSkinProcessing(data, character);
+                    Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+                        ProfileProperty p = SkinCache.get(playerUUID, character.getSkin());
+                        if (p != null) {
+                            updateHead(skullMeta, this.player, p, characterHead, inventory, index);
+                        }
+                    });
                 });
             } else {
-                SkinUtil.handleCachedSkin(snapshot, profileProperty, inventory, index);
+                updateHead(skullMeta, this.player, profileProperty, characterHead, inventory, index);
             }
+        }
+
+        private static void updateHead(SkullMeta skullMeta, Player player, ProfileProperty profileProperty, ItemStack characterHead, Inventory inventory, int index) {
+            skullMeta.setPlayerProfile(SkinUtil.handleCachedSkin(player, profileProperty));
+            characterHead.setItemMeta(skullMeta);
+            inventory.setItem(index, characterHead);
         }
 
         private void clickedItem(ItemStack clickedItem) {
@@ -208,14 +224,14 @@ public class CharacterSelectionMenu implements Listener {
         }
     }
 
-    public void updateInventory(String playerUUID, List<BungeeMessageListener.CharacterSnapshot> characterSnapshotList) {
+    public void updateInventory(String playerUUID, List<Character> characters) {
         if (!menuExists(playerUUID)) {
             SneakyCharacterManager.getInstance().getLogger().warning("Attempted to update invalid inventory!");
             return;
         }
         CharacterMenuHolder holder = activeMenus.get(playerUUID);
         if (holder == null) return; //Also should be possible
-        holder.receivedCharacterList(characterSnapshotList);
+        holder.receivedCharacterList(characters);
 
         int maxCharacterSlots = 0;
         for (PermissionAttachmentInfo permission : Bukkit.getPlayer(UUID.fromString(playerUUID)).getEffectivePermissions()) {
@@ -235,12 +251,12 @@ public class CharacterSelectionMenu implements Listener {
         }
         maxCharacterSlots = Math.min(maxCharacterSlots, 54);
 
-        if (characterSnapshotList.size() < holder.getInventory().getSize()) {
+        if (characters.size() < holder.getInventory().getSize()) {
             ItemStack createCharacterButton = new ItemStack(Material.PLAYER_HEAD);
             SkullMeta meta = (SkullMeta) createCharacterButton.getItemMeta();
             meta.setPlayerProfile(Bukkit.getPlayer(UUID.fromString(playerUUID)).getPlayerProfile());
 
-            if (maxCharacterSlots > characterSnapshotList.size()) {
+            if (maxCharacterSlots > characters.size()) {
                 meta.displayName(CREATE_CHARACTER);
                 meta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Steve")));
             } else {
@@ -249,7 +265,7 @@ public class CharacterSelectionMenu implements Listener {
             }
 
             createCharacterButton.setItemMeta(meta);
-            holder.getInventory().setItem((int) Math.floor(characterSnapshotList.size() / 9) * 9 + 8, createCharacterButton);
+            holder.getInventory().setItem((int) Math.floor(characters.size() / 9) * 9 + 8, createCharacterButton);
         }
     }
 

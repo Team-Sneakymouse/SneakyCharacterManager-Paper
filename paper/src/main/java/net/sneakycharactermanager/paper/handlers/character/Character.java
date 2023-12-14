@@ -143,12 +143,16 @@ public class Character {
         characterMap.put(this.player, this);
     }
 
+    public String getName() {
+        return this.name;
+    }
+
     public Player getPlayer() {
         return this.player;
     }
 
     public String getCharacterUUID() {
-        return characterUUID;
+        return this.characterUUID;
     }
 
     public String getCharacterName() {
@@ -168,7 +172,7 @@ public class Character {
     }
     
     public boolean isFirstLoad() {
-        return firstLoad;
+        return this.firstLoad;
     }
 
     public void save() {

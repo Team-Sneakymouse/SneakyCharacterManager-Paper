@@ -66,8 +66,8 @@ public class BungeeMessageListener implements PluginMessageListener
                 playerUUID = in.readUTF();
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
                 if (pl == null) return;
-                List<CharacterSnapshot> characterSnapshots = readCharacterList(pl, in);
-                SneakyCharacterManager.getInstance().selectionMenu.updateInventory(pl.getUniqueId().toString(), characterSnapshots);
+                List<Character> characters = readCharacterList(pl, in);
+                SneakyCharacterManager.getInstance().selectionMenu.updateInventory(pl.getUniqueId().toString(), characters);
                 break;
             case "updateCharacterList" :
                 playerUUID = in.readUTF();
@@ -109,11 +109,10 @@ public class BungeeMessageListener implements PluginMessageListener
         return strings;
     }
 
-    // This function is used to deserialize a character list from a ByteArrayDataInput, in order to build the character selection GUI
-    public static List<CharacterSnapshot> readCharacterList(Player player, ByteArrayDataInput in) {
+    public static List<Character> readCharacterList(Player player, ByteArrayDataInput in) {
         int size = in.readInt();
 
-        List<CharacterSnapshot> characters = new ArrayList<>();
+        List<Character> characters = new ArrayList<>();
         while (characters.size() < size) {
             characters.add(readCharacter(player, in));
         }
@@ -121,56 +120,13 @@ public class BungeeMessageListener implements PluginMessageListener
         return characters;
     }
 
-    private static CharacterSnapshot readCharacter(Player player, ByteArrayDataInput in) {
+    private static Character readCharacter(Player player, ByteArrayDataInput in) {
         String uuid = in.readUTF();
         String name = in.readUTF();
         String skin = in.readUTF();
         boolean slim = in.readBoolean();
 
-        return new CharacterSnapshot(player, uuid, name, skin, slim);
-    }
-
-    // This subclass is a heavily simplified version of the bungee side Character class. This allows us to deserialize a ByteArrayDataInput into the List<Character> that we need to build the GUI, without actually accessing the bungee-side Character class.
-    public static class CharacterSnapshot {
-        private Player player;
-        private String uuid;
-        private String name;
-        private String skin;
-        private boolean slim;
-        private ItemStack headItem;
-
-        public CharacterSnapshot(Player player, String uuid, String name, String skin, boolean slim) {
-            this.player = player;
-            this.uuid = uuid;
-            this.name = name;
-            this.skin = skin;
-            this.slim = slim;
-            this.headItem = new ItemStack(Material.PLAYER_HEAD);
-        }
-
-        public Player getPlayer() {
-            return player;
-        }
-    
-        public String getUUID() {
-            return uuid;
-        }
-    
-        public String getName() {
-            return name;
-        }
-    
-        public String getSkin() {
-            return skin;
-        }
-
-        public boolean isSlim() {
-            return slim;
-        }
-
-        public ItemStack getHeadItem() {
-            return headItem;
-        }
+        return new Character(player.getUniqueId().toString(), uuid, name, skin, slim);
     }
 
 }
