@@ -22,7 +22,10 @@ public class ConnectionEventListeners implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        
+
+        //We need to load other players names when a person joins
+        SneakyCharacterManager.getInstance().nametagManager.loadNames(player);
+
         int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(SneakyCharacterManager.getInstance(), () -> {
             if (!player.isOnline() || Character.isPlayedMapped(player)) {
                 Bukkit.getScheduler().cancelTask(taskIdMap.get(player));
@@ -33,6 +36,7 @@ public class ConnectionEventListeners implements Listener {
         }, 5, 20);
     
         taskIdMap.put(player, taskId);
+
     }
 
     @EventHandler
