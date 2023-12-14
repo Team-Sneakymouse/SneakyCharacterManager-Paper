@@ -22,7 +22,7 @@ public class PlayerData {
     private String lastPlayedCharacter;
     private final Map<String, Character> characterMap = new LinkedHashMap<>();
 
-    public PlayerData(String playerUUID) {
+    private PlayerData(String playerUUID) {
         this.playerUUID = playerUUID;
         playerFile = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID + ".yml");
 
