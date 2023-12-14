@@ -10,7 +10,6 @@ import javax.imageio.ImageIO;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
