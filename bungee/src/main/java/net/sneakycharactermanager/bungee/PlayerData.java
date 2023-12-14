@@ -111,13 +111,7 @@ public class PlayerData {
     }
 
     public static PlayerData get(String playerUUID) {
-        if (playerDataMap.containsKey(playerUUID)) {
-            return playerDataMap.get(playerUUID);
-        } else {
-            PlayerData playerData = new PlayerData(playerUUID);
-            playerDataMap.put(playerUUID, playerData);
-            return playerData;
-        }
+        return playerDataMap.computeIfAbsent(playerUUID, key -> new PlayerData(playerUUID));
     }
 
     public Character getCharacter(String characterUUID) {
