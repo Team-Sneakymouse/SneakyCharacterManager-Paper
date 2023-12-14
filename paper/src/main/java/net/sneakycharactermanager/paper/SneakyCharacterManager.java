@@ -11,6 +11,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import net.sneakycharactermanager.paper.commands.*;
 import net.sneakycharactermanager.paper.listeners.*;
+import net.sneakycharactermanager.paper.handlers.Placeholders;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
@@ -19,6 +20,10 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 
 public class SneakyCharacterManager extends JavaPlugin implements Listener {
+
+    public static final String IDENTIFIER = "sneakycharacters";
+    public static final String AUTHORS = "Team Sneakymouse";
+    public static final String VERSION = "1.0.0";
 
     private static SneakyCharacterManager instance = null;
     private static Map<Player, Integer> taskIdMap = new HashMap<>();
@@ -55,6 +60,10 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(selectionMenu, this);
 
         getServer().getPluginManager().addPermission(new Permission("sneakycharacters.characterslots.*"));
+
+        if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new Placeholders().register();
+        }
 
         for (Player player : getServer().getOnlinePlayers()) {
             int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
