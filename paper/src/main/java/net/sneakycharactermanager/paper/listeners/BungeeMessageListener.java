@@ -3,9 +3,7 @@ package net.sneakycharactermanager.paper.listeners;
 import java.util.*;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.bukkit.profile.PlayerTextures;
 import org.jetbrains.annotations.NotNull;
