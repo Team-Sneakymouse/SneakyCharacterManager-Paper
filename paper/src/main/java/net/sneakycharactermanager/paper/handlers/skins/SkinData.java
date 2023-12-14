@@ -160,7 +160,15 @@ public class SkinData {
 
     public void remove() {
         SneakyCharacterManager.getInstance().skinQueue.remove(this);
-        skinDataMap.remove(this.url);
+
+        Iterator<Map.Entry<String, SkinData>> iterator = skinDataMap.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, SkinData> entry = iterator.next();
+            if (entry.getValue() == this) {
+                iterator.remove();
+                break;
+            }
+        }
     }
 
     public static SkinData getOrCreate(@NotNull String url, boolean isSlim, int priority) {
