@@ -110,25 +110,16 @@ public class Character {
         }
 
         List<Entity> passengers = this.player.getPassengers();
-        List<Entity> textDisplays = new ArrayList<>();
 
         if (passengers.size() > 0) {
             for (Entity passenger : passengers) {
                 if (passenger.getType() != EntityType.TEXT_DISPLAY) {
-                    this.player.removePassenger(passenger);
-                } else {
-                    textDisplays.add(passenger);
                     this.player.removePassenger(passenger);
                 }
             }
         }
 
         this.player.teleport(playerLocation);
-
-        for (Entity entity : textDisplays) {
-            entity.teleport(playerLocation);
-            this.player.addPassenger(entity);
-        }
 
         ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
         this.player.getInventory().setContents(inventoryContents);
