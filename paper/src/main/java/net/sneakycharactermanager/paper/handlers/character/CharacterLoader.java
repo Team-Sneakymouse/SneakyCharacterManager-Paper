@@ -40,8 +40,7 @@ public class CharacterLoader {
         if (profileProperty == null) {
             if (shouldSkipLoading(character)) return;
             
-            SkinData data = new SkinData(character.getSkin(), character.isSlim());
-            SneakyCharacterManager.getInstance().skinQueue.add(data, 1);
+            SkinData data = SkinData.getOrCreate(url, character.isSlim(), 2);
 
             Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
                 SkinUtil.waitForSkinProcessing(data, character);
@@ -81,8 +80,7 @@ public class CharacterLoader {
     public static void updateSkin(Player player, String url) {
         boolean isSlimSkin = checkIsSlimSkin(url);
     
-        SkinData data = new SkinData(url, isSlimSkin);
-        SneakyCharacterManager.getInstance().skinQueue.add(data, 1);
+        SkinData data = SkinData.getOrCreate(url, isSlimSkin, 2);
 
         Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
             SkinUtil.waitForSkinProcessing(data, Character.get(player));

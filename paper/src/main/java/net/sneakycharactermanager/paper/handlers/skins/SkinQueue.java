@@ -55,7 +55,7 @@ public class SkinQueue extends BukkitRunnable {
             this.busy = true;
             next.convertSkinURL();
             if (next.isProcessed()) {
-                this.remove(next);
+                next.remove();
             }
             this.busy = false;
         }

@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -59,6 +60,8 @@ public class SkinData {
     private boolean cancelled = false;
     private int attempts = 0;
 
+    private static Map<String, SkinData> skinDataMap = new HashMap<>();
+
     private static final String MINESKIN_API_URL = "https://api.mineskin.org/generate/url";
 
     /**
@@ -71,9 +74,10 @@ public class SkinData {
      * @param url URL to download the skin from
      * @param isSlim True if it is a slim skin, false if it is a classic skin
      * */
-    public SkinData(@NotNull String url, boolean isSlim) {
+    private SkinData(@NotNull String url, boolean isSlim, int priority) {
         this.url = url;
         this.isSlim = isSlim;
+        SneakyCharacterManager.getInstance().skinQueue.add(this, priority);
     }
 
     /**
@@ -150,7 +154,16 @@ public class SkinData {
 
     public void cancel() {
         this.cancelled = true;
+        this.remove();
+    }
+
+    public void remove() {
         SneakyCharacterManager.getInstance().skinQueue.remove(this);
+        skinDataMap.remove(this.url);
+    }
+
+    public static SkinData getOrCreate(@NotNull String url, boolean isSlim, int priority) {
+        return skinDataMap.computeIfAbsent(url, key -> new SkinData(key, isSlim, priority));
     }
 
 }
