@@ -13,6 +13,7 @@ public class SkinQueue extends BukkitRunnable {
     private Map<Integer, List<SkinData>> queue = new LinkedHashMap<>();
     private BukkitTask task = null;
     private boolean busy = false;
+    public int pauseTicks = 0;
 
     public synchronized void add(SkinData skinData, int priority) {
         this.queue.computeIfAbsent(priority, k -> new ArrayList<>()).add(skinData);
@@ -44,6 +45,11 @@ public class SkinQueue extends BukkitRunnable {
     @Override
     public synchronized void run() {
         if (this.busy) {
+            return;
+        }
+
+        if (this.pauseTicks > 0) {
+            this.pauseTicks--;
             return;
         }
 

@@ -115,8 +115,7 @@ public class SkinData {
                 }
                 JSONObject dataObject = (JSONObject) result.get("data");
                 if (dataObject == null) {
-                    Bukkit.getLogger().severe("Failed to request skin:");
-                    Bukkit.getLogger().info(result.toString());
+                    if (result.toString().contains("Too many requests")) SneakyCharacterManager.getInstance().skinQueue.pauseTicks = 40;
                     return;
                 }
                 JSONObject textureObject = (JSONObject) dataObject.get("texture");
