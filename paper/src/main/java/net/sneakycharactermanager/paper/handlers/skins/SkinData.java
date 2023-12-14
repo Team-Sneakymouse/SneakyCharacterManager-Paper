@@ -170,7 +170,7 @@ public class SkinData {
         }
     }
 
-    public static SkinData getOrCreate(@NotNull String url, boolean isSlim, int priority) {
+    public static synchronized SkinData getOrCreate(@NotNull String url, boolean isSlim, int priority) {
         return skinDataMap.computeIfAbsent(url, key -> new SkinData(key, isSlim, priority));
     }
 

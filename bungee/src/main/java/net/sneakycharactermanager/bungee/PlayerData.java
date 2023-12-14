@@ -110,7 +110,7 @@ public class PlayerData {
         this.loadCharacter(serverInfo, this.lastPlayedCharacter);
     }
 
-    public static PlayerData get(String playerUUID) {
+    public static synchronized PlayerData get(String playerUUID) {
         return playerDataMap.computeIfAbsent(playerUUID, key -> new PlayerData(playerUUID));
     }
 
