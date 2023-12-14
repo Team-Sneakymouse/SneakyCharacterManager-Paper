@@ -10,15 +10,17 @@ public class SkinCache {
     private static Map<String, Map<String, ProfileProperty>> skinCache = new ConcurrentHashMap<>();
 
     public static ProfileProperty get(String playerUUID, String url) {
-        if (skinCache.containsKey(playerUUID)) {
-            ProfileProperty p = skinCache.get(playerUUID).get(url);
-            if (p != null && p.isSigned()) {
-                return p;
-            } else {
-                skinCache.get(playerUUID).remove(url);
+        return skinCache.compute(playerUUID, (key, value) -> {
+            if (value != null) {
+                ProfileProperty p = value.get(url);
+                if (p != null && p.isSigned()) {
+                    return value;
+                } else {
+                    value.remove(url);
+                }
             }
-        }
-        return null;
+            return null;
+        }).get(url);
     }
 
     public static void put(String playerUUID, String url, ProfileProperty profileProperty) {
