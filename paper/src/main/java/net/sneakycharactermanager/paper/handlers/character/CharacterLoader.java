@@ -30,7 +30,7 @@ public class CharacterLoader {
                 character.getPlayer(),
                 character.isFirstLoad(),
                 character.getCharacterUUID(),
-                character.getCharacterName(),
+                character.getName(),
                 url,
                 character.isSlim()
         ));
@@ -55,7 +55,7 @@ public class CharacterLoader {
             player.setPlayerProfile(SkinUtil.handleCachedSkin(player, profileProperty));
         }
 
-        SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getCharacterName());
+        SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getName());
     }
 
     
@@ -67,11 +67,11 @@ public class CharacterLoader {
                 SneakyCharacterManager.getInstance().getLogger().warning("Invalid Skin URL Received? Was this our fault?");
             }
     
-            if (character.getCharacterName() == null || character.getCharacterName().isEmpty()) {
+            if (character.getName() == null || character.getName().isEmpty()) {
                 return true;
             }
     
-            SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(character.getPlayer(), character.getCharacterName());
+            SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(character.getPlayer(), character.getName());
             return true;
         }
         return false;

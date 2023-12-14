@@ -134,10 +134,6 @@ public class Character {
         characterMap.put(this.player, this);
     }
 
-    public String getName() {
-        return this.name;
-    }
-
     public Player getPlayer() {
         return this.player;
     }
@@ -146,7 +142,7 @@ public class Character {
         return this.characterUUID;
     }
 
-    public String getCharacterName() {
+    public String getName() {
         return this.name;
     }
 
