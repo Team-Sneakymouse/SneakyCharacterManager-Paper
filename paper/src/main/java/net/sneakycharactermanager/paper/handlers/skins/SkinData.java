@@ -6,7 +6,8 @@ import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -60,7 +61,7 @@ public class SkinData {
     private boolean cancelled = false;
     private int attempts = 0;
 
-    private static Map<String, SkinData> skinDataMap = new HashMap<>();
+    private static ConcurrentMap<String, SkinData> skinDataMap = new ConcurrentHashMap<>();
 
     private static final String MINESKIN_API_URL = "https://api.mineskin.org/generate/url";
 
@@ -159,18 +160,10 @@ public class SkinData {
 
     public void remove() {
         SneakyCharacterManager.getInstance().skinQueue.remove(this);
-
-        Iterator<Map.Entry<String, SkinData>> iterator = skinDataMap.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<String, SkinData> entry = iterator.next();
-            if (entry.getValue() == this) {
-                iterator.remove();
-                break;
-            }
-        }
+        skinDataMap.values().removeIf(value -> value == this);
     }
 
-    public static synchronized SkinData getOrCreate(@NotNull String url, boolean isSlim, int priority) {
+    public static SkinData getOrCreate(@NotNull String url, boolean isSlim, int priority) {
         return skinDataMap.computeIfAbsent(url, key -> new SkinData(key, isSlim, priority));
     }
 
