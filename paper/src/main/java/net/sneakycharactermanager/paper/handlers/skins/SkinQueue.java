@@ -64,6 +64,7 @@ public class SkinQueue extends BukkitRunnable {
                 next.remove();
             }
             this.busy = false;
+            this.pauseTicks += 5;
         }
     }
 }
