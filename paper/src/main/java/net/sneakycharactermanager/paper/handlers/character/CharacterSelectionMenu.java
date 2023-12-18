@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
@@ -90,7 +91,7 @@ public class CharacterSelectionMenu implements Listener {
             skullMeta.displayName(ChatUtility.convertToComponent("&e" + character.getName()));
             List<Component> lore = new ArrayList<>();
             lore.add(ChatUtility.convertToComponent("&eL-Click: &bSelect character."));
-            lore.add(ChatUtility.convertToComponent("&eQ: &bBegin character deletion. You will be asked to confirm."));
+            lore.add(ChatUtility.convertToComponent("&eF: &bBegin character deletion. You will be asked to confirm."));
             skullMeta.lore(lore);
 
             skullMeta.getPersistentDataContainer().set(characterKey, PersistentDataType.STRING, character.getCharacterUUID());
@@ -162,7 +163,7 @@ public class CharacterSelectionMenu implements Listener {
         }
 
         
-        private void middleClickedItem(ItemStack clickedItem) {
+        private void swapItem(ItemStack clickedItem) {
             if (!clickedItem.getType().equals(Material.PLAYER_HEAD)) return;
 
             Player player = Bukkit.getPlayer(UUID.fromString(playerUUID));
@@ -185,7 +186,9 @@ public class CharacterSelectionMenu implements Listener {
             }
 
             player.sendMessage(ChatUtility.convertToComponent("&aDeleting character '" + ((TextComponent) meta.displayName()).content() + "'. Type '/char confirm' within 10 seconds to confirm deletion."));
-            player.closeInventory();
+            Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
+                player.closeInventory();
+            }, 1);
             CommandChar.deleteConfirmationMap.put(player, System.currentTimeMillis() + ";" +characterUUID);
         }
 
@@ -283,7 +286,7 @@ public class CharacterSelectionMenu implements Listener {
         if (clickedItem == null) return;
 
         if (event.getClick().equals(ClickType.LEFT)) characterMenuHolder.clickedItem(clickedItem);
-        else if (event.getClick().equals(ClickType.DROP)) characterMenuHolder.middleClickedItem(clickedItem);
+        else if (event.getClick().equals(ClickType.SWAP_OFFHAND)) characterMenuHolder.swapItem(clickedItem);
     }
 
     @EventHandler
