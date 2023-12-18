@@ -106,7 +106,7 @@ public class CharacterSelectionMenu implements Listener {
                 this.queuedDatas.add(data);
 
                 Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
-                    SkinUtil.waitForSkinProcessing(data, character);
+                    SkinUtil.waitForSkinProcessing(this.player, data);
                     Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
                         ProfileProperty p = SkinCache.get(playerUUID, character.getSkin());
                         if (p != null) {

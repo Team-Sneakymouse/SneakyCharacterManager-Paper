@@ -7,13 +7,12 @@ import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 
 public class SkinUtil {
     
-    public static void waitForSkinProcessing(SkinData data, Character character) {
+    public static void waitForSkinProcessing(Player player, SkinData data) {
         while (true) {
             if (data.isProcessed()) {
                 if (data.isValid()) {
@@ -22,7 +21,7 @@ public class SkinUtil {
 
                         if (property == null) return;
 
-                        SkinCache.put(character.getPlayer().getUniqueId().toString(), character.getSkin(), property);
+                        SkinCache.put(player.getUniqueId().toString(), data.getUrl(), property);
                     });
                 }
                 break;

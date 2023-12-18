@@ -150,8 +150,16 @@ public class Character {
         return this.skin;
     }
 
+    public void setSkin(String skin) {
+        this.skin = skin;
+    }
+    
     public boolean isSlim() {
         return this.slim;
+    }
+
+    public void setSlim(boolean slim) {
+        this.slim = slim;
     }
 
     public void setFirstLoad(boolean firstLoad) {

@@ -140,9 +140,9 @@ public class SkinData {
         if (!isValid) return null;
         return new ProfileProperty("textures", texture, signature);
     }
-
-    public boolean isSlim() {
-        return isSlim;
+    
+    public String getUrl() {
+        return url;
     }
 
     public boolean isValid() {

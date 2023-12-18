@@ -43,7 +43,7 @@ public class CharacterLoader {
             SkinData data = SkinData.getOrCreate(url, character.isSlim(), 2);
 
             Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
-                SkinUtil.waitForSkinProcessing(data, character);
+                SkinUtil.waitForSkinProcessing(player, data);
                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
                     ProfileProperty p = SkinCache.get(player.getUniqueId().toString(), character.getSkin());
                     if (p != null) {
@@ -83,12 +83,15 @@ public class CharacterLoader {
         SkinData data = SkinData.getOrCreate(url, isSlimSkin, 2);
 
         Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
-            SkinUtil.waitForSkinProcessing(data, Character.get(player));
+            SkinUtil.waitForSkinProcessing(player, data);
             Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
                 ProfileProperty p = SkinCache.get(player.getUniqueId().toString(), url);
-                if (p != null) {
+                Character character = Character.get(player);
+                if (p != null && character != null) {
                     player.setPlayerProfile(SkinUtil.handleCachedSkin(player, p));
-                    BungeeMessagingUtil.sendByteArray("updateCharacter", player.getUniqueId().toString(), 1, url, data.isSlim());
+                    character.setSkin(url);
+                    character.setSlim(isSlimSkin);
+                    BungeeMessagingUtil.sendByteArray("updateCharacter", player.getUniqueId().toString(), 1, url, isSlimSkin);
                 }
             });
         });
