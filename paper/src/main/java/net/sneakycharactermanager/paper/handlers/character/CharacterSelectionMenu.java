@@ -90,7 +90,7 @@ public class CharacterSelectionMenu implements Listener {
             skullMeta.displayName(ChatUtility.convertToComponent("&e" + character.getName()));
             List<Component> lore = new ArrayList<>();
             lore.add(ChatUtility.convertToComponent("&eL-Click: &bSelect character."));
-            lore.add(ChatUtility.convertToComponent("&eMiddle-Click: &bBegin character deletion. You will be asked to confirm."));
+            lore.add(ChatUtility.convertToComponent("&eQ: &bBegin character deletion. You will be asked to confirm."));
             skullMeta.lore(lore);
 
             skullMeta.getPersistentDataContainer().set(characterKey, PersistentDataType.STRING, character.getCharacterUUID());
@@ -283,7 +283,7 @@ public class CharacterSelectionMenu implements Listener {
         if (clickedItem == null) return;
 
         if (event.getClick().equals(ClickType.LEFT)) characterMenuHolder.clickedItem(clickedItem);
-        else if (event.getClick().equals(ClickType.MIDDLE)) characterMenuHolder.middleClickedItem(clickedItem);
+        else if (event.getClick().equals(ClickType.DROP)) characterMenuHolder.middleClickedItem(clickedItem);
     }
 
     @EventHandler
