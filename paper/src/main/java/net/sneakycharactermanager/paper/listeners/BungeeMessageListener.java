@@ -65,16 +65,22 @@ public class BungeeMessageListener implements PluginMessageListener
                 SneakyCharacterManager.getInstance().selectionMenu.openMenu(pl);
                 break;
             case "characterSelectionGUI" :
-                playerUUID = in.readUTF();
-                pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+                pl = Bukkit.getPlayer(UUID.fromString(in.readUTF()));
                 if (pl == null) return;
+
+                String requesterUUID = in.readUTF();
+                Player requester = Bukkit.getPlayer(UUID.fromString(requesterUUID));
+                if (requester == null) return;
+
                 List<Character> characters = readCharacterList(pl, in);
-                SneakyCharacterManager.getInstance().selectionMenu.updateInventory(pl.getUniqueId().toString(), characters);
+
+                SneakyCharacterManager.getInstance().selectionMenu.updateInventory(requesterUUID, characters);
                 break;
             case "preloadSkins" :
                 playerUUID = in.readUTF();
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
                 if (pl == null) return;
+                requesterUUID = in.readUTF(); // This is only read to clear it from the Input.
                 characters = readCharacterList(pl, in);
 
                 for (Character c : characters) {

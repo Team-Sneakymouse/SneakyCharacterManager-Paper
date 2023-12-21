@@ -43,16 +43,21 @@ public class CharacterSelectionMenu implements Listener {
 
     public class CharacterMenuHolder implements InventoryHolder {
 
-        private final String playerUUID;
-        private final Player player;
-        private Inventory inventory;
-        private List<SkinData> queuedDatas = new ArrayList<>();
+        protected static String LEFT = "&eL-Click: &bSelect character.";
+        protected static String SWAP_OFFHAND = "&eL-Click: &bSelect character.";
+
+        protected final String playerUUID;
+        protected final Player player;
+        protected final Player opener;
+        protected Inventory inventory;
+        protected List<SkinData> queuedDatas = new ArrayList<>();
 
         boolean updated = false;
 
-        public CharacterMenuHolder(String playerUUID) {
-            this.playerUUID = playerUUID;
-            this.player = Bukkit.getPlayer(UUID.fromString(playerUUID));
+        public CharacterMenuHolder(Player player, Player opener) {
+            this.player = player;
+            this.opener = opener;
+            this.playerUUID = player.getUniqueId().toString();
             if (this.player == null) return;
 
             int size = 9;
@@ -67,8 +72,8 @@ public class CharacterSelectionMenu implements Listener {
             requestCharacterList();
         }
 
-        private void requestCharacterList() {
-            BungeeMessagingUtil.sendByteArray("characterSelectionGUI", playerUUID);
+        protected void requestCharacterList() {
+            BungeeMessagingUtil.sendByteArray("characterSelectionGUI", playerUUID, opener.getUniqueId().toString());
         }
 
         public void receivedCharacterList(List<Character> characters) {
@@ -89,8 +94,8 @@ public class CharacterSelectionMenu implements Listener {
 
             skullMeta.displayName(ChatUtility.convertToComponent("&e" + character.getName()));
             List<Component> lore = new ArrayList<>();
-            lore.add(ChatUtility.convertToComponent("&eL-Click: &bSelect character."));
-            lore.add(ChatUtility.convertToComponent("&eF: &bBegin character deletion. You will be asked to confirm."));
+            lore.add(ChatUtility.convertToComponent(LEFT));
+            lore.add(ChatUtility.convertToComponent(SWAP_OFFHAND));
             skullMeta.lore(lore);
 
             skullMeta.getPersistentDataContainer().set(characterKey, PersistentDataType.STRING, character.getCharacterUUID());
@@ -127,18 +132,15 @@ public class CharacterSelectionMenu implements Listener {
             inventory.setItem(index, characterHead);
         }
 
-        private void clickedItem(ItemStack clickedItem) {
+        protected void clickedItem(ItemStack clickedItem) {
             if (!clickedItem.getType().equals(Material.PLAYER_HEAD)) return;
-
-            Player player = Bukkit.getPlayer(UUID.fromString(playerUUID));
-            if (player == null) return;
 
             SkullMeta meta = (SkullMeta) clickedItem.getItemMeta();
 
             if (meta.displayName().equals(CREATE_CHARACTER)) {
                 BungeeMessagingUtil.sendByteArray("createNewCharacter", playerUUID);
-                player.sendMessage(ChatUtility.convertToComponent("&aCreating a new character... Please Wait..."));
-                player.sendMessage(ChatUtility.convertToComponent("&aOnce the character is created, use the /nick and /skin command to customize it!"));
+                this.player.sendMessage(ChatUtility.convertToComponent("&aCreating a new character... Please Wait..."));
+                this.player.sendMessage(ChatUtility.convertToComponent("&aOnce the character is created, use the /nick and /skin command to customize it!"));
                 return;
             } else if (meta.displayName().equals(CHARACTER_SLOTS_FULL)) {
                 return;
@@ -146,27 +148,24 @@ public class CharacterSelectionMenu implements Listener {
 
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
 
-            Character currentChar = Character.get(player);
+            Character currentChar = Character.get(this.player);
 
             if (currentChar == null) return;
 
             if (characterUUID == null) return;
             if (characterUUID.equals(currentChar.getCharacterUUID())) {
-                player.sendMessage(ChatUtility.convertToComponent("&aYou are already playing that character."));
+                this.player.sendMessage(ChatUtility.convertToComponent("&aYou are already playing that character."));
                 return;
             }
 
-            player.sendMessage(ChatUtility.convertToComponent("&aLoading your character... Please Wait..."));
-            player.closeInventory();
+            this.player.sendMessage(ChatUtility.convertToComponent("&aLoading your character... Please Wait..."));
+            this.player.closeInventory();
             BungeeMessagingUtil.sendByteArray("selectCharacter", playerUUID, characterUUID);
         }
 
         
-        private void swapItem(ItemStack clickedItem) {
+        protected void swapItem(ItemStack clickedItem) {
             if (!clickedItem.getType().equals(Material.PLAYER_HEAD)) return;
-
-            Player player = Bukkit.getPlayer(UUID.fromString(playerUUID));
-            if (player == null) return;
 
             SkullMeta meta = (SkullMeta) clickedItem.getItemMeta();
 
@@ -174,21 +173,21 @@ public class CharacterSelectionMenu implements Listener {
 
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
 
-            Character currentChar = Character.get(player);
+            Character currentChar = Character.get(this.player);
 
             if (currentChar == null) return;
 
             if (characterUUID == null) return;
             if (characterUUID.equals(currentChar.getCharacterUUID())) {
-                player.sendMessage(ChatUtility.convertToComponent("&aYou cannot delete the character that you are currently playing."));
+                this.player.sendMessage(ChatUtility.convertToComponent("&aYou cannot delete the character that you are currently playing."));
                 return;
             }
 
-            player.sendMessage(ChatUtility.convertToComponent("&aDeleting character '" + ((TextComponent) meta.displayName()).content() + "'. Type '/char confirm' within 10 seconds to confirm deletion."));
+            this.player.sendMessage(ChatUtility.convertToComponent("&aDeleting character '" + ((TextComponent) meta.displayName()).content() + "'. Type '/char confirm' within 10 seconds to confirm deletion."));
             Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
-                player.closeInventory();
+                this.player.closeInventory();
             }, 1);
-            CommandChar.deleteConfirmationMap.put(player, System.currentTimeMillis() + ";" +characterUUID);
+            CommandChar.deleteConfirmationMap.put(this.player, System.currentTimeMillis() + ";" + characterUUID);
         }
 
         @Override
@@ -202,6 +201,51 @@ public class CharacterSelectionMenu implements Listener {
             }
         }
     }
+    
+    public class CharadminMenuHolder extends CharacterMenuHolder {
+
+        static {
+            LEFT = "&eL-Click: &bNothing yet.";
+            SWAP_OFFHAND = "&eF: &bOpen inventory.";
+        }
+
+        public CharadminMenuHolder(Player player, Player opener) {
+            super(player, opener);
+        }
+
+        @Override
+        protected void clickedItem(ItemStack clickedItem) {
+            return;
+        }
+
+        @Override
+        protected void swapItem(ItemStack clickedItem) {
+            if (!clickedItem.getType().equals(Material.PLAYER_HEAD)) return;
+
+            SkullMeta meta = (SkullMeta) clickedItem.getItemMeta();
+
+            String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
+
+            Character currentChar = Character.get(player);
+
+            if (currentChar == null) return;
+
+            if (characterUUID == null) return;
+            if (characterUUID.equals(currentChar.getCharacterUUID())) {
+                this.opener.sendMessage(ChatUtility.convertToComponent("&aThe player is currently on this character. Use direct inventory editing instead."));
+                return;
+            }
+
+            this.opener.sendMessage(ChatUtility.convertToComponent("&aEditing inventory for character '" + ((TextComponent) meta.displayName()).content() + "'."));
+
+            // TODO: Open character inventory GUI
+
+            Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
+                player.closeInventory();
+            }, 1);
+        }
+    
+    }
 
     public CharacterSelectionMenu() {
         activeMenus = new HashMap<>();
@@ -214,12 +258,23 @@ public class CharacterSelectionMenu implements Listener {
 
     public void openMenu(Player player) {
         if (!menuExists(player.getUniqueId().toString())) {
-            CharacterMenuHolder holder = new CharacterMenuHolder(player.getUniqueId().toString());
+            CharacterMenuHolder holder = new CharacterMenuHolder(player, player);
             player.openInventory(holder.getInventory());
             activeMenus.put(player.getUniqueId().toString(), holder);
         }else{ //This should ever happen but just incase!
             CharacterMenuHolder holder = activeMenus.get(player.getUniqueId().toString());
             player.openInventory(holder.getInventory());
+        }
+    }
+
+    public void openAdminMenu(Player player, Player opener) {
+        if (!menuExists(opener.getUniqueId().toString())) {
+            CharadminMenuHolder holder = new CharadminMenuHolder(player, opener);
+            opener.openInventory(holder.getInventory());
+            activeMenus.put(opener.getUniqueId().toString(), holder);
+        }else{ //This should ever happen but just incase!
+            CharadminMenuHolder holder = (CharadminMenuHolder) activeMenus.get(opener.getUniqueId().toString());
+            opener.openInventory(holder.getInventory());
         }
     }
 
@@ -232,39 +287,42 @@ public class CharacterSelectionMenu implements Listener {
         if (holder == null) return; //Also should be possible
         holder.receivedCharacterList(characters);
 
-        int maxCharacterSlots = 0;
-        for (PermissionAttachmentInfo permission : Bukkit.getPlayer(UUID.fromString(playerUUID)).getEffectivePermissions()) {
-            if (permission.getPermission().startsWith(CHARACTER_SLOTS_PERMISSION_NODE)) {
-                String valueString = permission.getPermission().replace(CHARACTER_SLOTS_PERMISSION_NODE, "");
+        if (holder.getClass().equals(CharacterMenuHolder.class)) {
+            int maxCharacterSlots = 0;
 
-                if (valueString.equals("*")) {
-                    maxCharacterSlots = 54;
-                    break;
+            Player player = Bukkit.getPlayer(UUID.fromString(playerUUID));
+
+            if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".*") || player.hasPermission(CHARACTER_SLOTS_PERMISSION_NODE + ".*")) maxCharacterSlots = 54;
+            else {
+                for (PermissionAttachmentInfo permission : player.getEffectivePermissions()) {
+                    if (permission.getPermission().startsWith(CHARACTER_SLOTS_PERMISSION_NODE)) {
+                        String valueString = permission.getPermission().replace(CHARACTER_SLOTS_PERMISSION_NODE, "");
+
+                        try {
+                            int value = Integer.parseInt(valueString);
+                        if (value > maxCharacterSlots) maxCharacterSlots = value;
+                        } catch (NumberFormatException e) {}
+                    }
+                }
+                maxCharacterSlots = Math.min(maxCharacterSlots, 54);
+            }
+
+            if (characters.size() < holder.getInventory().getSize()) {
+                ItemStack createCharacterButton = new ItemStack(Material.PLAYER_HEAD);
+                SkullMeta meta = (SkullMeta) createCharacterButton.getItemMeta();
+                meta.setPlayerProfile(player.getPlayerProfile());
+
+                if (maxCharacterSlots > characters.size()) {
+                    meta.displayName(CREATE_CHARACTER);
+                    meta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Steve")));
+                } else {
+                    meta.displayName(CHARACTER_SLOTS_FULL);
+                    meta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Zombie")));
                 }
 
-                try {
-                    int value = Integer.parseInt(valueString);
-                if (value > maxCharacterSlots) maxCharacterSlots = value;
-                } catch (NumberFormatException e) {}
+                createCharacterButton.setItemMeta(meta);
+                holder.getInventory().setItem((int) Math.floor(characters.size() / 9) * 9 + 8, createCharacterButton);
             }
-        }
-        maxCharacterSlots = Math.min(maxCharacterSlots, 54);
-
-        if (characters.size() < holder.getInventory().getSize()) {
-            ItemStack createCharacterButton = new ItemStack(Material.PLAYER_HEAD);
-            SkullMeta meta = (SkullMeta) createCharacterButton.getItemMeta();
-            meta.setPlayerProfile(Bukkit.getPlayer(UUID.fromString(playerUUID)).getPlayerProfile());
-
-            if (maxCharacterSlots > characters.size()) {
-                meta.displayName(CREATE_CHARACTER);
-                meta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Steve")));
-            } else {
-                meta.displayName(CHARACTER_SLOTS_FULL);
-                meta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Zombie")));
-            }
-
-            createCharacterButton.setItemMeta(meta);
-            holder.getInventory().setItem((int) Math.floor(characters.size() / 9) * 9 + 8, createCharacterButton);
         }
     }
 

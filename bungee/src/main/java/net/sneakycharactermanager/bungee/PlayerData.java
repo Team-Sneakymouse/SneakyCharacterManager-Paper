@@ -184,7 +184,7 @@ public class PlayerData {
         }
     }
 
-    public void sendEnabledCharacters(ServerInfo serverInfo, String subChannel) {
+    public void sendEnabledCharacters(ServerInfo serverInfo, String subChannel, String requesterUUID) {
         storeCharacters();
         List<Character> enabledCharacters = new ArrayList<>();
 
@@ -194,7 +194,7 @@ public class PlayerData {
             }
         }
 
-        PaperMessagingUtil.sendByteArray(serverInfo, subChannel, this.playerUUID, enabledCharacters);
+        PaperMessagingUtil.sendByteArray(serverInfo, subChannel, this.playerUUID, requesterUUID, enabledCharacters);
     }
 
     public String getLastPlayedCharacter() {

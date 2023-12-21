@@ -51,6 +51,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getCommandMap().register(IDENTIFIER, new CommandSkin());
         getServer().getCommandMap().register(IDENTIFIER, new CommandNames());
         getServer().getCommandMap().register(IDENTIFIER, new CommandNick());
+        getServer().getCommandMap().register(IDENTIFIER, new CommandCharadmin());
 
         getServer().getMessenger().registerIncomingPluginChannel(this, "sneakymouse:" + IDENTIFIER, new BungeeMessageListener());
         getServer().getMessenger().registerOutgoingPluginChannel(this, "sneakymouse:" + IDENTIFIER);
@@ -59,6 +60,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(new ConnectionEventListeners(), this);
         getServer().getPluginManager().registerEvents(selectionMenu, this);
 
+        getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".*"));
         getServer().getPluginManager().addPermission(new Permission(CharacterSelectionMenu.CHARACTER_SLOTS_PERMISSION_NODE + "*"));
 
         if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
