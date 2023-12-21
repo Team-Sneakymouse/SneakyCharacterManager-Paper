@@ -43,18 +43,20 @@ public class CharacterSelectionMenu implements Listener {
 
     public class CharacterMenuHolder implements InventoryHolder {
 
-        protected static String LEFT = "&eL-Click: &bSelect character.";
-        protected static String SWAP_OFFHAND = "&eF: &bBegin character deletion. You will be asked to confirm.";
+        protected static String LEFT;
+        protected static String SWAP_OFFHAND;
 
-        protected final String playerUUID;
+        private final String playerUUID;
         protected final Player player;
         protected final Player opener;
-        protected Inventory inventory;
-        protected List<SkinData> queuedDatas = new ArrayList<>();
+        private Inventory inventory;
+        private List<SkinData> queuedDatas = new ArrayList<>();
 
         boolean updated = false;
 
         public CharacterMenuHolder(Player player, Player opener) {
+            setTooltipStrings();
+
             this.player = player;
             this.opener = opener;
             this.playerUUID = player.getUniqueId().toString();
@@ -72,11 +74,16 @@ public class CharacterSelectionMenu implements Listener {
             requestCharacterList();
         }
 
-        protected void requestCharacterList() {
+        protected void setTooltipStrings() {
+            LEFT = "&eL-Click: &bSelect character.";
+            SWAP_OFFHAND = "&eF: &bBegin character deletion. You will be asked to confirm.";
+        }
+
+        private void requestCharacterList() {
             BungeeMessagingUtil.sendByteArray("characterSelectionGUI", playerUUID, opener.getUniqueId().toString());
         }
 
-        public void receivedCharacterList(List<Character> characters) {
+        private void receivedCharacterList(List<Character> characters) {
             if (updated) return;
 
             for (int i = 0; i < characters.size(); i++) {
@@ -204,13 +211,14 @@ public class CharacterSelectionMenu implements Listener {
     
     public class CharadminMenuHolder extends CharacterMenuHolder {
 
-        static {
-            LEFT = "&eL-Click: &bNothing yet.";
-            SWAP_OFFHAND = "&eF: &bOpen inventory.";
-        }
-
         public CharadminMenuHolder(Player player, Player opener) {
             super(player, opener);
+        }
+        
+        @Override
+        protected void setTooltipStrings() {
+            LEFT = "&eL-Click: &bNothing yet.";
+            SWAP_OFFHAND = "&eF: &bOpen inventory.";
         }
 
         @Override
