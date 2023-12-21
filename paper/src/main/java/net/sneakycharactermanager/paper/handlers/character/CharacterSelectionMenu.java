@@ -245,11 +245,13 @@ public class CharacterSelectionMenu implements Listener {
 
             this.opener.sendMessage(ChatUtility.convertToComponent("&aEditing inventory for character '" + ((TextComponent) meta.displayName()).content() + "'."));
 
-            // TODO: Open character inventory GUI
-
             Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
                 player.closeInventory();
             }, 1);
+            
+            Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
+                // TODO: Open character inventory GUI
+            }, 2);
         }
     
     }
