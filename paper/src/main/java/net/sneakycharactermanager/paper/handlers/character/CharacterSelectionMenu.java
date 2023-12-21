@@ -226,12 +226,11 @@ public class CharacterSelectionMenu implements Listener {
 
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
 
+            if (characterUUID == null) return;
+
             Character currentChar = Character.get(player);
 
-            if (currentChar == null) return;
-
-            if (characterUUID == null) return;
-            if (characterUUID.equals(currentChar.getCharacterUUID())) {
+            if (currentChar != null && characterUUID.equals(currentChar.getCharacterUUID())) {
                 this.opener.sendMessage(ChatUtility.convertToComponent("&aThe player is currently on this character. Use direct inventory editing instead."));
                 return;
             }
