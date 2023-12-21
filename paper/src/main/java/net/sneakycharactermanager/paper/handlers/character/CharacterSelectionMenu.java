@@ -44,7 +44,7 @@ public class CharacterSelectionMenu implements Listener {
     public class CharacterMenuHolder implements InventoryHolder {
 
         protected static String LEFT = "&eL-Click: &bSelect character.";
-        protected static String SWAP_OFFHAND = "&eL-Click: &bSelect character.";
+        protected static String SWAP_OFFHAND = "&eF: &bBegin character deletion. You will be asked to confirm.";
 
         protected final String playerUUID;
         protected final Player player;

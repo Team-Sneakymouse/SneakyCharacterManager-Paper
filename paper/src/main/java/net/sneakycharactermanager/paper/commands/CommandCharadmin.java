@@ -1,10 +1,8 @@
 package net.sneakycharactermanager.paper.commands;
 
 import java.io.File;
-import java.util.*;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
