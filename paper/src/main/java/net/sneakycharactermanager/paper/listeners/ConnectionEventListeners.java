@@ -49,7 +49,7 @@ public class ConnectionEventListeners implements Listener {
         //Un-Nick player who is disconnecting from the server
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
 
-        CommandChar.tabCompleteMap.remove(player);
+        CommandChar.tabCompleteMap.remove(player.getUniqueId().toString());
         SkinCache.remove(player.getUniqueId().toString());
         SneakyCharacterManager.getInstance().skinPreloader.preLoadedPlayers.remove(player);
 

@@ -1,5 +1,6 @@
 package net.sneakycharactermanager.paper.listeners;
 
+import java.io.EOFException;
 import java.util.*;
 
 import org.bukkit.Bukkit;
@@ -65,14 +66,10 @@ public class BungeeMessageListener implements PluginMessageListener
                 SneakyCharacterManager.getInstance().selectionMenu.openMenu(pl);
                 break;
             case "characterSelectionGUI" :
-                pl = Bukkit.getPlayer(UUID.fromString(in.readUTF()));
-                if (pl == null) return;
-
+                playerUUID = in.readUTF();
                 String requesterUUID = in.readUTF();
-                Player requester = Bukkit.getPlayer(UUID.fromString(requesterUUID));
-                if (requester == null) return;
+                List<Character> characters = readCharacterList(playerUUID, in);
 
-                List<Character> characters = readCharacterList(pl, in);
 
                 SneakyCharacterManager.getInstance().selectionMenu.updateInventory(requesterUUID, characters);
                 break;
@@ -81,7 +78,7 @@ public class BungeeMessageListener implements PluginMessageListener
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
                 if (pl == null) return;
                 requesterUUID = in.readUTF(); // This is only read to clear it from the Input.
-                characters = readCharacterList(pl, in);
+                characters = readCharacterList(requesterUUID, in);
 
                 for (Character c : characters) {
                     ProfileProperty p = SkinCache.get(playerUUID, c.getSkin());
@@ -98,7 +95,8 @@ public class BungeeMessageListener implements PluginMessageListener
             case "updateCharacterList" :
                 playerUUID = in.readUTF();
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-                CommandChar.tabCompleteMap.put(pl, readStringList(in));
+                assert pl != null;
+                CommandChar.tabCompleteMap.put(pl.getUniqueId().toString(), readStringList(in));
                 break;
             case "defaultSkin" :
                 playerUUID = in.readUTF();
@@ -135,24 +133,24 @@ public class BungeeMessageListener implements PluginMessageListener
         return strings;
     }
 
-    public static List<Character> readCharacterList(Player player, ByteArrayDataInput in) {
+    public static List<Character> readCharacterList(String uuid, ByteArrayDataInput in) {
         int size = in.readInt();
 
         List<Character> characters = new ArrayList<>();
         while (characters.size() < size) {
-            characters.add(readCharacter(player, in));
+            Character character = readCharacter(uuid, in);
+            characters.add(character);
         }
 
         return characters;
     }
 
-    private static Character readCharacter(Player player, ByteArrayDataInput in) {
+    private static Character readCharacter(String playerUUID, ByteArrayDataInput in) {
         String uuid = in.readUTF();
         String name = in.readUTF();
         String skin = in.readUTF();
         boolean slim = in.readBoolean();
-
-        return new Character(player.getUniqueId().toString(), uuid, name, skin, slim);
+        return new Character(playerUUID, uuid, name, skin, slim);
     }
 
 }

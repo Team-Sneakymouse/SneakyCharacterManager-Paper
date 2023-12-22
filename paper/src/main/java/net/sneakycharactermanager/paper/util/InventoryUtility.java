@@ -73,6 +73,33 @@ public class InventoryUtility {
     }
 
     /**
+     * Convert an inventory into a B64 String.
+     * (Note: This will only convert the inventory contents, not types or names)
+     * @param size Size of the inventory
+     * @param items Item Contents
+     * @return B64 Encoded inventory string
+     * */
+    public static String inventoryToBase64(int size, ItemStack[] items) {
+        try {
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream);
+
+            dataOutput.writeInt(size);
+
+            for (int i = 0; i < size; i++) {
+                dataOutput.writeObject(items[i]);
+            }
+
+            dataOutput.close();
+            return Base64Coder.encodeLines(outputStream.toByteArray());
+
+            //Converts the inventory and its contents to base64, This also saves item meta-data and inventory type
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not convert inventory to base64.", e);
+        }
+    }
+
+    /**
      * Get the Inventory from the B64 String (Will have a generic name)
      * @param data B64 string to decode into an ItemStack[]
      * @return Inventory created from the encoded data

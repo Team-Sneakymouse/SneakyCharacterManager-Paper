@@ -1,10 +1,16 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
+import net.sneakycharactermanager.paper.util.InventoryUtility;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -47,30 +53,50 @@ public class CharacterSelectionMenu implements Listener {
         protected static String SWAP_OFFHAND;
 
         private final String playerUUID;
-        protected final Player player;
+
+        protected OfflinePlayer offlinePlayer = null;
+        protected Player player = null;
         protected final Player opener;
         private Inventory inventory;
         private List<SkinData> queuedDatas = new ArrayList<>();
 
         boolean updated = false;
 
-        public CharacterMenuHolder(Player player, Player opener) {
+        public CharacterMenuHolder(OfflinePlayer player, Player opener) {
             setTooltipStrings();
 
-            this.player = player;
-            this.opener = opener;
-            this.playerUUID = player.getUniqueId().toString();
-            if (this.player == null) return;
-
-            int size = 9;
-
-            if (CommandChar.tabCompleteMap.containsKey(this.player)) {
-                size = Math.min((int) Math.floor((CommandChar.tabCompleteMap.get(this.player).size() + 1) / 9) * 9 + 9, 54);
+            if(player.isOnline()){
+                this.player = (Player) player;
+            }else{
+                this.offlinePlayer = player;
             }
 
-            inventory = Bukkit.createInventory(this, size,
-                    ChatUtility.convertToComponent("&e" + this.player.getName() + "'s Characters")
-            );
+            int size = 9;
+            if(this.player != null){
+                if (CommandChar.tabCompleteMap.containsKey(this.player.getUniqueId().toString())) {
+                    size = Math.min((int) Math.floor((CommandChar.tabCompleteMap.get(this.player.getUniqueId().toString()).size() + 1) / 9) * 9 + 9, 54);
+                }
+            }else {
+                if (CommandChar.tabCompleteMap.containsKey(this.offlinePlayer.getUniqueId().toString())) {
+                    size = Math.min((int) Math.floor((CommandChar.tabCompleteMap.get(this.offlinePlayer.getUniqueId().toString()).size() + 1) / 9) * 9 + 9, 54);
+                }
+            }
+
+            this.opener = opener;
+            if (this.player == null){
+                this.playerUUID = this.offlinePlayer.getUniqueId().toString();
+                inventory = Bukkit.createInventory(this, size,
+                        ChatUtility.convertToComponent("&e" + this.offlinePlayer.getName() + "'s Characters")
+                );
+            }else{
+                this.playerUUID = this.player.getUniqueId().toString();
+                inventory = Bukkit.createInventory(this, size,
+                        ChatUtility.convertToComponent("&e" + this.player.getName() + "'s Characters")
+                );
+            }
+
+
+
             requestCharacterList();
         }
 
@@ -118,22 +144,38 @@ public class CharacterSelectionMenu implements Listener {
                 this.queuedDatas.add(data);
 
                 Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
-                    SkinUtil.waitForSkinProcessing(this.player, data);
-                    Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                        ProfileProperty p = SkinCache.get(playerUUID, character.getSkin());
-                        if (p != null) {
-                            updateHead(skullMeta, this.player, p, characterHead, inventory, index);
-                            this.queuedDatas.remove(data);
-                            if (this.queuedDatas.isEmpty()) SneakyCharacterManager.getInstance().skinPreloader.preLoadedPlayers.add(this.player);
-                        }
-                    });
+                    if(player == null){
+                        SkinUtil.waitForSkinProcessing(this.offlinePlayer, data);
+                        Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+                            ProfileProperty p = SkinCache.get(playerUUID, character.getSkin());
+                            if (p != null) {
+                                updateHead(skullMeta, this.offlinePlayer, p, characterHead, inventory, index);
+                                this.queuedDatas.remove(data);
+                                //if (this.queuedDatas.isEmpty()) SneakyCharacterManager.getInstance().skinPreloader.preLoadedPlayers.add(this.offlinePlayer);
+                            }
+                        });
+                    }else{
+                        SkinUtil.waitForSkinProcessing(this.player, data);
+                        Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+                            ProfileProperty p = SkinCache.get(playerUUID, character.getSkin());
+                            if (p != null) {
+                                updateHead(skullMeta, this.player, p, characterHead, inventory, index);
+                                this.queuedDatas.remove(data);
+                                if (this.queuedDatas.isEmpty()) SneakyCharacterManager.getInstance().skinPreloader.preLoadedPlayers.add(this.player);
+                            }
+                        });
+                    }
                 });
             } else {
-                updateHead(skullMeta, this.player, profileProperty, characterHead, inventory, index);
+                if(this.player == null){
+                    updateHead(skullMeta, this.offlinePlayer, profileProperty, characterHead, inventory, index);
+                }else{
+                    updateHead(skullMeta, this.player, profileProperty, characterHead, inventory, index);
+                }
             }
         }
 
-        private static void updateHead(SkullMeta skullMeta, Player player, ProfileProperty profileProperty, ItemStack characterHead, Inventory inventory, int index) {
+        private static void updateHead(SkullMeta skullMeta, OfflinePlayer player, ProfileProperty profileProperty, ItemStack characterHead, Inventory inventory, int index) {
             skullMeta.setPlayerProfile(SkinUtil.handleCachedSkin(player, profileProperty));
             characterHead.setItemMeta(skullMeta);
             inventory.setItem(index, characterHead);
@@ -208,10 +250,60 @@ public class CharacterSelectionMenu implements Listener {
             }
         }
     }
+
+    public class AdminInventoryHolder implements InventoryHolder {
+
+        private Player opener;
+        private OfflinePlayer target;
+        private String characterUUID;
+        private ItemStack[] contents;
+
+        private Inventory inventory;
+
+        public AdminInventoryHolder(Player opener, OfflinePlayer target, String characterUUID, ItemStack[] contents){
+            this.opener = opener;
+            this.target = target;
+            this.characterUUID = characterUUID;
+            this.contents = contents;
+
+            createInventory();
+        }
+
+        private void createInventory(){
+            this.inventory = Bukkit.createInventory(this, 45, ChatUtility.convertToComponent("&eEditing Inventory"));
+            this.inventory.setContents(contents);
+        }
+
+        public void onClose(){
+
+            ItemStack[] dummyItems = new ItemStack[41];
+            for(int i = 0; i < dummyItems.length; i++){
+                dummyItems[i] = this.inventory.getContents()[i];
+            }
+
+            String encoded = InventoryUtility.inventoryToBase64(41, dummyItems);
+
+            File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), this.target.getUniqueId().toString());
+            File characterFile = new File(playerDir, this.characterUUID + ".yml");
+            YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
+            config.set("inventory", encoded);
+
+            try {
+                config.save(characterFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public @NotNull Inventory getInventory() {
+            return inventory;
+        }
+    }
     
     public class CharadminMenuHolder extends CharacterMenuHolder {
 
-        public CharadminMenuHolder(Player player, Player opener) {
+        public CharadminMenuHolder(OfflinePlayer player, Player opener) {
             super(player, opener);
         }
         
@@ -235,8 +327,10 @@ public class CharacterSelectionMenu implements Listener {
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
 
             if (characterUUID == null) return;
-
-            Character currentChar = Character.get(player);
+            Character currentChar = null;
+            if(this.player != null){
+                currentChar = Character.get(player);
+            }
 
             if (currentChar != null && characterUUID.equals(currentChar.getCharacterUUID())) {
                 this.opener.sendMessage(ChatUtility.convertToComponent("&aThe player is currently on this character. Use direct inventory editing instead."));
@@ -244,13 +338,24 @@ public class CharacterSelectionMenu implements Listener {
             }
 
             this.opener.sendMessage(ChatUtility.convertToComponent("&aEditing inventory for character '" + ((TextComponent) meta.displayName()).content() + "'."));
-
-            Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
-                player.closeInventory();
-            }, 1);
             
             Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
                 // TODO: Open character inventory GUI
+                String playerUUID;
+                if(player == null)
+                    playerUUID = offlinePlayer.getUniqueId().toString();
+                else
+                    playerUUID = player.getUniqueId().toString();
+
+                File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID);
+                File characterFile = new File(playerDir, characterUUID + ".yml");
+                YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
+
+                ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
+
+                AdminInventoryHolder holder = new AdminInventoryHolder(this.opener, (this.player == null ? this.offlinePlayer : this.player), characterUUID, inventoryContents);
+                this.opener.openInventory(holder.getInventory());
+
             }, 2);
         }
     
@@ -276,7 +381,7 @@ public class CharacterSelectionMenu implements Listener {
         }
     }
 
-    public void openAdminMenu(Player player, Player opener) {
+    public void openAdminMenu(OfflinePlayer player, Player opener) {
         if (!menuExists(opener.getUniqueId().toString())) {
             CharadminMenuHolder holder = new CharadminMenuHolder(player, opener);
             opener.openInventory(holder.getInventory());
@@ -366,7 +471,12 @@ public class CharacterSelectionMenu implements Listener {
     public void onClose(InventoryCloseEvent event) {
         Inventory inventory = event.getInventory();
         Player player = (Player) event.getPlayer();
-        if (!(inventory.getHolder() instanceof CharacterMenuHolder)) return;
+        if (!(inventory.getHolder() instanceof CharacterMenuHolder)){
+            if(inventory.getHolder() instanceof AdminInventoryHolder adminInventoryHolder){
+                adminInventoryHolder.onClose();
+            }
+            return;
+        }
         activeMenus.get(player.getUniqueId().toString()).cleanup();
         activeMenus.remove(player.getUniqueId().toString()); //Remove holder to save memory
     }
