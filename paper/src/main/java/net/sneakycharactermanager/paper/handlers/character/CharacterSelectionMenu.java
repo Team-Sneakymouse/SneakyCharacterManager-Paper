@@ -275,6 +275,16 @@ public class CharacterSelectionMenu implements Listener {
         }
 
         public void onClose(){
+            Character currentChar = null;
+            Player player = Bukkit.getPlayer(this.target.getUniqueId());
+            if(player != null){
+                currentChar = Character.get(player);
+            }
+
+            if(currentChar != null && currentChar.getCharacterUUID().equals(this.characterUUID)){
+                this.opener.sendMessage(ChatUtility.convertToComponent("&4Inventory not saved! &ePlayer swapped character while you were editing!"));
+                return;
+            }
 
             ItemStack[] dummyItems = new ItemStack[41];
             for(int i = 0; i < dummyItems.length; i++){
@@ -290,6 +300,7 @@ public class CharacterSelectionMenu implements Listener {
 
             try {
                 config.save(characterFile);
+                this.opener.sendMessage(ChatUtility.convertToComponent("&eSaved character inventory!"));
             } catch (IOException e) {
                 e.printStackTrace();
             }
