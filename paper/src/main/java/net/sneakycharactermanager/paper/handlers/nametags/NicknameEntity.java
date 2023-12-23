@@ -39,6 +39,8 @@ public class NicknameEntity {
         mounted.setTransformation(new Transformation(new Vector3f(0F, 0.4F, 0F),
                 new Quaternionf(), null, null));
 
+        mounted.setPos(nmsPlayer.position());
+
         player.addPassenger(mounted.getBukkitEntity());
         for(Player target : Bukkit.getOnlinePlayers()) {
             if (target.getUniqueId().toString().equals(player.getUniqueId().toString())) continue;
