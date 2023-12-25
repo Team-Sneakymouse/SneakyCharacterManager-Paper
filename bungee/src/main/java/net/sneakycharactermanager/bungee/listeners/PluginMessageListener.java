@@ -45,6 +45,10 @@ public class PluginMessageListener implements Listener {
                 PlayerData playerData = PlayerData.get(playerUUID);
                 playerData.loadLastPlayedCharacter(serverInfo);
                 break;
+            case "playerQuit" :
+                playerUUID = in.readUTF();
+                PlayerData.remove(playerUUID);
+                break;
             case "rebuildCharacterMap" :
                 playerUUID = in.readUTF();
                 playerData = PlayerData.get(playerUUID);

@@ -1,6 +1,5 @@
 package net.sneakycharactermanager.paper.listeners;
 
-import java.io.EOFException;
 import java.util.*;
 
 import org.bukkit.Bukkit;

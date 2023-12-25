@@ -114,6 +114,10 @@ public class PlayerData {
         return playerDataMap.computeIfAbsent(playerUUID, key -> new PlayerData(playerUUID));
     }
 
+    public static synchronized void remove(String playerUUID) {
+        playerDataMap.remove(playerUUID);
+    }
+
     public Character getCharacter(String characterUUID) {
         return characterMap.get(characterUUID);
     }
