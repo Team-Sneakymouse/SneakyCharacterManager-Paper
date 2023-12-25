@@ -19,6 +19,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Brightness;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.phys.Vec3;
 
 public class NicknameEntity {
 
@@ -38,8 +39,6 @@ public class NicknameEntity {
         mounted.setBrightnessOverride(new Brightness(15, 15));
         mounted.setTransformation(new Transformation(new Vector3f(0F, 0.4F, 0F),
                 new Quaternionf(), null, null));
-
-        mounted.setPos(nmsPlayer.position());
 
         player.addPassenger(mounted.getBukkitEntity());
         for(Player target : Bukkit.getOnlinePlayers()) {
@@ -78,6 +77,7 @@ public class NicknameEntity {
     }
 
     public void spawn(Player player) {
+        mounted.setPos(new Vec3(player.getX(), player.getY() - 300, player.getZ()));
         ServerPlayer nmsTarget = ((CraftPlayer)player).getHandle();
         ClientboundAddEntityPacket addEntityPacket = new ClientboundAddEntityPacket(mounted);
         ClientboundSetEntityDataPacket entityDataPacket = new ClientboundSetEntityDataPacket(mounted.getId(), Objects.requireNonNull(mounted.getEntityData().getNonDefaultValues()));
