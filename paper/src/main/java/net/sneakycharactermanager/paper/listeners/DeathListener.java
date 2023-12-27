@@ -1,11 +1,12 @@
 package net.sneakycharactermanager.paper.listeners;
 
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.player.PlayerRespawnEvent;
 
-import net.md_5.bungee.event.EventHandler;
+import com.destroystokyo.paper.event.player.PlayerPostRespawnEvent;
+
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;;
 
@@ -21,7 +22,7 @@ public class DeathListener implements Listener {
     }
 
     @EventHandler
-    public void onPlayerRespawn(PlayerRespawnEvent event) {
+    public void onPlayerRespawn(PlayerPostRespawnEvent event) {
         Player player = event.getPlayer();
 
         if (player == null) return;
