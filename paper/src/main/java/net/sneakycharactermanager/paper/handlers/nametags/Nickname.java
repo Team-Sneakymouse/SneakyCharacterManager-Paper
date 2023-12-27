@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.util.ChatUtility;
 
 public class Nickname {
 
@@ -42,7 +43,7 @@ public class Nickname {
             nickname = MiniMessage.miniMessage().escapeTags(nickname);
         }
         this.nickname = nickname;
-        nametag.setName(MiniMessage.miniMessage().deserialize(nickname));
+        nametag.setName(ChatUtility.convertToComponent(nickname));
     }
 
     /**
