@@ -15,22 +15,14 @@ public class DeathListener implements Listener {
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getPlayer();
-
-        if (player == null) return;
-
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
     }
 
     @EventHandler
     public void onPlayerRespawn(PlayerPostRespawnEvent event) {
         Player player = event.getPlayer();
-
-        if (player == null) return;
-
         Character character = Character.get(player);
-        
         if (character == null) return;
-        
         SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getName());
     }
 
