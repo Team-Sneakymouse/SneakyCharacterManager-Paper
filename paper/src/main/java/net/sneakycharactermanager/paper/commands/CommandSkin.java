@@ -25,7 +25,7 @@ public class CommandSkin extends Command {
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (!(sender instanceof Player player)) return true;
 
-        if (args.length != 1) {
+        if (args.length < 1) {
             player.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
             return true;
         }
@@ -36,16 +36,27 @@ public class CommandSkin extends Command {
             return true;
         }
 
+        Boolean slim = null;
+        if (args.length > 1) {
+            if (args[1].equals("SLIM")) slim = true;
+            else slim = false;
+        }
+
         player.sendMessage(ChatUtility.convertToComponent("&aUpdating your skin!"));
 
-        CharacterLoader.updateSkin(player, url);
+        CharacterLoader.updateSkin(player, url, slim);
 
         return true;
     }
 
     @Override
     public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
-        return new ArrayList<>();
+        if (args.length == 2) {
+            return Arrays.asList("SLIM", "CLASSIC");
+        } else {
+            return Collections.emptyList(); // or simply "return new ArrayList<>();"
+        }
     }
+    
     
 }

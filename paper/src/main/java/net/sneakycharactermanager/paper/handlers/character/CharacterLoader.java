@@ -3,13 +3,21 @@ package net.sneakycharactermanager.paper.handlers.character;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Objects;
+import java.net.http.HttpResponse;
+import java.net.http.HttpRequest;
+import java.net.http.HttpClient;
 
 import javax.imageio.ImageIO;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.profile.PlayerTextures;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
@@ -77,8 +85,11 @@ public class CharacterLoader {
         return false;
     }
 
-    public static void updateSkin(Player player, String url) {
-        boolean isSlimSkin = checkIsSlimSkin(url);
+    public static void updateSkin(Player player, String url, Boolean slim) {
+        PlayerProfile playerProfile = player.getPlayerProfile();
+        boolean def = playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
+
+        boolean isSlimSkin = slim == null ? checkIsSlimSkin(url, def) : slim;
     
         SkinData data = SkinData.getOrCreate(url, isSlimSkin, 2);
 
@@ -97,16 +108,33 @@ public class CharacterLoader {
         });
     }
     
-    private static boolean checkIsSlimSkin(String url) {
-        try (InputStream inputStream = new URL(url).openStream()) {
-            BufferedImage image = ImageIO.read(inputStream);
-            int pixel = image.getRGB(55, 20);
-    
-            int alpha = (pixel >> 24) & 0xFF;
-            return alpha == 0;
-        } catch (IOException e) {
+    private static boolean checkIsSlimSkin(String url, boolean def) {
+        try {
+            HttpClient httpClient = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder().uri(new URI(url)).build();
+            HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+
+            // Check the HTTP response status
+            int statusCode = response.statusCode();
+
+            if (statusCode == 200) {
+                try (InputStream inputStream = response.body()) {
+                    if (inputStream == null) return def;
+
+                    BufferedImage image = ImageIO.read(inputStream);
+
+                    if (image == null) return def;
+
+                    int pixel = image.getRGB(55, 20);
+                    int alpha = (pixel >> 24) & 0xFF;
+                    return alpha == 0;
+                }
+            }
+        } catch (IOException | InterruptedException | URISyntaxException e) {
             e.printStackTrace();
-            return false;
         }
+
+        return def;
     }
+
 }
