@@ -49,7 +49,7 @@ public class CommandChar extends Command {
                 return true;
             } else {
                 String name = String.join(" ", args);
-                player.sendMessage(ChatUtility.convertToComponent("&aLoading character `" + name + "`... Please Wait..."));
+                player.sendMessage(ChatUtility.convertToComponent("&aLoading character &b`" + name + "`&a... Please Wait..."));
                 BungeeMessagingUtil.sendByteArray("selectCharacterByName", player.getUniqueId().toString(), name);
                 return true;
             }

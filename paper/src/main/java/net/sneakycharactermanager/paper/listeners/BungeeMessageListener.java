@@ -113,7 +113,7 @@ public class BungeeMessageListener implements PluginMessageListener
             case "deleteConfirmed" :
                 playerUUID = in.readUTF();
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-                pl.sendMessage(ChatUtility.convertToComponent("&aThe following character has been deleted: `" + in.readUTF() + "` (" + in.readUTF() + ")"));
+                pl.sendMessage(ChatUtility.convertToComponent("&aThe following character has been deleted: &b`" + in.readUTF() + "`&a (" + in.readUTF() + ")"));
                 break;
             default:
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);

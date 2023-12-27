@@ -39,10 +39,10 @@ public class CommandCharadmin extends Command {
                 String playerUUID = player.getUniqueId().toString();
                 File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID);
                 if (playerDir.exists()) {
-                    opener.sendMessage(ChatUtility.convertToComponent("&aLoading character admin menu for player: " + args[0]));
+                    opener.sendMessage(ChatUtility.convertToComponent("&aLoading character admin menu for player: &b" + args[0]));
                     SneakyCharacterManager.getInstance().selectionMenu.openAdminMenu(player, opener);
                 } else {
-                    opener.sendMessage(ChatUtility.convertToComponent("&aUnknown player: " + args[0]));
+                    opener.sendMessage(ChatUtility.convertToComponent("&aUnknown player: &b" + args[0]));
                 }
             });
         });

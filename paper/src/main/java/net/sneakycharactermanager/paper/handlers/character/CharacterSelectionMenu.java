@@ -231,7 +231,7 @@ public class CharacterSelectionMenu implements Listener {
                 return;
             }
 
-            this.player.sendMessage(ChatUtility.convertToComponent("&aDeleting character '" + ((TextComponent) meta.displayName()).content() + "'. Type '/char confirm' within 10 seconds to confirm deletion."));
+            this.player.sendMessage(ChatUtility.convertToComponent("&aDeleting character &b'" + ((TextComponent) meta.displayName()).content() + "'&a. Type '/char confirm' within 10 seconds to confirm deletion."));
             Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
                 this.player.closeInventory();
             }, 1);
@@ -347,10 +347,9 @@ public class CharacterSelectionMenu implements Listener {
                 return;
             }
 
-            this.opener.sendMessage(ChatUtility.convertToComponent("&aEditing inventory for character '" + ((TextComponent) meta.displayName()).content() + "'."));
+            this.opener.sendMessage(ChatUtility.convertToComponent("&aEditing inventory for character &b'" + ((TextComponent) meta.displayName()).content() + "'&a."));
             
             Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
-                // TODO: Open character inventory GUI
                 String playerUUID;
                 if(player == null)
                     playerUUID = offlinePlayer.getUniqueId().toString();
