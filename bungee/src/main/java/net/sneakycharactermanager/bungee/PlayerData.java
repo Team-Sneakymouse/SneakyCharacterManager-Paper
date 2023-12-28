@@ -14,8 +14,8 @@ import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
 public class PlayerData {
 
     private static final Map<String, PlayerData> playerDataMap = new HashMap<>();
-    private static final ConfigurationProvider provider = ConfigurationProvider.getProvider(YamlConfiguration.class);
 
+    private final ConfigurationProvider provider = ConfigurationProvider.getProvider(YamlConfiguration.class);
     private final String playerUUID;
     private Configuration config;
     private final File playerFile;
@@ -70,7 +70,7 @@ public class PlayerData {
 
     private void loadConfig() {
         try {
-            this.config = provider.load(playerFile);
+            this.config = this.provider.load(playerFile);
         } catch(IOException e) {
             e.printStackTrace();
         }
@@ -78,7 +78,7 @@ public class PlayerData {
 
     private void saveConfig() {
         try{
-            provider.save(this.config, playerFile);
+            this.provider.save(this.config, playerFile);
         } catch(IOException e) {
             e.printStackTrace();
         }
