@@ -2,7 +2,12 @@ package net.sneakycharactermanager.bungee;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.config.ServerInfo;
@@ -13,14 +18,14 @@ import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
 
 public class PlayerData {
 
-    private static final Map<String, PlayerData> playerDataMap = new HashMap<>();
+    private static final Map<String, PlayerData> playerDataMap = new ConcurrentHashMap<>();
 
     private final ConfigurationProvider provider = ConfigurationProvider.getProvider(YamlConfiguration.class);
     private final String playerUUID;
     private Configuration config;
     private final File playerFile;
     private String lastPlayedCharacter;
-    private final Map<String, Character> characterMap = new LinkedHashMap<>();
+    private final Map<String, Character> characterMap = new ConcurrentHashMap<>();
 
     private PlayerData(String playerUUID) {
         this.playerUUID = playerUUID;
@@ -60,9 +65,11 @@ public class PlayerData {
 
     private void storeCharacters() {
         characterMap.clear();
-        for(String key : this.config.getKeys()) {
+        Iterator<String> iterator = this.config.getKeys().iterator();
+        while (iterator.hasNext()) {
+            String key = iterator.next();
             if (key.equalsIgnoreCase("lastPlayedCharacter")) continue;
-
+    
             Character character = new Character(key, this.config.getSection(key));
             this.characterMap.put(key, character);
         }
@@ -231,13 +238,17 @@ public class PlayerData {
     public void updateCharacterList(ServerInfo serverInfo) {
         storeCharacters();
         List<String> enabledCharacterNames = new ArrayList<>();
-
-        for (Character character: characterMap.values()) {
+    
+        Iterator<Map.Entry<String, Character>> iterator = characterMap.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, Character> entry = iterator.next();
+            Character character = entry.getValue();
+    
             if (character.isEnabled() && !this.lastPlayedCharacter.equals(character.getUUID())) {
                 enabledCharacterNames.add(character.getName());
             }
         }
-
+    
         if (enabledCharacterNames.size() > 0) PaperMessagingUtil.sendByteArray(serverInfo, "updateCharacterList", this.playerUUID, enabledCharacterNames);
     }
 
