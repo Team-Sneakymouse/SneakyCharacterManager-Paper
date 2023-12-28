@@ -76,7 +76,7 @@ public class PlayerData {
         }
     }
 
-    private  void saveConfig() {
+    private void saveConfig() {
         try{
             provider.save(this.config, playerFile);
         } catch(IOException e) {
