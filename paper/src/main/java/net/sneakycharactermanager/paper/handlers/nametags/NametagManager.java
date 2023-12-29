@@ -5,8 +5,6 @@ import java.util.*;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import net.sneakycharactermanager.paper.SneakyCharacterManager;
-
 
 /**
  * Manager class for any function involving Nicknames & Nametags
@@ -22,10 +20,6 @@ public class NametagManager {
         nicknames = new HashMap<>();
         isShowingNameplates = new HashMap<>();
         showingRealNames = new ArrayList<>();
-
-        Bukkit.getScheduler().runTaskTimer(SneakyCharacterManager.getInstance(), () -> {
-            this.updateAll();
-        }, 100, 100);
     }
 
     /**
@@ -140,15 +134,6 @@ public class NametagManager {
         Nickname nickname = nicknames.get(player.getUniqueId().toString());
         if (nickname == null) return player.getName();
         return nickname.getNickname();
-    }
-
-    /**
-     * Updates all nametag's entity data for all observers
-     * */
-    public void updateAll() {
-        for(Nickname name : nicknames.values()) {
-            name.update();
-        }
     }
 
 }

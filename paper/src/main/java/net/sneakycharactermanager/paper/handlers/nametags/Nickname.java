@@ -99,11 +99,4 @@ public class Nickname {
      * */
     public String getNickname() { return nickname; }
 
-    /**
-     * Updates the nametag's entity data for all observers
-     * */
-    public void update() {
-        nametag.update();;
-    }
-
 }

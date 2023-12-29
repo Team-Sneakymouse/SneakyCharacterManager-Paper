@@ -15,7 +15,6 @@ import net.kyori.adventure.text.Component;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
-import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Brightness;
 import net.minecraft.world.entity.Display;
@@ -86,19 +85,6 @@ public class NicknameEntity {
         ClientboundSetEntityDataPacket entityDataPacket = new ClientboundSetEntityDataPacket(mounted.getId(), Objects.requireNonNull(mounted.getEntityData().getNonDefaultValues()));
         nmsTarget.connection.send(addEntityPacket);
         nmsTarget.connection.send(entityDataPacket);
-    }
-
-    public void update() {
-        for (Player target : Bukkit.getOnlinePlayers()) {
-            if (target.getUniqueId().toString().equals(nmsPlayer.getUUID().toString())) continue;
-            
-            mounted.setPos(new Vec3(target.getX(), target.getY() - 300, target.getZ()));
-            ClientboundTeleportEntityPacket movePacket = new ClientboundTeleportEntityPacket(mounted);
-    
-            ServerPlayer nmsTarget = ((CraftPlayer) target).getHandle();
-    
-            nmsTarget.connection.send(movePacket);
-        }
     }
 
 }
