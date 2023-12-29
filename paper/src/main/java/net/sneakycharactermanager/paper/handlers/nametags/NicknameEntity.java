@@ -22,11 +22,10 @@ import org.bukkit.util.Transformation;
 public class NicknameEntity {
 
     private TextDisplay mounted;
-    private final ServerPlayer nmsPlayer;
+    private final Player player;
 
     public NicknameEntity(Player player) {
-        nmsPlayer = ((CraftPlayer)player).getHandle();
-
+        this.player = player;
         mounted = player.getWorld().spawn(player.getLocation(), TextDisplay.class);
 
         mounted.setBillboard(Display.Billboard.CENTER);
@@ -44,7 +43,7 @@ public class NicknameEntity {
     public void setName(Component nickname) {
         net.minecraft.world.entity.Display.TextDisplay c = (net.minecraft.world.entity.Display.TextDisplay) ((CraftEntity) mounted).getHandle();
 
-        net.minecraft.world.entity.Display.TextDisplay temp = new net.minecraft.world.entity.Display.TextDisplay(EntityType.TEXT_DISPLAY, nmsPlayer.level());
+        net.minecraft.world.entity.Display.TextDisplay temp = new net.minecraft.world.entity.Display.TextDisplay(EntityType.TEXT_DISPLAY, ((CraftPlayer) player).getHandle().level());
 
         temp.setText(PaperAdventure.asVanilla(nickname));
 
@@ -52,7 +51,7 @@ public class NicknameEntity {
                 Objects.requireNonNull(temp.getEntityData().getNonDefaultValues()));
 
         for(Player target : Bukkit.getOnlinePlayers()) {
-            if (target.getUniqueId().toString().equals(nmsPlayer.getStringUUID())) continue;
+            if (target.getUniqueId().toString().equals(player.getUniqueId().toString())) continue;
             ((CraftPlayer)target).getHandle().connection.send(dataPacket);
         }
 
@@ -60,9 +59,11 @@ public class NicknameEntity {
     }
 
     public void setLocalizedName(Component name, Player requester) {
+        if (requester.getUniqueId().toString().equals(player.getUniqueId().toString())) return;;
+
         net.minecraft.world.entity.Display.TextDisplay c = (net.minecraft.world.entity.Display.TextDisplay) ((CraftEntity) mounted).getHandle();
 
-        net.minecraft.world.entity.Display.TextDisplay temp = new net.minecraft.world.entity.Display.TextDisplay(EntityType.TEXT_DISPLAY, nmsPlayer.level());
+        net.minecraft.world.entity.Display.TextDisplay temp = new net.minecraft.world.entity.Display.TextDisplay(EntityType.TEXT_DISPLAY, ((CraftPlayer) player).getHandle().level());
 
         temp.setText(PaperAdventure.asVanilla(name));
 
