@@ -111,10 +111,6 @@ public class NametagManager {
      * @param player Player to load names for
      * */
     public void loadNames(Player player) {
-        for(Nickname name : nicknames.values()) {
-            name.loadNickname(player);
-        }
-
         if (isShowingNameplates.containsKey(player.getUniqueId().toString()) &&
                 !isShowingNameplates.get(player.getUniqueId().toString())) {
             hideNames(player, true);
