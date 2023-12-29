@@ -41,7 +41,6 @@ public class NicknameEntity {
         mounted.setTransformation(new Transformation(new Vector3f(0F, 0.4F, 0F),
                 new Quaternionf(), null, null));
 
-        mounted.setPos(new Vec3(nmsPlayer.getX(), nmsPlayer.getY() - 300, nmsPlayer.getZ()));
         player.addPassenger(mounted.getBukkitEntity());
         for(Player target : Bukkit.getOnlinePlayers()) {
             if (target.getUniqueId().toString().equals(player.getUniqueId().toString())) continue;
@@ -79,6 +78,7 @@ public class NicknameEntity {
     }
 
     public void spawn(Player player) {
+        mounted.setPos(new Vec3(player.getX(), player.getY() - 300, player.getZ()));
         ServerPlayer nmsTarget = ((CraftPlayer)player).getHandle();
         ClientboundAddEntityPacket addEntityPacket = new ClientboundAddEntityPacket(mounted);
         ClientboundSetEntityDataPacket entityDataPacket = new ClientboundSetEntityDataPacket(mounted.getId(), Objects.requireNonNull(mounted.getEntityData().getNonDefaultValues()));
@@ -87,11 +87,11 @@ public class NicknameEntity {
     }
 
     public void update() {
-        mounted.setPos(new Vec3(nmsPlayer.getX(), nmsPlayer.getY() - 300, nmsPlayer.getZ()));
-        ClientboundTeleportEntityPacket movePacket = new ClientboundTeleportEntityPacket(mounted);
-
         for (Player target : Bukkit.getOnlinePlayers()) {
             if (target.getUniqueId().toString().equals(nmsPlayer.getUUID().toString())) continue;
+            
+            mounted.setPos(new Vec3(target.getX(), target.getY() - 300, target.getZ()));
+            ClientboundTeleportEntityPacket movePacket = new ClientboundTeleportEntityPacket(mounted);
     
             ServerPlayer nmsTarget = ((CraftPlayer) target).getHandle();
     
