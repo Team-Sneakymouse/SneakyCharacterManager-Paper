@@ -33,7 +33,7 @@ public class NicknameEntity {
 
         mounted.setBillboardConstraints(Display.BillboardConstraints.VERTICAL);
         byte flagBytes = mounted.getFlags();
-        flagBytes = (byte) (flagBytes | 2);
+        //flagBytes = (byte) (flagBytes | 2);
         flagBytes = (byte) (flagBytes | 4);
 
         mounted.setFlags(flagBytes);
