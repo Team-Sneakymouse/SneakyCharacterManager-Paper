@@ -20,6 +20,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Brightness;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.phys.Vec3;
 
 public class NicknameEntity {
@@ -70,6 +71,7 @@ public class NicknameEntity {
     }
 
     public void destroy() {
+        mounted.remove(RemovalReason.UNLOADED_WITH_PLAYER);
         ClientboundRemoveEntitiesPacket removeEntitiesPacket = new ClientboundRemoveEntitiesPacket(mounted.getId());
         for(Player target : Bukkit.getOnlinePlayers()) {
             if (target.getUniqueId().toString().equals(nmsPlayer.getStringUUID())) continue;
