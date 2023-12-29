@@ -67,7 +67,7 @@ public class NicknameEntity {
         temp.setText(PaperAdventure.asVanilla(name));
 
         ClientboundSetEntityDataPacket dataPacket = new ClientboundSetEntityDataPacket(c.getId(),
-                Objects.requireNonNull(c.getEntityData().getNonDefaultValues()));
+                Objects.requireNonNull(temp.getEntityData().getNonDefaultValues()));
 
         ((CraftPlayer)requester).getHandle().connection.send(dataPacket);
 
