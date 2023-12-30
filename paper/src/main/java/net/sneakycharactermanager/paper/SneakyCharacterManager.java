@@ -5,7 +5,9 @@ import java.util.*;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -92,10 +94,12 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         }, 0, 1200);
     }
 
-    @Override
-    public void onDisable() {
-        Character.saveAll();
-        this.nametagManager.unnickAll();
+    @EventHandler
+    public void onPluginDisable(PluginDisableEvent event) {
+        if (event.getPlugin() == this) {
+            Character.saveAll();
+            this.nametagManager.unnickAll();
+        }
     }
 
     public static SneakyCharacterManager getInstance() {
