@@ -27,7 +27,9 @@ public class Nickname {
         this.uuid = player.getUniqueId().toString();
         this.realName = player.getName();
         this.nickname = nickname;
-        this.setNickname(nickname);
+        Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
+            this.setNickname(nickname);
+        }, 2);
     }
 
     /**
