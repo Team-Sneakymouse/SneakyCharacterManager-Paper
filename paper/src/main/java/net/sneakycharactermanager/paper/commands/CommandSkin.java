@@ -76,7 +76,9 @@ public class CommandSkin extends Command {
 
     @Override
     public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
-        if (args.length == 2) {
+        if (args.length == 1) {
+            return Arrays.asList("revert");
+        } else if (args.length == 2) {
             return Arrays.asList("SLIM", "CLASSIC");
         } else {
             return Collections.emptyList(); // or simply "return new ArrayList<>();"
