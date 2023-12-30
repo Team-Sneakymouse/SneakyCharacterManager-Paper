@@ -32,13 +32,12 @@ public class NicknameEntity {
 
         mounted.setBillboard(Display.Billboard.CENTER);
         mounted.setLineWidth(150);
-        mounted.setSeeThrough(false);
-        mounted.setDefaultBackground(false);
         mounted.setShadowed(true);
         mounted.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
-
         mounted.setBrightness(new Display.Brightness(15, 15));
         mounted.setTransformation(new Transformation(new Vector3f(0F,0.4F,0F), new AxisAngle4f(), new Vector3f(1), new AxisAngle4f()));
+
+        mounted.addScoreboardTag("NicknameEntity");
 
         player.addPassenger(mounted);
     }
