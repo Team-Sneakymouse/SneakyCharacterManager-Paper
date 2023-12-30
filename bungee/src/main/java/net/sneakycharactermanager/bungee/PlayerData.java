@@ -2,6 +2,9 @@ package net.sneakycharactermanager.bungee;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -20,7 +23,6 @@ public class PlayerData {
 
     private static final Map<String, PlayerData> playerDataMap = new ConcurrentHashMap<>();
 
-    private final ConfigurationProvider provider = ConfigurationProvider.getProvider(YamlConfiguration.class);
     private final String playerUUID;
     private Configuration config;
     private final File playerFile;
@@ -76,17 +78,17 @@ public class PlayerData {
     }
 
     private void loadConfig() {
-        try {
-            this.config = this.provider.load(playerFile);
-        } catch(IOException e) {
+        try (InputStream inputStream = Files.newInputStream(playerFile.toPath())) {
+            this.config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(inputStream);
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     private void saveConfig() {
-        try{
-            this.provider.save(this.config, playerFile);
-        } catch(IOException e) {
+        try (OutputStream outputStream = Files.newOutputStream(playerFile.toPath())) {
+            ConfigurationProvider.getProvider(YamlConfiguration.class).save(this.config, playerFile);
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
