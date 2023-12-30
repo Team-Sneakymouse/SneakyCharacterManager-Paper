@@ -53,6 +53,13 @@ public class CommandNick extends Command {
             return false;
         }
 
+        //Name Filtering:
+        String pattern = "[^\\p{L}\\p{M}0-9\\-\"' &<>]+";
+        if(nickname.matches(".*" + pattern + ".*")){
+            player.sendMessage(ChatUtility.convertToComponent("&4Invalid name! It cannot contain special characters! Quotes, Spaces, and Diacritics are okay."));
+            return false;
+        }
+
         SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, nickname);
         BungeeMessagingUtil.sendByteArray("updateCharacter", player.getUniqueId().toString(), 2, nickname);
         player.sendMessage(ChatUtility.convertToComponent("&eName updated to: " + nickname));
