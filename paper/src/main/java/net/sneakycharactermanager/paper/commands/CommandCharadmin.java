@@ -1,8 +1,13 @@
 package net.sneakycharactermanager.paper.commands;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -47,6 +52,21 @@ public class CommandCharadmin extends Command {
             });
         });
         return true;
+    }
+
+    @Override
+    public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
+        if (args.length == 1) {
+            List<String> playerNames = new ArrayList<>();
+
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                playerNames.add(player.getName());
+            }
+
+            return playerNames;
+        } else {
+            return Collections.emptyList(); // or simply "return new ArrayList<>();"
+        }
     }
     
 }
