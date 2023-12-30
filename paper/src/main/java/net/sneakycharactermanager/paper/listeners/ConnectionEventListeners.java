@@ -61,7 +61,6 @@ public class ConnectionEventListeners implements Listener {
             character.save();
         }
         Character.remove(player);
-        BungeeMessagingUtil.sendByteArray("playerQuit", player.getUniqueId().toString());
     }
 
 }
