@@ -44,7 +44,7 @@ public class PlayerData {
         } catch(IOException e) {
             e.printStackTrace();
         }
-        loadConfig();
+        if (!loadConfig()) return;
 
         this.lastPlayedCharacter = this.config.getString("lastPlayedCharacter");
 
@@ -66,6 +66,7 @@ public class PlayerData {
     }
 
     private void storeCharacters() {
+        if (!loadConfig()) return;
         characterMap.clear();
         Iterator<String> iterator = this.config.getKeys().iterator();
         while (iterator.hasNext()) {
@@ -77,11 +78,13 @@ public class PlayerData {
         }
     }
 
-    private void loadConfig() {
+    private boolean loadConfig() {
         try (InputStream inputStream = Files.newInputStream(playerFile.toPath())) {
             this.config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(inputStream);
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
+            return false;
         }
     }
 
@@ -96,7 +99,7 @@ public class PlayerData {
     public void loadCharacter(ServerInfo serverInfo, String characterUUID) {
         storeCharacters();
         Character character = this.characterMap.get(characterUUID);
-        loadConfig();
+        if (!loadConfig()) return;
 
         if (character == null) {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to load a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
@@ -132,7 +135,7 @@ public class PlayerData {
     }
 
     public String createNewCharacter(String name) {
-        loadConfig();
+        if (!loadConfig()) return null;
         Character character = new Character(name);
 
         this.characterMap.put(character.getUUID(), character);
@@ -149,7 +152,7 @@ public class PlayerData {
     }
 
     private void updateCharacterInYaml(Character character) {
-        loadConfig();
+        if (!loadConfig()) return;
         Configuration section = this.config.getSection(character.getUUID());
 
         section.set("enabled", character.isEnabled());

@@ -102,7 +102,8 @@ public class PluginMessageListener implements Listener {
             case "createNewCharacter" :
                 playerUUID = in.readUTF();
                 playerData = PlayerData.get(playerUUID);
-                playerData.loadCharacter(serverInfo, playerData.createNewCharacter(ProxyServer.getInstance().getPlayer(UUID.fromString(playerUUID)).getName()));
+                characterUUID = playerData.createNewCharacter(ProxyServer.getInstance().getPlayer(UUID.fromString(playerUUID)).getName());
+                if (characterUUID != null) playerData.loadCharacter(serverInfo, characterUUID);
                 break;
             case "deleteCharacter" :
                 playerUUID = in.readUTF();
