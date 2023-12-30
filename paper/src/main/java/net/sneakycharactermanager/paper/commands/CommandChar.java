@@ -64,7 +64,7 @@ public class CommandChar extends Command {
     @Override
     public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
         if(!(sender instanceof Player player)) return List.of();
-        if (tabCompleteMap.containsKey(player.getUniqueId().toString())) {
+        if (tabCompleteMap.containsKey(player.getUniqueId().toString()) && args.length == 1) {
             List<String> names = new ArrayList<>();
 
             for (String name : tabCompleteMap.get(player.getUniqueId().toString())) {

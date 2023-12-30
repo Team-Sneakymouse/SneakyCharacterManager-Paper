@@ -52,6 +52,10 @@ public class CommandNames extends Command {
 
     @Override
     public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) throws IllegalArgumentException {
-        return List.of("on", "off", "character");
+        if(args.length == 1){
+            return List.of("on", "off", "character");
+        } else{
+            return List.of();
+        }
     }
 }
