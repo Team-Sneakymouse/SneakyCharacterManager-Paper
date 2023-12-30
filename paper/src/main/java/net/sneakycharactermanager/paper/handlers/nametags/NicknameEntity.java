@@ -3,21 +3,23 @@ package net.sneakycharactermanager.paper.handlers.nametags;
 import java.util.Objects;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.craftbukkit.v1_20_R2.entity.CraftEntity;
 import org.bukkit.craftbukkit.v1_20_R2.entity.CraftPlayer;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TextDisplay;
+import org.bukkit.util.Transformation;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
 import io.papermc.paper.adventure.PaperAdventure;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Entity.RemovalReason;
-import org.bukkit.entity.TextDisplay;
-import org.bukkit.util.Transformation;
+import net.minecraft.world.entity.EntityType;
 
 public class NicknameEntity {
 
@@ -33,6 +35,7 @@ public class NicknameEntity {
         mounted.setSeeThrough(false);
         mounted.setDefaultBackground(false);
         mounted.setShadowed(true);
+        mounted.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
 
         mounted.setBrightness(new Display.Brightness(15, 15));
         mounted.setTransformation(new Transformation(new Vector3f(0F,0.4F,0F), new AxisAngle4f(), new Vector3f(1), new AxisAngle4f()));
@@ -47,8 +50,11 @@ public class NicknameEntity {
 
         temp.setText(PaperAdventure.asVanilla(nickname));
 
+        SynchedEntityData entityData = temp.getEntityData();
+        entityData.set(net.minecraft.world.entity.Display.TextDisplay.DATA_BACKGROUND_COLOR_ID, ((TextComponent) nickname).content().equals("") ? 0 : 956301312);
+
         ClientboundSetEntityDataPacket dataPacket = new ClientboundSetEntityDataPacket(c.getId(),
-                Objects.requireNonNull(temp.getEntityData().getNonDefaultValues()));
+                Objects.requireNonNull(entityData.getNonDefaultValues()));
 
         for(Player target : Bukkit.getOnlinePlayers()) {
             if (target.getUniqueId().toString().equals(player.getUniqueId().toString())) continue;
@@ -67,8 +73,11 @@ public class NicknameEntity {
 
         temp.setText(PaperAdventure.asVanilla(name));
 
+        SynchedEntityData entityData = temp.getEntityData();
+        entityData.set(net.minecraft.world.entity.Display.TextDisplay.DATA_BACKGROUND_COLOR_ID, ((TextComponent) name).content().equals("") ? 0 : 956301312);
+
         ClientboundSetEntityDataPacket dataPacket = new ClientboundSetEntityDataPacket(c.getId(),
-                Objects.requireNonNull(temp.getEntityData().getNonDefaultValues()));
+                Objects.requireNonNull(entityData.getNonDefaultValues()));
 
         ((CraftPlayer)requester).getHandle().connection.send(dataPacket);
 
