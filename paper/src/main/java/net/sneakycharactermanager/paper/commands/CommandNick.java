@@ -35,6 +35,24 @@ public class CommandNick extends Command {
             builder.append(word).append(" ");
         }
         String nickname = builder.substring(0, builder.length()-1);
+
+        List<String> bannedWords = SneakyCharacterManager.getInstance().getConfig().getStringList("bannedWords");
+
+        boolean containsBannedWord = false;
+        if(!bannedWords.isEmpty()){
+            for(String word : bannedWords){
+                if(nickname.toLowerCase().contains(word.toLowerCase())){
+                    containsBannedWord = true;
+                    break;
+                }
+            }
+        }
+
+        if(containsBannedWord){
+            player.sendMessage(ChatUtility.convertToComponent("&4Your name contains a banned word! *Insert Ban Message Here*"));
+            return false;
+        }
+
         SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, nickname);
         BungeeMessagingUtil.sendByteArray("updateCharacter", player.getUniqueId().toString(), 2, nickname);
         player.sendMessage(ChatUtility.convertToComponent("&eName updated to: " + nickname));

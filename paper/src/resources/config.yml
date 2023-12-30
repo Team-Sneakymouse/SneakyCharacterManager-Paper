@@ -1,1 +1,3 @@
 deleteCharacterDataOnServerStart: false
+bannedWords:
+  - badword
