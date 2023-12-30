@@ -95,6 +95,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         Character.saveAll();
+        this.nametagManager.unnickAll();
     }
 
     public static SneakyCharacterManager getInstance() {

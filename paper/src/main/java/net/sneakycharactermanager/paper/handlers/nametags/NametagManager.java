@@ -132,4 +132,13 @@ public class NametagManager {
         return nickname.getNickname();
     }
 
+    /**
+     * Remove the nickname entities of all players.
+     * */
+    public void unnickAll() {
+        nicknames.values().forEach(entry -> {
+            entry.unNick();
+        });
+    }
+
 }
