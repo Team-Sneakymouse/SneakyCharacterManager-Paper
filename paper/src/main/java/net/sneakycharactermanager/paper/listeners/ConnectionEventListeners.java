@@ -22,7 +22,6 @@ public class ConnectionEventListeners implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-
         //We need to load other players names when a person joins
         SneakyCharacterManager.getInstance().nametagManager.loadNames(player);
 
@@ -31,7 +30,7 @@ public class ConnectionEventListeners implements Listener {
                 Bukkit.getScheduler().cancelTask(taskIdMap.get(player));
                 taskIdMap.remove(player);
             } else {
-                BungeeMessagingUtil.sendByteArray("playerJoin", player.getUniqueId().toString());
+                BungeeMessagingUtil.sendByteArray(player, "playerJoin", player.getUniqueId().toString());
             }
         }, 5, 20);
     
@@ -61,6 +60,7 @@ public class ConnectionEventListeners implements Listener {
             character.save();
         }
         Character.remove(player);
+
     }
 
 }

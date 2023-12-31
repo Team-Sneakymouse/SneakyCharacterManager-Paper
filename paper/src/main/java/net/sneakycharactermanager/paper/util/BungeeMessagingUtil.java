@@ -1,18 +1,20 @@
 package net.sneakycharactermanager.paper.util;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import org.bukkit.entity.Player;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.UUID;
 
 public class BungeeMessagingUtil {
 
-    public static void sendByteArray(String subChannelName, Object... objects) {
+    public static void sendByteArray(Player requester, String subChannelName, Object... objects) {
         try (ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
             DataOutputStream out = new DataOutputStream(byteArrayOutput)) {
 
-            out.writeUTF(subChannelName);
+            out.writeUTF(subChannelName + "_UUID:" + UUID.randomUUID());
 
             for (Object object : objects) {
                 if (object.getClass() == Boolean.class)
@@ -37,7 +39,12 @@ public class BungeeMessagingUtil {
                 }
             }
 
-            SneakyCharacterManager.getInstance().getServer().sendPluginMessage(SneakyCharacterManager.getInstance(), "sneakymouse:" + SneakyCharacterManager.IDENTIFIER, byteArrayOutput.toByteArray());
+
+            if(requester == null){
+                SneakyCharacterManager.getInstance().getServer().sendPluginMessage(SneakyCharacterManager.getInstance(), "sneakymouse:" + SneakyCharacterManager.IDENTIFIER, byteArrayOutput.toByteArray());
+            }else {
+                requester.sendPluginMessage(SneakyCharacterManager.getInstance(), "sneakymouse:" + SneakyCharacterManager.IDENTIFIER, byteArrayOutput.toByteArray());
+            }
 
         } catch (IOException e) {
             e.printStackTrace();

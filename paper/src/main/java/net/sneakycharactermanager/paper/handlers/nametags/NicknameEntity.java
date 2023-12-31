@@ -2,6 +2,8 @@ package net.sneakycharactermanager.paper.handlers.nametags;
 
 import java.util.Objects;
 
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.craftbukkit.v1_20_R2.entity.CraftEntity;
@@ -44,23 +46,24 @@ public class NicknameEntity {
 
     public void setName(Component nickname) {
         net.minecraft.world.entity.Display.TextDisplay c = (net.minecraft.world.entity.Display.TextDisplay) ((CraftEntity) mounted).getHandle();
-
-        net.minecraft.world.entity.Display.TextDisplay temp = new net.minecraft.world.entity.Display.TextDisplay(EntityType.TEXT_DISPLAY, ((CraftPlayer) player).getHandle().level());
-
-        temp.setText(PaperAdventure.asVanilla(nickname));
-
-        SynchedEntityData entityData = temp.getEntityData();
-        entityData.set(net.minecraft.world.entity.Display.TextDisplay.DATA_BACKGROUND_COLOR_ID, ((TextComponent) nickname).content().equals("") ? 0 : 956301312);
-
-        ClientboundSetEntityDataPacket dataPacket = new ClientboundSetEntityDataPacket(c.getId(),
-                Objects.requireNonNull(entityData.getNonDefaultValues()));
-
-        for(Player target : Bukkit.getOnlinePlayers()) {
-            if (target.getUniqueId().toString().equals(player.getUniqueId().toString())) continue;
-            ((CraftPlayer)target).getHandle().connection.send(dataPacket);
-        }
-
-        temp.remove(RemovalReason.DISCARDED);
+        mounted.text(nickname);
+//        net.minecraft.world.entity.Display.TextDisplay temp = new net.minecraft.world.entity.Display.TextDisplay(EntityType.TEXT_DISPLAY, ((CraftPlayer) player).getHandle().level());
+//
+//        temp.setText(PaperAdventure.asVanilla(nickname));
+//
+//        SynchedEntityData entityData = temp.getEntityData();
+//        entityData.set(net.minecraft.world.entity.Display.TextDisplay.DATA_BACKGROUND_COLOR_ID, ((TextComponent) nickname).content().equals("") ? 0 : 956301312);
+//
+//        ClientboundSetEntityDataPacket dataPacket = new ClientboundSetEntityDataPacket(c.getId(),
+//                Objects.requireNonNull(entityData.getNonDefaultValues()));
+//
+//        for(Player target : Bukkit.getOnlinePlayers()) {
+//            if (target.getUniqueId().toString().equals(player.getUniqueId().toString())) continue;
+//            ((CraftPlayer)target).getHandle().connection.send(dataPacket);
+//        }
+//
+//        temp.remove(RemovalReason.DISCARDED);
+        ((CraftPlayer)this.player).getHandle().connection.send(new ClientboundRemoveEntitiesPacket(c.getId()));
     }
 
     public void setLocalizedName(Component name, Player requester) {

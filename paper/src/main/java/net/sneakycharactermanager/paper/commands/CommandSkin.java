@@ -110,15 +110,16 @@ public class CommandSkin extends Command {
                         Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), ()->{
                             PlayerProfile profile = player.getPlayerProfile();
                             profile.setProperty(property);
-                            player.setPlayerProfile(profile);
                             player.sendMessage(ChatUtility.convertToComponent("&aUpdating your skin!"));
+
 
                             String textureURL = profile.getTextures().getSkin().toString();
                             boolean isSlim = profile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
                             Character character = Character.get(player);
                             character.setSkin(textureURL);
                             character.setSlim(isSlim);
-                            BungeeMessagingUtil.sendByteArray("updateCharacter", player.getUniqueId().toString(), 1, textureURL, isSlim);
+                            BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), 1, textureURL, isSlim);
+                            player.setPlayerProfile(profile);
                         });
                     }
                 }

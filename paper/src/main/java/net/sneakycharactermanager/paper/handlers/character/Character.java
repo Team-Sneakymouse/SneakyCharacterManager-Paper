@@ -145,6 +145,7 @@ public class Character {
     public String getName() {
         return this.name;
     }
+    public void setName(String name) { this.name = name; }
 
     public String getSkin() {
         return this.skin;

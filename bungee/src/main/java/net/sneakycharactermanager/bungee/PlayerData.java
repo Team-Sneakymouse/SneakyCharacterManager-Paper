@@ -44,7 +44,10 @@ public class PlayerData {
         } catch(IOException e) {
             e.printStackTrace();
         }
-        if (!loadConfig()) return;
+        if (!loadConfig()) {
+            SneakyCharacterManager.getInstance().getLogger().severe("Failed to load config! (Player Data Constructor)");
+            return;
+        }
 
         this.lastPlayedCharacter = this.config.getString("lastPlayedCharacter");
 
@@ -66,21 +69,29 @@ public class PlayerData {
     }
 
     private void storeCharacters() {
-        if (!loadConfig()) return;
+        if (!loadConfig()) {
+            SneakyCharacterManager.getInstance().getLogger().severe("Failed to load config! (Store Characters)");
+            return;
+        }
         characterMap.clear();
-        Iterator<String> iterator = this.config.getKeys().iterator();
-        while (iterator.hasNext()) {
-            String key = iterator.next();
-            if (key.equalsIgnoreCase("lastPlayedCharacter")) continue;
-    
+//        Iterator<String> iterator = this.config.getKeys().iterator();
+//        while (iterator.hasNext()) {
+//            String key = iterator.next();
+//            if (key.equalsIgnoreCase("lastPlayedCharacter")) continue;
+//
+//            Character character = new Character(key, this.config.getSection(key));
+//            this.characterMap.put(key, character);
+//        }
+        for(String key : config.getKeys()){
+            if(key.equalsIgnoreCase("lastPlayedCharacter")) continue;
             Character character = new Character(key, this.config.getSection(key));
             this.characterMap.put(key, character);
         }
     }
 
     private boolean loadConfig() {
-        try (InputStream inputStream = Files.newInputStream(playerFile.toPath())) {
-            this.config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(inputStream);
+        try {
+            this.config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(playerFile);
             return true;
         } catch (IOException e) {
             e.printStackTrace();
@@ -89,17 +100,20 @@ public class PlayerData {
     }
 
     private void saveConfig() {
-        try (OutputStream outputStream = Files.newOutputStream(playerFile.toPath())) {
+        try {
             ConfigurationProvider.getProvider(YamlConfiguration.class).save(this.config, playerFile);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
     public void loadCharacter(ServerInfo serverInfo, String characterUUID) {
         storeCharacters();
         Character character = this.characterMap.get(characterUUID);
-        if (!loadConfig()) return;
+        if (!loadConfig()) {
+            SneakyCharacterManager.getInstance().getLogger().severe("Failed to load config! (Load Character)");
+            return;
+        }
 
         if (character == null) {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to load a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
@@ -135,7 +149,10 @@ public class PlayerData {
     }
 
     public String createNewCharacter(String name) {
-        if (!loadConfig()) return null;
+        if (!loadConfig()){
+            SneakyCharacterManager.getInstance().getLogger().severe("Failed to load config! (Create new Character)");
+            return null;
+        }
         Character character = new Character(name);
 
         this.characterMap.put(character.getUUID(), character);
@@ -152,13 +169,18 @@ public class PlayerData {
     }
 
     private void updateCharacterInYaml(Character character) {
-        if (!loadConfig()) return;
+        if (!loadConfig()){
+            SneakyCharacterManager.getInstance().getLogger().severe("Failed to load config! (Update Charaqcter in YAML)");
+            return;
+        }
         Configuration section = this.config.getSection(character.getUUID());
 
         section.set("enabled", character.isEnabled());
         section.set("name", character.getName());
         section.set("skin", character.getSkin());
         section.set("slim", character.isSlim());
+
+        this.config.set(character.getUUID(), section);
 
         saveConfig();
     }

@@ -36,7 +36,7 @@ public class CommandChar extends Command {
                 if (deleteConfirmationMap.containsKey(player)) {
                     String[] s = deleteConfirmationMap.get(player).split(";");
                     if (System.currentTimeMillis() < Long.valueOf(s[0]) + 10000) {
-                        BungeeMessagingUtil.sendByteArray("deleteCharacter", player.getUniqueId().toString(), s[1]);
+                        BungeeMessagingUtil.sendByteArray(player, "deleteCharacter", player.getUniqueId().toString(), s[1]);
                         sender.sendMessage(ChatUtility.convertToComponent("&aDeleting character..."));
                         deleteConfirmationMap.remove(player);
                     } else {
@@ -50,7 +50,7 @@ public class CommandChar extends Command {
             } else {
                 String name = String.join(" ", args);
                 player.sendMessage(ChatUtility.convertToComponent("&aLoading character &b`" + name + "`&a... Please Wait..."));
-                BungeeMessagingUtil.sendByteArray("selectCharacterByName", player.getUniqueId().toString(), name);
+                BungeeMessagingUtil.sendByteArray(player, "selectCharacterByName", player.getUniqueId().toString(), name);
                 return true;
             }
         }

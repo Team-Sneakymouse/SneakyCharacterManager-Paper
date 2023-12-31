@@ -1,5 +1,7 @@
 package net.sneakycharactermanager.bungee.listeners;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import com.google.common.io.ByteArrayDataInput;
@@ -20,6 +22,11 @@ import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
 
 public class PluginMessageListener implements Listener {
 
+    private List<String> handledRequests;
+    public PluginMessageListener(){
+        handledRequests = new ArrayList<>();
+    }
+
     @EventHandler
     public void on(PluginMessageEvent event)
     {
@@ -37,7 +44,19 @@ public class PluginMessageListener implements Listener {
         }
 
         ByteArrayDataInput in = ByteStreams.newDataInput(event.getData());
-        String subChannel = in.readUTF();
+        String channelData = in.readUTF();
+
+        String[] _data = channelData.split("_UUID:");
+
+        String subChannel = _data[0];
+        String uuid = _data[1];
+
+        if(handledRequests.contains(uuid)){
+            SneakyCharacterManager.getInstance().getLogger().warning("Recieved duplicated message! Ignoring");
+            return;
+        }
+
+        handledRequests.add(uuid);
 
         switch (subChannel) {
             case "playerJoin" :

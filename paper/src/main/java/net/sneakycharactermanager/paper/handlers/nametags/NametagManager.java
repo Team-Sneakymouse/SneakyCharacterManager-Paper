@@ -2,6 +2,7 @@ package net.sneakycharactermanager.paper.handlers.nametags;
 
 import java.util.*;
 
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -18,6 +19,7 @@ public class NametagManager {
 
     public NametagManager() {
         nicknames = new HashMap<>();
+
         isShowingNameplates = new HashMap<>();
         showingRealNames = new ArrayList<>();
     }
@@ -36,23 +38,25 @@ public class NametagManager {
             nicknames.get(player.getUniqueId().toString()).setNickname(nickname);
         }
 
-        for(String uuid : showingRealNames) {
-            Player requester = Bukkit.getPlayer(UUID.fromString(uuid));
-            if (requester == null || ! requester.isOnline()) continue;
-            for(Nickname name : nicknames.values()) {
-                name.showRealName(requester, true);
-            }
-        }
-
-        for(Map.Entry<String, Boolean> showingNameplates : isShowingNameplates.entrySet()) {
-            Player requester = Bukkit.getPlayer(UUID.fromString(showingNameplates.getKey()));
-            if (requester == null || !requester.isOnline()) continue;
-            if (!showingNameplates.getValue()) {
+        Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), ()->{
+            for(String uuid : showingRealNames) {
+                Player requester = Bukkit.getPlayer(UUID.fromString(uuid));
+                if (requester == null || ! requester.isOnline()) continue;
                 for(Nickname name : nicknames.values()) {
-                    name.hideName(requester, true);
+                    name.showRealName(requester, true);
                 }
             }
-        }
+
+            for(Map.Entry<String, Boolean> showingNameplates : isShowingNameplates.entrySet()) {
+                Player requester = Bukkit.getPlayer(UUID.fromString(showingNameplates.getKey()));
+                if (requester == null || !requester.isOnline()) continue;
+                if (!showingNameplates.getValue()) {
+                    for(Nickname name : nicknames.values()) {
+                        name.hideName(requester, true);
+                    }
+                }
+            }
+        }, 20);
 
     }
 
@@ -67,8 +71,10 @@ public class NametagManager {
     @Deprecated
     public void createLocalized(Player requester, boolean enabled) {
         if (enabled) {
+            isShowingNameplates.put(requester.getUniqueId().toString(), true);
             showingRealNames.add(requester.getUniqueId().toString());
         }else{
+            isShowingNameplates.put(requester.getUniqueId().toString(), true);
             showingRealNames.remove(requester.getUniqueId().toString());
         }
         for(Nickname name : nicknames.values()) {
@@ -111,13 +117,15 @@ public class NametagManager {
      * @param player Player to load names for
      * */
     public void loadNames(Player player) {
-        if (!(isShowingNameplates.containsKey(player.getUniqueId().toString()) &&
-                !isShowingNameplates.get(player.getUniqueId().toString()))) {
+        if(!isShowingNameplates.getOrDefault(player.getUniqueId().toString(), false)){
+            hideNames(player, true);
+        }else{
             hideNames(player, false);
-        }
-
-        if (showingRealNames.contains(player.getUniqueId().toString())) {
-            createLocalized(player, true);
+            if(showingRealNames.contains(player.getUniqueId().toString())){
+                createLocalized(player, true);
+            }else{
+                createLocalized(player, false);
+            }
         }
     }
 

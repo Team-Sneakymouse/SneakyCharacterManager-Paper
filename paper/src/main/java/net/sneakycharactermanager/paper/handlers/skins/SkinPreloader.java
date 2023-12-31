@@ -38,7 +38,7 @@ public class SkinPreloader extends BukkitRunnable {
         if (this.requestsThisMinute > 25) return;
         preLoadedPlayers.add(player);
 
-        BungeeMessagingUtil.sendByteArray("preloadSkins", player.getUniqueId().toString());
+        BungeeMessagingUtil.sendByteArray(player, "preloadSkins", player.getUniqueId().toString());
     }
     
 }

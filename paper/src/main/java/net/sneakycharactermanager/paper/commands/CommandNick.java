@@ -2,6 +2,7 @@ package net.sneakycharactermanager.paper.commands;
 
 import java.util.*;
 
+import net.sneakycharactermanager.paper.handlers.character.Character;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -59,9 +60,14 @@ public class CommandNick extends Command {
             player.sendMessage(ChatUtility.convertToComponent("&4Invalid name! It cannot contain special characters! Quotes, Spaces, and Diacritics are okay."));
             return false;
         }
-
+        Character character = Character.get(player);
+        if(character == null) {
+            player.sendMessage(ChatUtility.convertToComponent("&cSorry! Failed to retrieve character!"));
+            return false;
+        }
+        character.setName(nickname);
         SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, nickname);
-        BungeeMessagingUtil.sendByteArray("updateCharacter", player.getUniqueId().toString(), 2, nickname);
+        BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), 2, nickname);
         player.sendMessage(ChatUtility.convertToComponent("&eName updated to: " + nickname));
         return false;
     }

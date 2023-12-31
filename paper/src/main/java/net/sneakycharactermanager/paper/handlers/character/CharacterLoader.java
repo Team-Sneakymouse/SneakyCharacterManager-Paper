@@ -97,10 +97,10 @@ public class CharacterLoader {
                 ProfileProperty p = SkinCache.get(player.getUniqueId().toString(), url);
                 Character character = Character.get(player);
                 if (p != null && character != null) {
-                    player.setPlayerProfile(SkinUtil.handleCachedSkin(player, p));
                     character.setSkin(url);
                     character.setSlim(isSlimSkin);
-                    BungeeMessagingUtil.sendByteArray("updateCharacter", player.getUniqueId().toString(), 1, url, isSlimSkin);
+                    BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), 1, url, isSlimSkin);
+                    player.setPlayerProfile(SkinUtil.handleCachedSkin(player, p));
                 }
             });
         });

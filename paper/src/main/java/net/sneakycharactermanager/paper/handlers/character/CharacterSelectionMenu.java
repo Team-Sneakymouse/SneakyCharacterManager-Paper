@@ -105,7 +105,7 @@ public class CharacterSelectionMenu implements Listener {
         }
 
         private void requestCharacterList() {
-            BungeeMessagingUtil.sendByteArray("characterSelectionGUI", playerUUID, opener.getUniqueId().toString());
+            BungeeMessagingUtil.sendByteArray(this.opener, "characterSelectionGUI", playerUUID, opener.getUniqueId().toString());
         }
 
         private void receivedCharacterList(List<Character> characters) {
@@ -186,7 +186,7 @@ public class CharacterSelectionMenu implements Listener {
             SkullMeta meta = (SkullMeta) clickedItem.getItemMeta();
 
             if (meta.displayName().equals(CREATE_CHARACTER)) {
-                BungeeMessagingUtil.sendByteArray("createNewCharacter", playerUUID);
+                BungeeMessagingUtil.sendByteArray(this.opener, "createNewCharacter", playerUUID);
                 this.player.sendMessage(ChatUtility.convertToComponent("&aCreating a new character... Please Wait..."));
                 this.player.sendMessage(ChatUtility.convertToComponent("&aOnce the character is created, use the /nick and /skin command to customize it!"));
                 return;
@@ -208,7 +208,7 @@ public class CharacterSelectionMenu implements Listener {
 
             this.player.sendMessage(ChatUtility.convertToComponent("&aLoading your character... Please Wait..."));
             this.player.closeInventory();
-            BungeeMessagingUtil.sendByteArray("selectCharacter", playerUUID, characterUUID);
+            BungeeMessagingUtil.sendByteArray(this.opener, "selectCharacter", playerUUID, characterUUID);
         }
 
         

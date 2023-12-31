@@ -79,7 +79,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
                     Bukkit.getScheduler().cancelTask(taskIdMap.get(player));
                     taskIdMap.remove(player);
                 } else {
-                    BungeeMessagingUtil.sendByteArray("rebuildCharacterMap", player.getUniqueId());
+                    BungeeMessagingUtil.sendByteArray(player, "rebuildCharacterMap", player.getUniqueId());
                 }
             }, 0, 20);
         
