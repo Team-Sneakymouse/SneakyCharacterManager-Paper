@@ -15,6 +15,10 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.simple.JSONObject;
@@ -24,6 +28,8 @@ import org.json.simple.parser.ParseException;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
+import net.sneakycharactermanager.paper.util.SkinUtil;
 
 public class SkinData {
 
@@ -54,6 +60,13 @@ public class SkinData {
 
     private final String url;
     private final boolean isSlim;
+    private final int priority;
+    private final Player player;
+    
+    private final SkullMeta skullMeta;
+    private final ItemStack characterHead;
+    private final Inventory inventory;
+    private final int index;
 
     private String texture;
     private String signature;
@@ -75,9 +88,15 @@ public class SkinData {
      * @param url URL to download the skin from
      * @param isSlim True if it is a slim skin, false if it is a classic skin
      * */
-    private SkinData(@NotNull String url, boolean isSlim, int priority) {
+    private SkinData(@NotNull String url, boolean isSlim, int priority, Player player, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
         this.url = url;
         this.isSlim = isSlim;
+        this.priority = priority;
+        this.player = player;
+        this.skullMeta = skullMeta;
+        this.characterHead = characterHead;
+        this.inventory = inventory;
+        this.index = index;
         SneakyCharacterManager.getInstance().skinQueue.add(this, priority);
     }
 
@@ -140,6 +159,19 @@ public class SkinData {
         if (!isValid) return null;
         return new ProfileProperty("textures", texture, signature);
     }
+
+    public void apply() {
+        //Priority 0 is only used for pre-caching skins. So priority 0 skindatas should not be applied.
+        if (this.priority > 0) {
+            if (this.skullMeta == null) {
+                this.player.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, this.getTextureProperty()));
+            } else if (SneakyCharacterManager.getInstance().selectionMenu.menuExists(this.player.getUniqueId().toString())) {
+                this.skullMeta.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, this.getTextureProperty()));
+                this.characterHead.setItemMeta(this.skullMeta);
+                this.inventory.setItem(this.index, this.characterHead);
+            }
+        }
+    }
     
     public String getUrl() {
         return url;
@@ -153,7 +185,13 @@ public class SkinData {
         return (isValid() || this.attempts > 5);
     }
 
+    public Player getPlayer() {
+        return player;
+    }
+
     public void cancel() {
+        if (this.isProcessed()) return;
+
         this.cancelled = true;
         this.remove();
     }
@@ -163,8 +201,12 @@ public class SkinData {
         skinDataMap.values().removeIf(value -> value == this);
     }
 
-    public static SkinData getOrCreate(@NotNull String url, boolean isSlim, int priority) {
-        return skinDataMap.computeIfAbsent(url, key -> new SkinData(key, isSlim, priority));
+    public static SkinData getOrCreate(@NotNull String url, boolean isSlim, int priority, Player player) {
+        return skinDataMap.computeIfAbsent(url, key -> new SkinData(key, isSlim, priority, player, null, null, null, 0));
+    }
+
+    public static SkinData getOrCreate(@NotNull String url, boolean isSlim, int priority, Player player, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
+        return skinDataMap.computeIfAbsent(url, key -> new SkinData(key, isSlim, priority, player, skullMeta, characterHead, inventory, index));
     }
 
 }

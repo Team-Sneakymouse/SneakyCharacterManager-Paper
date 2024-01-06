@@ -33,7 +33,7 @@ public class CharacterLoader {
         ProfileProperty profileProperty = SkinCache.get(player.getUniqueId().toString(), url);
 
         Bukkit.getServer().getPluginManager().callEvent(new LoadCharacterEvent(
-                character.getPlayer(),
+                player,
                 character.isFirstLoad(),
                 character.getCharacterUUID(),
                 character.getName(),
@@ -44,19 +44,9 @@ public class CharacterLoader {
         character.setFirstLoad(false);
 
         if (profileProperty == null) {
-            if (shouldSkipLoading(character)) return;
-            
-            SkinData data = SkinData.getOrCreate(url, character.isSlim(), 2);
-
-            Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
-                SkinUtil.waitForSkinProcessing(player, data);
-                Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                    ProfileProperty p = SkinCache.get(player.getUniqueId().toString(), character.getSkin());
-                    if (p != null) {
-                        player.setPlayerProfile(SkinUtil.handleCachedSkin(player, p));
-                    }
-                });
-            });
+            if (!shouldSkipLoading(character)) {
+                SkinData.getOrCreate(url, character.isSlim(), 2, player);
+            }
         } else {
             player.setPlayerProfile(SkinUtil.handleCachedSkin(player, profileProperty));
         }
@@ -77,7 +67,6 @@ public class CharacterLoader {
                 return true;
             }
     
-            SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(character.getPlayer(), character.getName());
             return true;
         }
         return false;
@@ -89,21 +78,12 @@ public class CharacterLoader {
 
         boolean isSlimSkin = slim == null ? checkIsSlimSkin(url, def) : slim;
     
-        SkinData data = SkinData.getOrCreate(url, isSlimSkin, 2);
+        SkinData.getOrCreate(url, isSlimSkin, 2, player);
 
-        Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
-            SkinUtil.waitForSkinProcessing(player, data);
-            Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                ProfileProperty p = SkinCache.get(player.getUniqueId().toString(), url);
-                Character character = Character.get(player);
-                if (p != null && character != null) {
-                    character.setSkin(url);
-                    character.setSlim(isSlimSkin);
-                    BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), 1, url, isSlimSkin);
-                    player.setPlayerProfile(SkinUtil.handleCachedSkin(player, p));
-                }
-            });
-        });
+        Character character = Character.get(player);
+        character.setSkin(url);
+        character.setSlim(isSlimSkin);
+        BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), 1, url, isSlimSkin);
     }
     
     private static boolean checkIsSlimSkin(String url, boolean def) {

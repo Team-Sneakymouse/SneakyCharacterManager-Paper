@@ -115,6 +115,8 @@ public class CharacterSelectionMenu implements Listener {
                 addItem(this.getInventory(), characters.get(i), i);
             }
 
+            SneakyCharacterManager.getInstance().skinPreloader.preLoadedPlayers.add(this.player);
+
             updated = true;
         }
 
@@ -139,32 +141,8 @@ public class CharacterSelectionMenu implements Listener {
             if (profileProperty == null) {
                 inventory.setItem(index, characterHead);
 
-                SkinData data = SkinData.getOrCreate(character.getSkin(), character.isSlim(), 1);
+                SkinData data = SkinData.getOrCreate(character.getSkin(), character.isSlim(), 1, this.player, skullMeta, characterHead, inventory, index);
                 this.queuedDatas.add(data);
-
-                Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
-                    if(player == null){
-                        SkinUtil.waitForSkinProcessing(this.offlinePlayer, data);
-                        Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                            ProfileProperty p = SkinCache.get(playerUUID, character.getSkin());
-                            if (p != null) {
-                                updateHead(skullMeta, this.offlinePlayer, p, characterHead, inventory, index);
-                                this.queuedDatas.remove(data);
-                                //if (this.queuedDatas.isEmpty()) SneakyCharacterManager.getInstance().skinPreloader.preLoadedPlayers.add(this.offlinePlayer);
-                            }
-                        });
-                    }else{
-                        SkinUtil.waitForSkinProcessing(this.player, data);
-                        Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                            ProfileProperty p = SkinCache.get(playerUUID, character.getSkin());
-                            if (p != null) {
-                                updateHead(skullMeta, this.player, p, characterHead, inventory, index);
-                                this.queuedDatas.remove(data);
-                                if (this.queuedDatas.isEmpty()) SneakyCharacterManager.getInstance().skinPreloader.preLoadedPlayers.add(this.player);
-                            }
-                        });
-                    }
-                });
             } else {
                 if(this.player == null){
                     updateHead(skullMeta, this.offlinePlayer, profileProperty, characterHead, inventory, index);
@@ -247,6 +225,7 @@ public class CharacterSelectionMenu implements Listener {
             for (SkinData skinData : queuedDatas) {
                 skinData.cancel();
             }
+            queuedDatas.clear();
         }
     }
 
@@ -375,7 +354,7 @@ public class CharacterSelectionMenu implements Listener {
         characterKey = NamespacedKey.fromString("character", SneakyCharacterManager.getInstance());
     }
 
-    private boolean menuExists(String uuid) {
+    public boolean menuExists(String uuid) {
         return activeMenus.containsKey(uuid);
     }
 
