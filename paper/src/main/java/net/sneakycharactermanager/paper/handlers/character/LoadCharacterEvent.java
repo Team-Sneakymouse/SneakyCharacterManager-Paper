@@ -1,13 +1,15 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
 import org.bukkit.entity.Player;
+import org.bukkit.event.Cancellable;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerEvent;
 import org.jetbrains.annotations.NotNull;
 
-public class LoadCharacterEvent extends PlayerEvent {
+public class LoadCharacterEvent extends PlayerEvent implements Cancellable {
 
 	protected static final HandlerList handlers = new HandlerList();
+    private boolean cancel = false;
 
     private final boolean firstLoad;
     private final String characterUUID;
@@ -27,6 +29,16 @@ public class LoadCharacterEvent extends PlayerEvent {
     @Override
     public @NotNull HandlerList getHandlers() {
         return handlers;
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return this.cancel;
+    }
+
+    @Override
+    public void setCancelled(boolean cancel) {
+        this.cancel = cancel;
     }
     
     public boolean getFirstLoad() {

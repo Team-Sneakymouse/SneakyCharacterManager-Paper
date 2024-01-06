@@ -32,26 +32,30 @@ public class CharacterLoader {
     
         ProfileProperty profileProperty = SkinCache.get(player.getUniqueId().toString(), url);
 
-        Bukkit.getServer().getPluginManager().callEvent(new LoadCharacterEvent(
+        LoadCharacterEvent event = new LoadCharacterEvent(
                 player,
                 character.isFirstLoad(),
                 character.getCharacterUUID(),
                 character.getName(),
                 url,
                 character.isSlim()
-        ));
-    
-        character.setFirstLoad(false);
+        );
 
-        if (profileProperty == null) {
-            if (!shouldSkipLoading(character)) {
-                SkinData.getOrCreate(url, character.isSlim(), 2, player);
+        Bukkit.getServer().getPluginManager().callEvent(event);
+
+        if (!event.isCancelled()) {
+            character.setFirstLoad(false);
+
+            if (profileProperty == null) {
+                if (!shouldSkipLoading(character)) {
+                    SkinData.getOrCreate(url, character.isSlim(), 2, player);
+                }
+            } else {
+                player.setPlayerProfile(SkinUtil.handleCachedSkin(player, profileProperty));
             }
-        } else {
-            player.setPlayerProfile(SkinUtil.handleCachedSkin(player, profileProperty));
-        }
 
-        SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getName());
+            SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getName());
+        }
     }
 
     
