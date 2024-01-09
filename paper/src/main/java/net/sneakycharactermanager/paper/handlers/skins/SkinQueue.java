@@ -40,7 +40,7 @@ public class SkinQueue extends BukkitRunnable {
         this.task = runTaskTimerAsynchronously(SneakyCharacterManager.getInstance(), 0, 1);
     }
 
-    private synchronized void stop() {
+    public synchronized void stop() {
         this.task.cancel();
         SneakyCharacterManager.getInstance().skinQueue = new SkinQueue();
     }

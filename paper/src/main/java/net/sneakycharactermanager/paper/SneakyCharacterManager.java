@@ -96,6 +96,10 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         if (event.getPlugin() == this) {
             Character.saveAll();
             this.nametagManager.unnickAll();
+
+            Bukkit.getScheduler().cancelTasks(this);
+            Bukkit.getAsyncScheduler().cancelTasks(this);
+            this.skinQueue.stop();
         }
     }
 
