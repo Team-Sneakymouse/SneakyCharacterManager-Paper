@@ -76,12 +76,8 @@ public class Nickname {
      * @param requester Player who wants to hide names
      * @param state To hide or show the name
      * */
-    public void hideName(Player requester, boolean state) {
-        if (state) {
-            nametag.setLocalizedName(Component.text(""), requester);
-        }else{
-            nametag.setLocalizedName(MiniMessage.miniMessage().deserialize(this.nickname), requester);
-        }
+    public void hideName(Player requester) {
+        nametag.setLocalizedName(Component.text(""), requester);
     }
 
     /**

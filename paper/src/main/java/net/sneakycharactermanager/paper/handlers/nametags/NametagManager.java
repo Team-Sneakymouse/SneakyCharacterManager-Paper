@@ -52,7 +52,7 @@ public class NametagManager {
                 if (requester == null || !requester.isOnline()) continue;
                 if (!showingNameplates.getValue()) {
                     for(Nickname name : nicknames.values()) {
-                        name.hideName(requester, true);
+                        name.hideName(requester);
                     }
                 }
             }
@@ -102,12 +102,14 @@ public class NametagManager {
         if (state) {
             isShowingNameplates.put(requester.getUniqueId().toString(), false);
             showingRealNames.remove(requester.getUniqueId().toString());
+
+            
+            for(Nickname nickname : nicknames.values()) {
+                nickname.hideName(requester);
+            }
         }
         else {
             isShowingNameplates.put(requester.getUniqueId().toString(), true);
-        }
-        for(Nickname nickname : nicknames.values()) {
-            nickname.hideName(requester, state);
         }
     }
 
@@ -128,7 +130,6 @@ public class NametagManager {
             }
         }
     }
-
 
     /**
      * Get the players current Nickname!
