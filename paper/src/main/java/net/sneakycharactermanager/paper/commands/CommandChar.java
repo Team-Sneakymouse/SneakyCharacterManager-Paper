@@ -68,7 +68,7 @@ public class CommandChar extends Command {
             List<String> names = new ArrayList<>();
 
             for (String name : tabCompleteMap.get(player.getUniqueId().toString())) {
-                if (!names.contains(name)) names.add(name);
+                if (!names.contains(name) && name.toLowerCase().startsWith(args[0].toLowerCase())) names.add(name);
             }
 
             return names;
