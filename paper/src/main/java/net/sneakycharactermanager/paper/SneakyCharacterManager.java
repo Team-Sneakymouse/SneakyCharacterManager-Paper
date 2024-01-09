@@ -89,6 +89,16 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
             Character.saveAll();
         }, 0, 1200);
+
+        Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
+            for (Player player : getServer().getOnlinePlayers()) {
+                Character character = Character.get(player);
+
+                if (character == null) continue;
+
+                this.nametagManager.nicknamePlayer(player, character.getName());
+            }
+        }, 0, 100);
     }
 
     @EventHandler
