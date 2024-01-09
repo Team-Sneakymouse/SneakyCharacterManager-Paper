@@ -72,7 +72,7 @@ public class NametagManager {
     public void createLocalized(Player requester, boolean enabled) {
         if (enabled) {
             isShowingNameplates.put(requester.getUniqueId().toString(), true);
-            showingRealNames.add(requester.getUniqueId().toString());
+            if (!showingRealNames.contains(requester.getUniqueId().toString())) showingRealNames.add(requester.getUniqueId().toString());
         }else{
             isShowingNameplates.put(requester.getUniqueId().toString(), true);
             showingRealNames.remove(requester.getUniqueId().toString());
