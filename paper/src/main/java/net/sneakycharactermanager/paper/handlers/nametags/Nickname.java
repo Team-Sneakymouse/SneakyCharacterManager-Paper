@@ -39,9 +39,6 @@ public class Nickname {
     public void setNickname(String nickname) {
         Player player = Bukkit.getPlayer(UUID.fromString(this.uuid));
         if (player == null) return;
-        if (!player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".colournames")) {
-            nickname = MiniMessage.miniMessage().escapeTags(nickname);
-        }
         this.nickname = nickname;
         nametag.setName(ChatUtility.convertToComponent(nickname));
     }

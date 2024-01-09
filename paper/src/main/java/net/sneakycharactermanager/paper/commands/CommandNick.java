@@ -60,6 +60,12 @@ public class CommandNick extends Command {
             player.sendMessage(ChatUtility.convertToComponent("&4Invalid name! It cannot contain special characters! Quotes, Spaces, and Diacritics are okay."));
             return false;
         }
+        String pattern2 = "[&<>]";
+        if(nickname.matches(".*" + pattern2 + ".*") && !player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".formatnames")){
+            player.sendMessage(ChatUtility.convertToComponent("&4Invalid name! It cannot contain special characters! Quotes, Spaces, and Diacritics are okay."));
+            return false;
+        }
+
         Character character = Character.get(player);
         if(character == null) {
             player.sendMessage(ChatUtility.convertToComponent("&cSorry! Failed to retrieve character!"));
