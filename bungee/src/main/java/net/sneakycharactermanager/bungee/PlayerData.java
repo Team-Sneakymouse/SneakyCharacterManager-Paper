@@ -2,11 +2,9 @@ package net.sneakycharactermanager.bungee;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -27,7 +25,7 @@ public class PlayerData {
     private Configuration config;
     private final File playerFile;
     private String lastPlayedCharacter;
-    private final Map<String, Character> characterMap = new ConcurrentHashMap<>();
+    private final Map<String, Character> characterMap = new LinkedHashMap<>();
 
     private PlayerData(String playerUUID) {
         this.playerUUID = playerUUID;
