@@ -20,6 +20,7 @@ import org.bukkit.event.inventory.InventoryInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.persistence.PersistentDataType;
@@ -44,7 +45,6 @@ public class CharacterSelectionMenu implements Listener {
 
     public static final String CHARACTER_SLOTS_PERMISSION_NODE = SneakyCharacterManager.IDENTIFIER + ".characterslots.";
     private static final Component CREATE_CHARACTER = ChatUtility.convertToComponent("&2Create Character");
-    private static final Component CHARACTER_SLOTS_FULL = ChatUtility.convertToComponent("&4No Character Slots Remaining");
 
     public class CharacterMenuHolder implements InventoryHolder {
 
@@ -159,18 +159,16 @@ public class CharacterSelectionMenu implements Listener {
         }
 
         protected void clickedItem(ItemStack clickedItem) {
-            if (!clickedItem.getType().equals(Material.PLAYER_HEAD)) return;
-
-            SkullMeta meta = (SkullMeta) clickedItem.getItemMeta();
-
-            if (meta.displayName().equals(CREATE_CHARACTER)) {
+            if (clickedItem.getType().equals(Material.LIME_STAINED_GLASS_PANE)) {
                 BungeeMessagingUtil.sendByteArray(this.opener, "createNewCharacter", playerUUID);
                 this.player.sendMessage(ChatUtility.convertToComponent("&aCreating a new character... Please Wait..."));
                 this.player.sendMessage(ChatUtility.convertToComponent("&aOnce the character is created, use the /nick and /skin command to customize it!"));
                 return;
-            } else if (meta.displayName().equals(CHARACTER_SLOTS_FULL)) {
-                return;
             }
+            
+            if (!clickedItem.getType().equals(Material.PLAYER_HEAD)) return;
+
+            SkullMeta meta = (SkullMeta) clickedItem.getItemMeta();
 
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
 
@@ -195,7 +193,7 @@ public class CharacterSelectionMenu implements Listener {
 
             SkullMeta meta = (SkullMeta) clickedItem.getItemMeta();
 
-            if (meta.displayName().equals(CREATE_CHARACTER) || meta.displayName().equals(CHARACTER_SLOTS_FULL)) return;
+            if (meta.displayName().equals(CREATE_CHARACTER)) return;
 
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
 
@@ -410,20 +408,17 @@ public class CharacterSelectionMenu implements Listener {
             }
 
             if (characters.size() < holder.getInventory().getSize()) {
-                ItemStack createCharacterButton = new ItemStack(Material.PLAYER_HEAD);
-                SkullMeta meta = (SkullMeta) createCharacterButton.getItemMeta();
-                meta.setPlayerProfile(player.getPlayerProfile());
+                int openSlots = maxCharacterSlots - characters.size();
 
-                if (maxCharacterSlots > characters.size()) {
-                    meta.displayName(CREATE_CHARACTER);
-                    meta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Steve")));
-                } else {
-                    meta.displayName(CHARACTER_SLOTS_FULL);
-                    meta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Zombie")));
-                }
-
+                ItemStack createCharacterButton = new ItemStack(Material.LIME_STAINED_GLASS_PANE);
+                ItemMeta meta = createCharacterButton.getItemMeta();
+                meta.displayName(CREATE_CHARACTER);
                 createCharacterButton.setItemMeta(meta);
-                holder.getInventory().setItem((int) Math.floor(characters.size() / 9) * 9 + 8, createCharacterButton);
+
+                for (int i = 0; i < openSlots; i++) {
+                    if (characters.size() + i > holder.getInventory().getSize()) break;
+                    holder.getInventory().setItem(characters.size() + i, createCharacterButton);
+                }
             }
         }
     }
