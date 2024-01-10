@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.*;
 
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -92,6 +93,8 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
         Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
             for (Player player : getServer().getOnlinePlayers()) {
+                if (player.getGameMode() == GameMode.SPECTATOR || VanishEvents.vanishedPlayers.contains(player)) continue;
+
                 Character character = Character.get(player);
 
                 if (character == null) continue;

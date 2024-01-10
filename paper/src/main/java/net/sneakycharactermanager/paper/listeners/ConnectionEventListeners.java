@@ -60,7 +60,7 @@ public class ConnectionEventListeners implements Listener {
             character.save();
         }
         Character.remove(player);
-
+        VanishEvents.vanishedPlayers.remove(player);
     }
 
 }
