@@ -21,10 +21,10 @@ public class VanishEvents implements Listener {
     @EventHandler
     public void onVanish(PlayerShowEntityEvent event){
         if(!(event.getEntity() instanceof Player hidden)) return;
-        Character character = Character.get(hidden);
-        if(character == null) return;
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(hidden);
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), ()->{
+            Character character = Character.get(hidden);
+            if(character == null) return;
             SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(hidden, character.getName());
         }, 2);
     }
