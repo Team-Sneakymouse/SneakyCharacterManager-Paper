@@ -54,6 +54,10 @@ public class NametagManager {
                     for(Nickname name : nicknames.values()) {
                         name.hideName(requester);
                     }
+                } else {
+                    for(Nickname name : nicknames.values()) {
+                        name.showRealName(requester, false);
+                    }
                 }
             }
         }, 20);
