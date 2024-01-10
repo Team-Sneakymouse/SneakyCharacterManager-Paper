@@ -20,6 +20,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.profile.PlayerTextures;
 import org.jetbrains.annotations.NotNull;
@@ -120,6 +121,9 @@ public class CommandSkin extends Command {
                             character.setSlim(isSlim);
                             BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), 1, textureURL, isSlim);
                             player.setPlayerProfile(profile);
+
+                            Entity vehicle = player.getVehicle();
+                            if (vehicle != null) vehicle.removePassenger(player);
                         });
                     }
                 }
