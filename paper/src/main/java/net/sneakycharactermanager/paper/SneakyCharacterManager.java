@@ -93,7 +93,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
         Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
             for (Player player : getServer().getOnlinePlayers()) {
-                if (player.getGameMode() == GameMode.SPECTATOR || VanishEvents.vanishedPlayers.contains(player) || player.getScoreboardTags().contains("vanished")) continue;
+                if (player.getGameMode() == GameMode.SPECTATOR || VanishEvents.vanishedPlayers.contains(player)) continue;
 
                 Character character = Character.get(player);
 
