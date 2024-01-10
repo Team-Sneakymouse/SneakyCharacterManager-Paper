@@ -416,7 +416,7 @@ public class CharacterSelectionMenu implements Listener {
                 createCharacterButton.setItemMeta(meta);
 
                 for (int i = 0; i < openSlots; i++) {
-                    if (characters.size() + i > holder.getInventory().getSize()) break;
+                    if (characters.size() + i > holder.getInventory().getSize() - 1) break;
                     holder.getInventory().setItem(characters.size() + i, createCharacterButton);
                 }
             }
