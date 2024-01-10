@@ -2,6 +2,8 @@ package net.sneakycharactermanager.paper.listeners;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
+
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -22,7 +24,9 @@ public class VanishEvents implements Listener {
         Character character = Character.get(hidden);
         if(character == null) return;
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(hidden);
-        SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(hidden, character.getName());
+        Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), ()->{
+            SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(hidden, character.getName());
+        }, 2);
     }
 
 }

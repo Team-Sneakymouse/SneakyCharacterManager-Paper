@@ -2,6 +2,8 @@ package net.sneakycharactermanager.paper.listeners;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
+
+import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -21,7 +23,10 @@ public class GamemodeEvents implements Listener {
             SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
             Character character = Character.get(player);
             if(character == null) return;
-            SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getName());
+
+            Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), ()->{
+                SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getName());
+            }, 2);
         }
     }
 
