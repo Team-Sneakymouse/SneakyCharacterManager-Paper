@@ -15,6 +15,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -28,7 +29,6 @@ import org.json.simple.parser.ParseException;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
 public class SkinData {
@@ -165,6 +165,9 @@ public class SkinData {
         if (this.priority > 0) {
             if (this.skullMeta == null) {
                 this.player.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, this.getTextureProperty()));
+                Entity vehicle = player.getVehicle();
+                if (vehicle != null) vehicle.removePassenger(player);
+                player.teleport(player.getLocation().add(0, 1, 0));
             } else if (SneakyCharacterManager.getInstance().selectionMenu.menuExists(this.player.getUniqueId().toString())) {
                 this.skullMeta.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, this.getTextureProperty()));
                 this.characterHead.setItemMeta(this.skullMeta);

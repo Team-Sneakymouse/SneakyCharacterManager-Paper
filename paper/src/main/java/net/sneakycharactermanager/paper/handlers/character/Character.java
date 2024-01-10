@@ -119,7 +119,7 @@ public class Character {
             }
         }
 
-        this.player.teleport(playerLocation);
+        this.player.teleport(playerLocation.add(0, 1, 0));
 
         ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
         this.player.getInventory().setContents(inventoryContents);

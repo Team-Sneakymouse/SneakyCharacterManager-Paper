@@ -124,6 +124,7 @@ public class CommandSkin extends Command {
 
                             Entity vehicle = player.getVehicle();
                             if (vehicle != null) vehicle.removePassenger(player);
+                            player.teleport(player.getLocation().add(0, 1, 0));
                         });
                     }
                 }
