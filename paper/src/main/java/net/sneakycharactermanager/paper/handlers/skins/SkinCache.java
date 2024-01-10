@@ -9,7 +9,7 @@ public class SkinCache {
 
     private static Map<String, Map<String, ProfileProperty>> skinCache = new ConcurrentHashMap<>();
 
-    public static ProfileProperty get(String playerUUID, String url) {
+    public synchronized static ProfileProperty get(String playerUUID, String url) {
         return Optional.ofNullable(skinCache.compute(playerUUID, (key, value) -> {
             if (value != null) {
                 ProfileProperty p = value.get(url);
@@ -26,12 +26,12 @@ public class SkinCache {
         })).flatMap(map -> Optional.ofNullable(map.get(url))).orElse(null);
     }
 
-    public static void put(String playerUUID, String url, ProfileProperty profileProperty) {
+    public synchronized static void put(String playerUUID, String url, ProfileProperty profileProperty) {
         if (!skinCache.containsKey(playerUUID)) skinCache.put(playerUUID, new HashMap<String,ProfileProperty>());
         skinCache.get(playerUUID).put(url, profileProperty);
     }
 
-    public static void remove(String playerUUID) {
+    public synchronized static void remove(String playerUUID) {
         skinCache.remove(playerUUID);
     }
 
