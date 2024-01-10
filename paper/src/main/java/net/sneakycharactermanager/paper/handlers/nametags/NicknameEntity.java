@@ -4,6 +4,8 @@ import java.util.Objects;
 
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.util.ChatUtility;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.craftbukkit.v1_20_R2.entity.CraftEntity;
@@ -72,8 +74,8 @@ public class NicknameEntity {
     }
 
     public void updateComponents(String name) {
-        componentCharacter = MiniMessage.miniMessage().deserialize(name);
-        componentOn = MiniMessage.miniMessage().deserialize(
+        componentCharacter = ChatUtility.convertToComponent(name);
+        componentOn = ChatUtility.convertToComponent(
             "<white>" + name + "<newline><gray>[" + player.getName() + "]");
     }
 
