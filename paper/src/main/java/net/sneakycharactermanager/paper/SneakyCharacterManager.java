@@ -98,7 +98,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
                 if (character == null) continue;
 
-                this.nametagManager.nicknamePlayer(player, character.getName());
+                this.nametagManager.refreshNickname(player, character.getName());
             }
         }, 0, 100);
     }

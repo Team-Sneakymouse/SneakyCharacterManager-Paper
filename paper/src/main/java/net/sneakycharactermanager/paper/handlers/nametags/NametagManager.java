@@ -67,6 +67,37 @@ public class NametagManager {
 
     }
 
+    public void refreshNickname(Player player, String nickname) {
+        if (player.isDead() || player.getGameMode() == GameMode.SPECTATOR || (PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%") != null && !PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%").isEmpty())) return;
+
+        if (!nicknames.containsKey(player.getUniqueId().toString())) return;
+
+        List<Player> handled = new ArrayList<>();
+        for(String uuid : showingRealNames) {
+            Player requester = Bukkit.getPlayer(UUID.fromString(uuid));
+            if (requester == null || ! requester.isOnline()) continue;
+            for(Nickname name : nicknames.values()) {
+                name.showRealName(requester, true);
+            }
+            handled.add(requester);
+        }
+
+        for(Map.Entry<String, Boolean> showingNameplates : isShowingNameplates.entrySet()) {
+            Player requester = Bukkit.getPlayer(UUID.fromString(showingNameplates.getKey()));
+            if (requester == null || !requester.isOnline() || handled.contains(requester)) continue;
+            if (!showingNameplates.getValue()) {
+                for(Nickname name : nicknames.values()) {
+                    name.hideName(requester);
+                }
+            } else {
+                for(Nickname name : nicknames.values()) {
+                    name.showRealName(requester, false);
+                }
+            }
+        }
+
+    }
+
     /**
      * Create a localized nickname for the requested player to see!
      * Currently, this just shows the 'real' name of all nicknamed players!
