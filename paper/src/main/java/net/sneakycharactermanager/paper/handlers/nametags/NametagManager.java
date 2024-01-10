@@ -72,6 +72,9 @@ public class NametagManager {
 
         if (!nicknames.containsKey(player.getUniqueId().toString())) return;
 
+        Nickname ownName = nicknames.get(player.getUniqueId().toString());
+        if (ownName != null) ownName.hideNameFromOwner();
+
         List<Player> handled = new ArrayList<>();
         for(String uuid : showingRealNames) {
             Player requester = Bukkit.getPlayer(UUID.fromString(uuid));

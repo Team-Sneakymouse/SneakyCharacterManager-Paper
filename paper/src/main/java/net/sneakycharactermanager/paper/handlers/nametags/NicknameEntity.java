@@ -86,6 +86,26 @@ public class NicknameEntity {
         temp.remove(RemovalReason.DISCARDED);
     }
 
+    public void hideFromOwner() {
+        Component name = Component.text("");
+
+        net.minecraft.world.entity.Display.TextDisplay c = (net.minecraft.world.entity.Display.TextDisplay) ((CraftEntity) mounted).getHandle();
+
+        net.minecraft.world.entity.Display.TextDisplay temp = new net.minecraft.world.entity.Display.TextDisplay(EntityType.TEXT_DISPLAY, ((CraftPlayer) player).getHandle().level());
+
+        temp.setText(PaperAdventure.asVanilla(name));
+
+        SynchedEntityData entityData = temp.getEntityData();
+        entityData.set(net.minecraft.world.entity.Display.TextDisplay.DATA_BACKGROUND_COLOR_ID, ((TextComponent) name).content().equals("") ? 0 : 956301312);
+
+        ClientboundSetEntityDataPacket dataPacket = new ClientboundSetEntityDataPacket(c.getId(),
+                Objects.requireNonNull(entityData.getNonDefaultValues()));
+
+        ((CraftPlayer)this.player).getHandle().connection.send(dataPacket);
+
+        temp.remove(RemovalReason.DISCARDED);
+    }
+
     public void destroy() {
         mounted.remove();
     }

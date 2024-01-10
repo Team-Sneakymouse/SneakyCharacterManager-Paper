@@ -77,6 +77,10 @@ public class Nickname {
         nametag.setLocalizedName(Component.text(""), requester);
     }
 
+    public void hideNameFromOwner() {
+        nametag.hideFromOwner();
+    }
+
     /**
      * Get the players current Nickname!
      * @return The Players Nickname
