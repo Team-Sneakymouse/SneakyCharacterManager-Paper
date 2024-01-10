@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.*;
 
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -11,6 +12,7 @@ import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import me.clip.placeholderapi.PlaceholderAPI;
 import net.sneakycharactermanager.paper.commands.*;
 import net.sneakycharactermanager.paper.listeners.*;
 import net.sneakycharactermanager.paper.handlers.Placeholders;
