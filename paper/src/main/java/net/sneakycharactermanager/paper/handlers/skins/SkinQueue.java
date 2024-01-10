@@ -2,20 +2,19 @@ package net.sneakycharactermanager.paper.handlers.skins;
 
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
 
 import com.destroystokyo.paper.profile.ProfileProperty;
 
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 
-public class SkinQueue extends BukkitRunnable {
+public class SkinQueue {
 
     private Map<Integer, List<SkinData>> queue = new LinkedHashMap<>();
-    private BukkitTask task = null;
-    private boolean busy = false;
+    private ScheduledTask task = null;
     public int pauseTicks = 0;
 
     public synchronized void add(SkinData skinData, int priority) {
@@ -37,31 +36,22 @@ public class SkinQueue extends BukkitRunnable {
 
     private void start() {
         if (this.task != null) return;
-        this.task = runTaskTimerAsynchronously(SneakyCharacterManager.getInstance(), 0, 1);
+        this.task = Bukkit.getAsyncScheduler().runDelayed(SneakyCharacterManager.getInstance(), (s) -> {
+            this.run();
+        }, 50, TimeUnit.MILLISECONDS);
     }
 
     public void stop() {
         this.task.cancel();
-        SneakyCharacterManager.getInstance().skinQueue = new SkinQueue();
+        this.task = null;
     }
 
-    @Override
     public synchronized void run() {
-        if (this.busy) {
-            return;
-        }
-
-        if (this.pauseTicks > 0) {
-            this.pauseTicks--;
-            return;
-        }
-
         SkinData next = this.getNext();
 
         if (next == null) {
             this.stop();
         } else {
-            this.busy = true;
             next.convertSkinURL();
             if (next.isProcessed()) {
                 if (next.isValid()) {
@@ -76,8 +66,10 @@ public class SkinQueue extends BukkitRunnable {
                 }
                 next.remove();
             }
-            this.busy = false;
-            this.pauseTicks += 5;
+            this.task = Bukkit.getAsyncScheduler().runDelayed(SneakyCharacterManager.getInstance(), (s) -> {
+                this.run();
+            }, 50 * (this.pauseTicks + 5), TimeUnit.MILLISECONDS);
+            this.pauseTicks = 0;
         }
     }
 }
