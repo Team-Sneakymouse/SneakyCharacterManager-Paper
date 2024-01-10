@@ -37,6 +37,11 @@ public class CommandNick extends Command {
         }
         String nickname = builder.substring(0, builder.length()-1);
 
+        if (nickname.length() > 32 && !player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".formatnames")) {
+            player.sendMessage(ChatUtility.convertToComponent("&4That name is too long! No more than 32 characters."));
+            return false;
+        }
+
         List<String> bannedWords = SneakyCharacterManager.getInstance().getConfig().getStringList("bannedWords");
 
         boolean containsBannedWord = false;
