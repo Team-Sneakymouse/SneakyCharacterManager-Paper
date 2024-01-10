@@ -35,12 +35,12 @@ public class SkinQueue extends BukkitRunnable {
         return maxEntry.map(entry -> entry.getValue().get(0)).orElse(null);
     }
 
-    private synchronized void start() {
+    private void start() {
         if (this.task != null) return;
         this.task = runTaskTimerAsynchronously(SneakyCharacterManager.getInstance(), 0, 1);
     }
 
-    public synchronized void stop() {
+    public void stop() {
         this.task.cancel();
         SneakyCharacterManager.getInstance().skinQueue = new SkinQueue();
     }
