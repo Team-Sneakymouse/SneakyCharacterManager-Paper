@@ -18,6 +18,7 @@ import net.sneakycharactermanager.paper.listeners.*;
 import net.sneakycharactermanager.paper.handlers.Placeholders;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
+import net.sneakycharactermanager.paper.handlers.nametags.NameTagRefresher;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinPreloader;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
@@ -36,6 +37,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
     public CharacterSelectionMenu selectionMenu;
     public SkinQueue skinQueue;
     public SkinPreloader skinPreloader;
+    public NameTagRefresher nameTagRefresher;
 
     @Override
     public void onEnable() {
@@ -44,6 +46,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         selectionMenu = new CharacterSelectionMenu();
         skinQueue = new SkinQueue();
         skinPreloader = new SkinPreloader();
+        nameTagRefresher = new NameTagRefresher();
 
         saveDefaultConfig();
 
@@ -91,16 +94,6 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
             Character.saveAll();
         }, 0, 1200);
-
-        Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
-            for (Player player : getServer().getOnlinePlayers()) {
-                Character character = Character.get(player);
-
-                if (character == null) continue;
-
-                this.nametagManager.refreshNickname(player, character.getName());
-            }
-        }, 0, 100);
     }
 
     @EventHandler
@@ -112,6 +105,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
             Bukkit.getScheduler().cancelTasks(this);
             Bukkit.getAsyncScheduler().cancelTasks(this);
             this.skinQueue.stop();
+            this.nameTagRefresher.stop();
         }
     }
 

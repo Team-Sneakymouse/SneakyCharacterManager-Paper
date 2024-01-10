@@ -5,15 +5,12 @@ import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
 public class Nickname {
 
     private String nickname;
-    private final String realName;
     private final String uuid;
     private final NicknameEntity nametag;
 
@@ -25,7 +22,6 @@ public class Nickname {
     public Nickname(Player player, String nickname) {
         this.nametag = new NicknameEntity(player);
         this.uuid = player.getUniqueId().toString();
-        this.realName = player.getName();
         this.nickname = nickname;
         this.setNickname(nickname);
     }
@@ -41,6 +37,7 @@ public class Nickname {
         if (player == null) return;
         this.nickname = nickname;
         nametag.setName(ChatUtility.convertToComponent(nickname));
+        nametag.updateComponents(nickname);
     }
 
     /**
@@ -51,12 +48,10 @@ public class Nickname {
      * */
     public void showRealName(Player requester, boolean enabled) {
         if (enabled) {
-            nametag.setLocalizedName(MiniMessage.miniMessage().deserialize(
-                    "<white>" + this.nickname + "<newline><gray>[" + this.realName + "]"
-            ), requester);
+            nametag.refreshOn(requester);
         }
         else {
-            nametag.setLocalizedName(MiniMessage.miniMessage().deserialize(this.nickname), requester);
+            nametag.refreshCharacter(requester);
         }
     }
 
@@ -74,7 +69,7 @@ public class Nickname {
      * @param state To hide or show the name
      * */
     public void hideName(Player requester) {
-        nametag.setLocalizedName(Component.text(""), requester);
+        nametag.refreshOff(requester);
     }
 
     public void hideNameFromOwner() {

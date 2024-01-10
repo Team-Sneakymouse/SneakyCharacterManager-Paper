@@ -33,8 +33,6 @@ public class NametagManager {
      * @param nickname Nickname to set onto the player
      * */
     public void nicknamePlayer(Player player, String nickname) {
-        if (player.isDead() || player.getGameMode() == GameMode.SPECTATOR || (PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%") != null && !PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%").isEmpty())) return;
-
         if (!nicknames.containsKey(player.getUniqueId().toString())) {
             nicknames.put(player.getUniqueId().toString(), new Nickname(player, nickname));
         }else{
@@ -42,60 +40,38 @@ public class NametagManager {
         }
 
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), ()->{
-            for(String uuid : showingRealNames) {
-                Player requester = Bukkit.getPlayer(UUID.fromString(uuid));
-                if (requester == null || ! requester.isOnline()) continue;
-                for(Nickname name : nicknames.values()) {
-                    name.showRealName(requester, true);
-                }
-            }
-
-            for(Map.Entry<String, Boolean> showingNameplates : isShowingNameplates.entrySet()) {
-                Player requester = Bukkit.getPlayer(UUID.fromString(showingNameplates.getKey()));
-                if (requester == null || !requester.isOnline()) continue;
-                if (!showingNameplates.getValue()) {
-                    for(Nickname name : nicknames.values()) {
-                        name.hideName(requester);
-                    }
-                } else {
-                    for(Nickname name : nicknames.values()) {
-                        name.showRealName(requester, false);
-                    }
-                }
-            }
-        }, 20);
+            refreshNickname(player);
+        }, 5);
 
     }
 
-    public void refreshNickname(Player player, String nickname) {
+    public void refreshNickname(Player player) {
         if (player.isDead() || player.getGameMode() == GameMode.SPECTATOR || (PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%") != null && !PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%").isEmpty())) return;
 
-        if (!nicknames.containsKey(player.getUniqueId().toString())) return;
+        Nickname name = nicknames.get(player.getUniqueId().toString());
+        if (name == null) return;
+        
+        name.hideNameFromOwner();
 
-        Nickname ownName = nicknames.get(player.getUniqueId().toString());
-        if (ownName != null) ownName.hideNameFromOwner();
-
-        List<Player> handled = new ArrayList<>();
+        List<String> handled = new ArrayList<>();
         for(String uuid : showingRealNames) {
             Player requester = Bukkit.getPlayer(UUID.fromString(uuid));
-            if (requester == null || ! requester.isOnline()) continue;
-            for(Nickname name : nicknames.values()) {
-                name.showRealName(requester, true);
-            }
-            handled.add(requester);
+            if (requester == null || ! requester.isOnline() || !requester.getWorld().getName().equals(player.getWorld().getName()) || requester.getLocation().distanceSquared(player.getLocation()) > 2500) continue;
+
+            name.showRealName(requester, true);
+            handled.add(uuid);
         }
 
         for(Map.Entry<String, Boolean> showingNameplates : isShowingNameplates.entrySet()) {
+            if (handled.contains(showingNameplates.getKey())) continue;
             Player requester = Bukkit.getPlayer(UUID.fromString(showingNameplates.getKey()));
-            if (requester == null || !requester.isOnline() || handled.contains(requester)) continue;
+
+            if (requester == null || ! requester.isOnline() || !requester.getWorld().getName().equals(player.getWorld().getName()) || requester.getLocation().distanceSquared(player.getLocation()) > 2500) continue;
+
             if (!showingNameplates.getValue()) {
-                for(Nickname name : nicknames.values()) {
-                    name.hideName(requester);
-                }
+                name.hideName(requester);
             } else {
-                for(Nickname name : nicknames.values()) {
-                    name.showRealName(requester, false);
-                }
+                name.showRealName(requester, false);
             }
         }
 

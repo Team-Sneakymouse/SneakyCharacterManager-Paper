@@ -18,6 +18,7 @@ import org.joml.Vector3f;
 import io.papermc.paper.adventure.PaperAdventure;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Entity.RemovalReason;
@@ -27,6 +28,10 @@ public class NicknameEntity {
 
     private TextDisplay mounted;
     private final Player player;
+
+    private static final Component componentOff = Component.text("");
+    private Component componentCharacter;
+    private Component componentOn;
 
     public NicknameEntity(Player player) {
         this.player = player;
@@ -66,8 +71,26 @@ public class NicknameEntity {
         ((CraftPlayer)this.player).getHandle().connection.send(new ClientboundRemoveEntitiesPacket(c.getId()));
     }
 
-    public void setLocalizedName(Component name, Player requester) {
-        if (requester.getUniqueId().toString().equals(player.getUniqueId().toString())) return;;
+    public void updateComponents(String name) {
+        componentCharacter = MiniMessage.miniMessage().deserialize(name);
+        componentOn = MiniMessage.miniMessage().deserialize(
+            "<white>" + name + "<newline><gray>[" + player.getName() + "]");
+    }
+
+    public void refreshOff(Player requester) {
+        setLocalizedName(componentOff, requester);
+    }
+
+    public void refreshCharacter(Player requester) {
+        setLocalizedName(componentCharacter, requester);
+    }
+
+    public void refreshOn(Player requester) {
+        setLocalizedName(componentOn, requester);
+    }
+
+    private void setLocalizedName(Component name, Player requester) {
+        if (requester.getUniqueId().toString().equals(player.getUniqueId().toString())) return;
 
         net.minecraft.world.entity.Display.TextDisplay c = (net.minecraft.world.entity.Display.TextDisplay) ((CraftEntity) mounted).getHandle();
 
@@ -87,16 +110,14 @@ public class NicknameEntity {
     }
 
     public void hideFromOwner() {
-        Component name = Component.text("");
-
         net.minecraft.world.entity.Display.TextDisplay c = (net.minecraft.world.entity.Display.TextDisplay) ((CraftEntity) mounted).getHandle();
 
         net.minecraft.world.entity.Display.TextDisplay temp = new net.minecraft.world.entity.Display.TextDisplay(EntityType.TEXT_DISPLAY, ((CraftPlayer) player).getHandle().level());
 
-        temp.setText(PaperAdventure.asVanilla(name));
+        temp.setText(PaperAdventure.asVanilla(componentOff));
 
         SynchedEntityData entityData = temp.getEntityData();
-        entityData.set(net.minecraft.world.entity.Display.TextDisplay.DATA_BACKGROUND_COLOR_ID, ((TextComponent) name).content().equals("") ? 0 : 956301312);
+        entityData.set(net.minecraft.world.entity.Display.TextDisplay.DATA_BACKGROUND_COLOR_ID, ((TextComponent) componentOff).content().equals("") ? 0 : 956301312);
 
         ClientboundSetEntityDataPacket dataPacket = new ClientboundSetEntityDataPacket(c.getId(),
                 Objects.requireNonNull(entityData.getNonDefaultValues()));
