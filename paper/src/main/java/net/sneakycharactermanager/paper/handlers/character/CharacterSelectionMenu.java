@@ -133,7 +133,7 @@ public class CharacterSelectionMenu implements Listener {
             skullMeta.lore(lore);
 
             skullMeta.getPersistentDataContainer().set(characterKey, PersistentDataType.STRING, character.getCharacterUUID());
-            skullMeta.setOwningPlayer((Bukkit.getOfflinePlayer("MHF_Alex")));
+            skullMeta.setOwningPlayer(this.opener);
             characterHead.setItemMeta(skullMeta);
 
             ProfileProperty profileProperty = SkinCache.get(playerUUID, character.getSkin());
