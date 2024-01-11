@@ -70,9 +70,7 @@ public class NametagManager {
 
     }
 
-    public void refreshNickname(Player requester, String playerUUID) {
-        Nickname name = nicknames.get(playerUUID);
-        if (name == null) return;
+    public void refreshNickname(Nickname name, Player requester) {
         String requesterUUID = requester.getUniqueId().toString();
 
         if (showingRealNames.contains(requesterUUID)) {
@@ -157,12 +155,10 @@ public class NametagManager {
 
     /**
      * Get the players current Nickname!
-     * @return The Players Nickname || The players name if they have no Nickname!
+     * @return The Players Nickname, or null if they don't have one.
      * */
-    public String getNickname(Player player) {
-        Nickname nickname = nicknames.get(player.getUniqueId().toString());
-        if (nickname == null) return player.getName();
-        return nickname.getNickname();
+    public Nickname getNickname(Player player) {
+        return nicknames.get(player.getUniqueId().toString());
     }
 
     /**

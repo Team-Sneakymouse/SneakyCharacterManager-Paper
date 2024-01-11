@@ -20,7 +20,7 @@ public class NameTagRefresher extends BukkitRunnable {
     private Map<Player, List<Player>> trackedByPrev = new ConcurrentHashMap<>();
 
     public NameTagRefresher() {
-        this.task = runTaskTimerAsynchronously(SneakyCharacterManager.getInstance(), 0, 20);
+        this.task = runTaskTimer(SneakyCharacterManager.getInstance(), 0, 20);
     }
 
     public void stop() {
@@ -31,7 +31,12 @@ public class NameTagRefresher extends BukkitRunnable {
     public void run() {
         for (Player player : Bukkit.getOnlinePlayers()) {
             List<Player> trackingPlayers = new ArrayList<>();
-            if (player.isDead() || player.getGameMode() == GameMode.SPECTATOR || (PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%") != null && !PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%").isEmpty())) {
+            Nickname name = SneakyCharacterManager.getInstance().nametagManager.getNickname(player);
+            if (player.isDead() ||
+                player.getGameMode() == GameMode.SPECTATOR ||
+                (PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%") != null && !PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%").isEmpty()) ||
+                name == null
+            ) {
                 trackedByPrev.put(player, trackingPlayers);
                 continue;
             }
@@ -42,9 +47,7 @@ public class NameTagRefresher extends BukkitRunnable {
                 trackingPlayers.add(tracking);
                 if (trackingPlayersPrev != null && trackingPlayersPrev.contains(tracking)) continue;
 
-                Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                    SneakyCharacterManager.getInstance().nametagManager.refreshNickname(tracking, player.getUniqueId().toString());
-                });
+                SneakyCharacterManager.getInstance().nametagManager.refreshNickname(name, tracking);
             }
 
             trackedByPrev.put(player, trackingPlayers);
