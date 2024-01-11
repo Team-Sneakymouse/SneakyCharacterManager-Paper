@@ -41,6 +41,7 @@ public class SkinQueue {
     }
 
     public synchronized void stop() {
+        if (this.task == null) return;
         this.task.cancel();
         this.task = null;
     }
