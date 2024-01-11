@@ -58,7 +58,7 @@ public class NametagManager {
         List<String> handled = new ArrayList<>();
         for(String uuid : showingRealNames) {
             Player requester = Bukkit.getPlayer(UUID.fromString(uuid));
-            if (requester == null || ! requester.isOnline() || !requester.getWorld().getName().equals(player.getWorld().getName()) || requester.getLocation().distanceSquared(player.getLocation()) > 2500) continue;
+            if (requester == null || ! requester.isOnline() || !requester.getWorld().getName().equals(player.getWorld().getName()) || requester.getLocation().distanceSquared(player.getLocation()) > 12100) continue;
 
             name.showRealName(requester, true);
             handled.add(uuid);
@@ -68,7 +68,7 @@ public class NametagManager {
             if (handled.contains(showingNameplates.getKey())) continue;
             Player requester = Bukkit.getPlayer(UUID.fromString(showingNameplates.getKey()));
 
-            if (requester == null || ! requester.isOnline() || !requester.getWorld().getName().equals(player.getWorld().getName()) || requester.getLocation().distanceSquared(player.getLocation()) > 2500) continue;
+            if (requester == null || ! requester.isOnline() || !requester.getWorld().getName().equals(player.getWorld().getName()) || requester.getLocation().distanceSquared(player.getLocation()) > 12100) continue;
 
             if (!showingNameplates.getValue()) {
                 name.hideName(requester);
