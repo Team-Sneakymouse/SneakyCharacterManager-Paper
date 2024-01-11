@@ -105,7 +105,7 @@ public class SkinData {
      * Minecraft does not allow external URLs as skin textures so making use of
      * MineSkin's API is the best way to convert the data!
      * */
-    public void convertSkinURL() {
+    public boolean convertSkinURL() {
         this.attempts++;
         SneakyCharacterManager.getInstance().skinPreloader.requestsThisMinute++;
         //Make a request to MineSkin to change skin data!
@@ -131,12 +131,12 @@ public class SkinData {
                 JSONObject result = (JSONObject) parser.parse(new InputStreamReader(in, StandardCharsets.UTF_8));
 
                 if (result.containsKey("delay")) {
-                    return;
+                    return false;
                 }
                 JSONObject dataObject = (JSONObject) result.get("data");
                 if (dataObject == null) {
-                    if (result.toString().contains("Too many requests")) SneakyCharacterManager.getInstance().skinQueue.pauseTicks = 40;
-                    return;
+                    //if (result.toString().contains("Too many requests")) SneakyCharacterManager.getInstance().skinQueue.pauseTicks = 40;
+                    return false;
                 }
                 JSONObject textureObject = (JSONObject) dataObject.get("texture");
 
@@ -146,9 +146,10 @@ public class SkinData {
         } catch (IOException | URISyntaxException | ParseException e) {
             e.printStackTrace();
             Bukkit.getLogger().severe("Something went very wrong!");
-            return;
+            return false;
         }
         this.isValid = true;
+        return true;
     }
 
     /**

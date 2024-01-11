@@ -15,7 +15,6 @@ public class SkinQueue {
 
     private Map<Integer, List<SkinData>> queue = new LinkedHashMap<>();
     private ScheduledTask task = null;
-    public int pauseTicks = 0;
 
     public synchronized void add(SkinData skinData, int priority) {
         this.queue.computeIfAbsent(priority, k -> new ArrayList<>()).add(skinData);
@@ -52,7 +51,7 @@ public class SkinQueue {
         if (next == null) {
             this.stop();
         } else {
-            next.convertSkinURL();
+            boolean success = next.convertSkinURL();
             if (next.isProcessed()) {
                 if (next.isValid()) {
                     Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
@@ -68,8 +67,7 @@ public class SkinQueue {
             }
             this.task = Bukkit.getAsyncScheduler().runDelayed(SneakyCharacterManager.getInstance(), (s) -> {
                 this.run();
-            }, 50 * (this.pauseTicks + 5), TimeUnit.MILLISECONDS);
-            this.pauseTicks = 0;
+            }, 50 * (success ? 5 : 45), TimeUnit.MILLISECONDS);
         }
     }
 }
