@@ -72,6 +72,7 @@ public class NametagManager {
 
     public void refreshNickname(Player requester, String playerUUID) {
         Nickname name = nicknames.get(playerUUID);
+        if (name == null) return;
         String requesterUUID = requester.getUniqueId().toString();
 
         if (showingRealNames.contains(requesterUUID)) {
