@@ -34,14 +34,14 @@ public class SkinQueue {
         return maxEntry.map(entry -> entry.getValue().get(0)).orElse(null);
     }
 
-    private void start() {
+    private synchronized void start() {
         if (this.task != null) return;
         this.task = Bukkit.getAsyncScheduler().runDelayed(SneakyCharacterManager.getInstance(), (s) -> {
             this.run();
         }, 50, TimeUnit.MILLISECONDS);
     }
 
-    public void stop() {
+    public synchronized void stop() {
         this.task.cancel();
         this.task = null;
     }
