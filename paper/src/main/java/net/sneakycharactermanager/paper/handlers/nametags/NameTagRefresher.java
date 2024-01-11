@@ -39,7 +39,7 @@ public class NameTagRefresher extends BukkitRunnable {
             List<Player> trackingPlayersPrev = trackedByPrev.get(player);
 
             for (Player tracking : player.getTrackedBy()) {
-                trackingPlayers.add(player);
+                trackingPlayers.add(tracking);
                 if (trackingPlayersPrev != null && trackingPlayersPrev.contains(tracking)) continue;
 
                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
