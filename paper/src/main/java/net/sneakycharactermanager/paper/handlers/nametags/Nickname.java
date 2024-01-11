@@ -36,8 +36,7 @@ public class Nickname {
         Player player = Bukkit.getPlayer(UUID.fromString(this.uuid));
         if (player == null) return;
         this.nickname = nickname;
-        nametag.setName(ChatUtility.convertToComponent(nickname));
-        nametag.updateComponents(nickname);
+        nametag.updatePackets(nickname);
     }
 
     /**
@@ -48,10 +47,10 @@ public class Nickname {
      * */
     public void showRealName(Player requester, boolean enabled) {
         if (enabled) {
-            nametag.refreshOn(requester);
+            nametag.sendOn(requester);
         }
         else {
-            nametag.refreshCharacter(requester);
+            nametag.sendCharacter(requester);
         }
     }
 
@@ -69,11 +68,7 @@ public class Nickname {
      * @param state To hide or show the name
      * */
     public void hideName(Player requester) {
-        nametag.refreshOff(requester);
-    }
-
-    public void hideNameFromOwner() {
-        nametag.hideFromOwner();
+        nametag.sendOff(requester);
     }
 
     /**

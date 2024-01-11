@@ -52,8 +52,6 @@ public class NametagManager {
 
         Nickname name = nicknames.get(player.getUniqueId().toString());
         if (name == null) return;
-        
-        name.hideNameFromOwner();
 
         List<String> handled = new ArrayList<>();
         for(String uuid : showingRealNames) {
