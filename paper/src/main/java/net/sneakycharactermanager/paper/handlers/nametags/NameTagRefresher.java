@@ -1,23 +1,26 @@
 package net.sneakycharactermanager.paper.handlers.nametags;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
+import me.clip.placeholderapi.PlaceholderAPI;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.handlers.character.Character;
 
 public class NameTagRefresher extends BukkitRunnable {
 
     private BukkitTask task = null;
-    private List<Player> handled = new ArrayList<>();
+    private Map<Player, List<Player>> trackedByPrev = new HashMap<>();
 
     public NameTagRefresher() {
-        this.task = runTaskTimer(SneakyCharacterManager.getInstance(), 0, 1);
+        this.task = runTaskTimerAsynchronously(SneakyCharacterManager.getInstance(), 0, 20);
     }
 
     public void stop() {
@@ -27,18 +30,25 @@ public class NameTagRefresher extends BukkitRunnable {
     @Override
     public void run() {
         for (Player player : Bukkit.getOnlinePlayers()) {
-            if (handled.contains(player)) continue;
-            handled.add(player);
+            List<Player> trackingPlayers = new ArrayList<>();
+            if (player.isDead() || player.getGameMode() == GameMode.SPECTATOR || (PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%") != null && !PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%").isEmpty())) {
+                trackedByPrev.put(player, trackingPlayers);
+                continue;
+            }
 
-            Character character = Character.get(player);
+            List<Player> trackingPlayersPrev = trackedByPrev.get(player);
 
-            if (character == null) continue;
+            for (Player tracking : player.getTrackedBy()) {
+                trackingPlayers.add(player);
+                if (trackingPlayersPrev != null && trackingPlayersPrev.contains(tracking)) continue;
+                
+                Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+                    SneakyCharacterManager.getInstance().nametagManager.refreshNickname(tracking, player.getUniqueId().toString());
+                });
+            }
 
-            SneakyCharacterManager.getInstance().nametagManager.refreshNickname(player);
-
-            return;
+            trackedByPrev.put(player, trackingPlayers);
         }
-        this.handled.clear();
     }
     
 }

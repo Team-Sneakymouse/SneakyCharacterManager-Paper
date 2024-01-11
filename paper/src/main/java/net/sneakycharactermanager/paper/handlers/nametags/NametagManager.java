@@ -42,39 +42,45 @@ public class NametagManager {
         }
 
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), ()->{
-            refreshNickname(player);
+            Nickname name = nicknames.get(player.getUniqueId().toString());
+            if (name == null) return;
+
+            List<String> handled = new ArrayList<>();
+            for(String uuid : showingRealNames) {
+                Player requester = Bukkit.getPlayer(UUID.fromString(uuid));
+                if (requester == null || ! requester.isOnline() || !requester.getWorld().getName().equals(player.getWorld().getName()) || requester.getLocation().distanceSquared(player.getLocation()) > 12100) continue;
+
+                name.showRealName(requester, true);
+                handled.add(uuid);
+            }
+
+            for(Map.Entry<String, Boolean> showingNameplates : isShowingNameplates.entrySet()) {
+                if (handled.contains(showingNameplates.getKey())) continue;
+                Player requester = Bukkit.getPlayer(UUID.fromString(showingNameplates.getKey()));
+
+                if (requester == null || ! requester.isOnline() || !requester.getWorld().getName().equals(player.getWorld().getName()) || requester.getLocation().distanceSquared(player.getLocation()) > 12100) continue;
+
+                if (!showingNameplates.getValue()) {
+                    name.hideName(requester);
+                } else {
+                    name.showRealName(requester, false);
+                }
+            }
         }, 5);
 
     }
 
-    public void refreshNickname(Player player) {
-        if (player.isDead() || player.getGameMode() == GameMode.SPECTATOR || (PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%") != null && !PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%").isEmpty())) return;
+    public void refreshNickname(Player requester, String playerUUID) {
+        Nickname name = nicknames.get(playerUUID);
+        String requesterUUID = requester.getUniqueId().toString();
 
-        Nickname name = nicknames.get(player.getUniqueId().toString());
-        if (name == null) return;
-
-        List<String> handled = new ArrayList<>();
-        for(String uuid : showingRealNames) {
-            Player requester = Bukkit.getPlayer(UUID.fromString(uuid));
-            if (requester == null || ! requester.isOnline() || !requester.getWorld().getName().equals(player.getWorld().getName()) || requester.getLocation().distanceSquared(player.getLocation()) > 12100) continue;
-
+        if (showingRealNames.contains(requesterUUID)) {
             name.showRealName(requester, true);
-            handled.add(uuid);
+        } else if (isShowingNameplates.getOrDefault(requesterUUID, true)) {
+            name.showRealName(requester, false);
+        } else {
+            name.hideName(requester);
         }
-
-        for(Map.Entry<String, Boolean> showingNameplates : isShowingNameplates.entrySet()) {
-            if (handled.contains(showingNameplates.getKey())) continue;
-            Player requester = Bukkit.getPlayer(UUID.fromString(showingNameplates.getKey()));
-
-            if (requester == null || ! requester.isOnline() || !requester.getWorld().getName().equals(player.getWorld().getName()) || requester.getLocation().distanceSquared(player.getLocation()) > 12100) continue;
-
-            if (!showingNameplates.getValue()) {
-                name.hideName(requester);
-            } else {
-                name.showRealName(requester, false);
-            }
-        }
-
     }
 
     /**
