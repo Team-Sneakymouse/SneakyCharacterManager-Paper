@@ -52,7 +52,7 @@ public class SkinQueue {
         if (next == null) {
             this.stop();
         } else {
-            boolean success = next.convertSkinURL();
+            boolean tooManyRequests = next.convertSkinURL();
             if (next.isProcessed()) {
                 if (next.isValid()) {
                     Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
@@ -68,7 +68,7 @@ public class SkinQueue {
             }
             this.task = Bukkit.getAsyncScheduler().runDelayed(SneakyCharacterManager.getInstance(), (s) -> {
                 this.run();
-            }, 50 * (success ? 5 : 45), TimeUnit.MILLISECONDS);
+            }, 50 * (tooManyRequests ? 45 : 5), TimeUnit.MILLISECONDS);
         }
     }
 }

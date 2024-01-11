@@ -135,7 +135,7 @@ public class SkinData {
                 }
                 JSONObject dataObject = (JSONObject) result.get("data");
                 if (dataObject == null) {
-                    //if (result.toString().contains("Too many requests")) SneakyCharacterManager.getInstance().skinQueue.pauseTicks = 40;
+                    if (result.toString().contains("Too many requests")) return true;
                     return false;
                 }
                 JSONObject textureObject = (JSONObject) dataObject.get("texture");
@@ -149,7 +149,7 @@ public class SkinData {
             return false;
         }
         this.isValid = true;
-        return true;
+        return false;
     }
 
     /**
