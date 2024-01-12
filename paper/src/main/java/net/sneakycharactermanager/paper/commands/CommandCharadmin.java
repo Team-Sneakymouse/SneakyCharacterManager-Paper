@@ -59,8 +59,8 @@ public class CommandCharadmin extends Command {
         if (args.length == 1) {
             List<String> playerNames = new ArrayList<>();
 
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                if (player.getName().toLowerCase().startsWith(args[0].toLowerCase())) playerNames.add(player.getName());
+            for (@NotNull OfflinePlayer player : Bukkit.getOfflinePlayers()) {
+                if (player.getName().toLowerCase().startsWith(args[0].toLowerCase()) && !player.getName().equals("CMI-Fake-Operator")) playerNames.add(player.getName());
             }
 
             return playerNames;
