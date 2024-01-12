@@ -10,4 +10,7 @@ dependencies:
   server:
     PlaceholderAPI:
       load: BEFORE
-      required: false
+      required: true
+    GSit:
+      load: AFTER
+      required: true
