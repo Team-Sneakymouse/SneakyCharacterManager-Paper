@@ -128,6 +128,9 @@ public class CharacterLoader {
         SkinData.getOrCreate(url, isSlimSkin, 2, player);
 
         Character character = Character.get(player);
+
+        if (character == null) return;
+
         character.setSkin(url);
         character.setSlim(isSlimSkin);
         BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), 1, url, isSlimSkin);
