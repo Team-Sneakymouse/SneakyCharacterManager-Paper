@@ -117,6 +117,9 @@ public class CommandSkin extends Command {
                             String textureURL = profile.getTextures().getSkin().toString();
                             boolean isSlim = profile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
                             Character character = Character.get(player);
+
+                            if (character == null) return;
+
                             character.setSkin(textureURL);
                             character.setSlim(isSlim);
                             BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), 1, textureURL, isSlim);

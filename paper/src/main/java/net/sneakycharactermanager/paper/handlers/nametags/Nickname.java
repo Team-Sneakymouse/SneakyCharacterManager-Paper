@@ -6,7 +6,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.sneakycharactermanager.paper.util.ChatUtility;
 
 public class Nickname {
 

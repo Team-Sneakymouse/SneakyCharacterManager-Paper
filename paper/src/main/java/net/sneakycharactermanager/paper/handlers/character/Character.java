@@ -10,6 +10,8 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -93,7 +95,8 @@ public class Character {
 
     public void load() {
         if (this.player != null && characterMap.containsKey(this.player)) {
-            get(this.player).save();
+            Character character = get(this.player);
+            if (character != null) character.save();
         }
 
         File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), this.player.getUniqueId().toString());
@@ -210,6 +213,7 @@ public class Character {
         }
     }
 
+    @Nullable
     public static Character get(Player player) {
         return characterMap.get(player);
     }
