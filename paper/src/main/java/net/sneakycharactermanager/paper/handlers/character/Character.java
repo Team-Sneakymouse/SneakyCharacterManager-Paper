@@ -3,7 +3,10 @@ package net.sneakycharactermanager.paper.handlers.character;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -15,15 +18,12 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
-import net.kyori.adventure.text.Component;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu.CharacterMenuHolder;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
 import net.sneakycharactermanager.paper.util.InventoryUtility;
 
 public class Character {
@@ -135,6 +135,7 @@ public class Character {
         CharacterLoader.loadCharacter(this);
 
         this.map();
+        ConsoleCommandCharDisable.playerCharEnable(this.player.getUniqueId().toString());
     }
 
     public void map() {

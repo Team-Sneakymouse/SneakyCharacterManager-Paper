@@ -11,6 +11,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.commands.CommandChar;
+import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
@@ -55,7 +56,7 @@ public class ConnectionEventListeners implements Listener {
         Character character = Character.get(player);
 
         if (character == null) {
-            SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager found a player who quit out but wasn't a character. This should never happen: " + player.getName());
+            if (!ConsoleCommandCharDisable.isPlayerCharDisabled(player.getUniqueId().toString())) SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager found a player who quit out but wasn't a character. This should never happen: " + player.getName());
         } else {
             character.save();
         }

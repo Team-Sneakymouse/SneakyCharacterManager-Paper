@@ -189,10 +189,8 @@ public class CharacterSelectionMenu implements Listener {
 
             Character currentChar = Character.get(this.player);
 
-            if (currentChar == null) return;
-
             if (characterUUID == null) return;
-            if (characterUUID.equals(currentChar.getCharacterUUID())) {
+            if (currentChar != null && characterUUID.equals(currentChar.getCharacterUUID())) {
                 this.player.sendMessage(ChatUtility.convertToComponent("&aYou are already playing that character."));
                 return;
             }
@@ -214,10 +212,8 @@ public class CharacterSelectionMenu implements Listener {
 
             Character currentChar = Character.get(this.player);
 
-            if (currentChar == null) return;
-
             if (characterUUID == null) return;
-            if (characterUUID.equals(currentChar.getCharacterUUID())) {
+            if (currentChar != null && characterUUID.equals(currentChar.getCharacterUUID())) {
                 this.player.sendMessage(ChatUtility.convertToComponent("&aYou cannot delete the character that you are currently playing."));
                 return;
             }

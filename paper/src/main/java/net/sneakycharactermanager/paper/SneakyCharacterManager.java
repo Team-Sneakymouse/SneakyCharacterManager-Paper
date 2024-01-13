@@ -14,6 +14,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.sneakycharactermanager.paper.commands.*;
+import net.sneakycharactermanager.paper.consolecommands.*;
 import net.sneakycharactermanager.paper.listeners.*;
 import net.sneakycharactermanager.paper.handlers.Placeholders;
 import net.sneakycharactermanager.paper.handlers.character.Character;
@@ -60,6 +61,8 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getCommandMap().register(IDENTIFIER, new CommandNick());
         getServer().getCommandMap().register(IDENTIFIER, new CommandCharadmin());
         getServer().getCommandMap().register(IDENTIFIER, new CommandCharScan());
+
+        getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharDisable());
 
         getServer().getMessenger().registerIncomingPluginChannel(this, "sneakymouse:" + IDENTIFIER, new BungeeMessageListener());
         getServer().getMessenger().registerOutgoingPluginChannel(this, "sneakymouse:" + IDENTIFIER);

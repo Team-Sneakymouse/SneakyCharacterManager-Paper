@@ -34,7 +34,7 @@ public class Placeholders extends PlaceholderExpansion {
     @Override
     public String onPlaceholderRequest(Player player, String params) {
         Character character = Character.get(player);
-        if (character == null) return null;
+        if (character == null) return "";
 
         switch(params.toLowerCase()) {
             case "character_uuid" :
