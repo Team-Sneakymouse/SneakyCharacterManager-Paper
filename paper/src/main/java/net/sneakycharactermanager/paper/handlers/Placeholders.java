@@ -34,12 +34,20 @@ public class Placeholders extends PlaceholderExpansion {
 
     @Override
     public String onPlaceholderRequest(Player player, String params) {
-        if(params.equalsIgnoreCase("character_name")) {
-            if (player != null) {
-                Character character = Character.get(player);
-                if (character != null) return character.getName();
-            }
+        Character character = Character.get(player);
+        if (character == null) return null;
+
+        switch(params.toLowerCase()) {
+            case "character_uuid" :
+                return character.getCharacterUUID();
+            case "character_name" :
+                return character.getName();
+            case "character_skin" :
+                return character.getSkin();
+            case "character_slim" :
+                return character.isSlim() + "";
         }
+        
         return null;
     }
     
