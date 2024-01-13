@@ -1,6 +1,8 @@
 package net.sneakycharactermanager.bungee;
 
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.config.Configuration;
@@ -50,6 +52,12 @@ public class Character {
 
     public String getName() {
         return this.name;
+    }
+
+    public String getNameUnformatted() {
+        Pattern pattern = Pattern.compile("\\<[^)]*\\>|&[0-9A-FK-OR]");
+        Matcher matcher = pattern.matcher(this.name);
+        return matcher.replaceAll("");
     }
 
     public void setName(String name) {

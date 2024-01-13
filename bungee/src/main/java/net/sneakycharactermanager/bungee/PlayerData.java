@@ -251,7 +251,7 @@ public class PlayerData {
         storeCharacters();
 
         for (Character character: characterMap.values()) {
-            if (character.isEnabled() && !this.lastPlayedCharacter.equals(character.getUUID()) && character.getName().toLowerCase().startsWith(characterName.toLowerCase())) {
+            if (character.isEnabled() && !this.lastPlayedCharacter.equals(character.getUUID()) && character.getNameUnformatted().toLowerCase().startsWith(characterName.toLowerCase())) {
                 loadCharacter(serverInfo, character.getUUID(), false);
                 return;
             }
@@ -270,7 +270,7 @@ public class PlayerData {
             Character character = entry.getValue();
     
             if (character.isEnabled() && !this.lastPlayedCharacter.equals(character.getUUID())) {
-                enabledCharacterNames.add(character.getName());
+                enabledCharacterNames.add(character.getNameUnformatted());
             }
         }
     
