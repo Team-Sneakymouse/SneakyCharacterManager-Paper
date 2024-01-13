@@ -395,7 +395,7 @@ public class CharacterSelectionMenu implements Listener {
             if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".*") || player.hasPermission(CHARACTER_SLOTS_PERMISSION_NODE + ".*")) maxCharacterSlots = 54;
             else {
                 for (PermissionAttachmentInfo permission : player.getEffectivePermissions()) {
-                    if (permission.getPermission().startsWith(CHARACTER_SLOTS_PERMISSION_NODE)) {
+                    if (permission.getValue() && permission.getPermission().startsWith(CHARACTER_SLOTS_PERMISSION_NODE)) {
                         String valueString = permission.getPermission().replace(CHARACTER_SLOTS_PERMISSION_NODE, "");
 
                         try {
