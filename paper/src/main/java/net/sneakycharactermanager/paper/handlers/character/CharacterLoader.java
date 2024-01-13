@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.net.http.HttpRequest;
 import java.net.http.HttpClient;
 
@@ -78,22 +79,23 @@ public class CharacterLoader {
 
     public static void updateSkin(Player player, String url, Boolean slim) {
         PlayerProfile playerProfile = player.getPlayerProfile();
-        boolean def = playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
 
-        boolean isSlimSkin = slim == null ? checkIsSlimSkin(url, def) : slim;
-    
-        SkinData.getOrCreate(url, isSlimSkin, 2, player);
-
-        Character character = Character.get(player);
-        character.setSkin(url);
-        character.setSlim(isSlimSkin);
-        BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), 1, url, isSlimSkin);
+        if (slim == null) {
+            Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
+                checkSlimThenSetSkin(url, playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM), player);
+            });
+        } else {
+            setSkin(url, slim, player);
+        }
     }
-    
-    private static boolean checkIsSlimSkin(String url, boolean def) {
+
+    private static void checkSlimThenSetSkin(String url, boolean slim, Player player) {
         try {
             HttpClient httpClient = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder().uri(new URI(url)).build();
+            HttpRequest request = HttpRequest.newBuilder().uri(
+                new URI(url))
+                .timeout(Duration.ofSeconds(2))
+                .build();
             HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
             // Check the HTTP response status
@@ -101,22 +103,34 @@ public class CharacterLoader {
 
             if (statusCode == 200) {
                 try (InputStream inputStream = response.body()) {
-                    if (inputStream == null) return def;
+                    if (inputStream != null) {
+                        BufferedImage image = ImageIO.read(inputStream);
 
-                    BufferedImage image = ImageIO.read(inputStream);
-
-                    if (image == null) return def;
-
-                    int pixel = image.getRGB(55, 20);
-                    int alpha = (pixel >> 24) & 0xFF;
-                    return alpha == 0;
+                        if (image != null) {
+                            int pixel = image.getRGB(55, 20);
+                            int alpha = (pixel >> 24) & 0xFF;
+                            slim = alpha == 0;
+                        }
+                    }
                 }
             }
         } catch (IOException | InterruptedException | URISyntaxException e) {
             e.printStackTrace();
         }
 
-        return def;
+        final boolean slimFinal = slim;
+        Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+            setSkin(url, slimFinal, player);
+        });
+    }
+
+    private static void setSkin(String url, boolean isSlimSkin, Player player) {
+        SkinData.getOrCreate(url, isSlimSkin, 2, player);
+
+        Character character = Character.get(player);
+        character.setSkin(url);
+        character.setSlim(isSlimSkin);
+        BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), 1, url, isSlimSkin);
     }
 
 }
