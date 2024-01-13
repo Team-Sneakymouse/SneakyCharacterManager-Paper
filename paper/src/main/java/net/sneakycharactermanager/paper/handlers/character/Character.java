@@ -15,10 +15,15 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
+import net.kyori.adventure.text.Component;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu.CharacterMenuHolder;
+import net.sneakycharactermanager.paper.util.ChatUtility;
 import net.sneakycharactermanager.paper.util.InventoryUtility;
 
 public class Character {
@@ -226,6 +231,26 @@ public class Character {
 
     public static boolean isPlayedMapped(Player player) {
         return characterMap.containsKey(player);
+    }
+
+    public static boolean canPlayerLoadCharacter(Player player, String characterUUID) {
+        if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".bypasscharacterlocks")) return true;
+
+        Boolean characterPerm = null;
+        for (PermissionAttachmentInfo permission : player.getEffectivePermissions()) {
+            if (permission.getPermission().equals(SneakyCharacterManager.IDENTIFIER + ".character." + characterUUID)) {
+                characterPerm = permission.getValue();
+            }
+        }
+
+        if (
+            (characterPerm == null && !player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".character.*")) ||
+            (characterPerm != null && !characterPerm)
+        ) {
+            return false;
+        }
+
+        return true;
     }
 
 }

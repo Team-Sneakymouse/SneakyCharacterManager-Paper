@@ -29,8 +29,8 @@ public class Character {
         this.slim = false;
     }
 
-    public void loadCharacter(String subChannel, ServerInfo serverInfo, String playerUUID) {
-        PaperMessagingUtil.sendByteArray(serverInfo, subChannel, playerUUID, this);
+    public void loadCharacter(String subChannel, ServerInfo serverInfo, String playerUUID, boolean forced) {
+        PaperMessagingUtil.sendByteArray(serverInfo, subChannel, playerUUID, this, forced);
         if (this.skin.isEmpty()) {
             PaperMessagingUtil.sendByteArray(serverInfo, "defaultSkin", playerUUID, this.uuid);
         }

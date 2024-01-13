@@ -20,7 +20,6 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
-import net.sneakycharactermanager.paper.util.SkinUtil;
 
 public class BungeeMessageListener implements PluginMessageListener
 {
@@ -42,6 +41,14 @@ public class BungeeMessageListener implements PluginMessageListener
                 String characterName = in.readUTF();
                 String skin = in.readUTF();
                 boolean slim = in.readBoolean();
+                boolean forced = in.readBoolean();
+
+                Player pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+
+                if (!forced && !Character.canPlayerLoadCharacter(player, characterUUID)) {
+                    pl.sendMessage(ChatUtility.convertToComponent("&4You cannot access this character right now."));
+                    break;
+                }
                 
                 Character character = new Character(playerUUID, characterUUID, characterName, skin, slim);
                 character.load();
@@ -52,13 +59,14 @@ public class BungeeMessageListener implements PluginMessageListener
                 characterName = in.readUTF();
                 skin = in.readUTF();
                 slim = in.readBoolean();
+                forced = in.readBoolean();
                 
                 character = new Character(playerUUID, characterUUID, characterName, skin, slim);
                 character.map();
                 break;
             case "selectCharacterByNameFailed" :
                 playerUUID = in.readUTF();
-                Player pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+                pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
                 if (pl == null) return;
 
                 pl.sendMessage(ChatUtility.convertToComponent("&aNo character found. Loading character menu..."));

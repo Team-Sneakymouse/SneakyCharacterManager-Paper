@@ -105,7 +105,7 @@ public class PlayerData {
         }
     }
 
-    public void loadCharacter(ServerInfo serverInfo, String characterUUID) {
+    public void loadCharacter(ServerInfo serverInfo, String characterUUID, boolean forced) {
         storeCharacters();
         Character character = this.characterMap.get(characterUUID);
         if (!loadConfig()) {
@@ -117,7 +117,7 @@ public class PlayerData {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to load a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
             return;
         } else {
-            character.loadCharacter("loadCharacter", serverInfo, this.playerUUID);
+            character.loadCharacter("loadCharacter", serverInfo, this.playerUUID, forced);
         }
 
         if (!this.lastPlayedCharacter.equals(characterUUID)) {
@@ -131,7 +131,7 @@ public class PlayerData {
     }
 
     public void loadLastPlayedCharacter(ServerInfo serverInfo) {
-        this.loadCharacter(serverInfo, this.lastPlayedCharacter);
+        this.loadCharacter(serverInfo, this.lastPlayedCharacter, true);
     }
 
     public static synchronized PlayerData get(String playerUUID) {
@@ -243,7 +243,7 @@ public class PlayerData {
         if (character == null) {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to load a character that does not exist! [" + this.playerUUID + ", " + this.lastPlayedCharacter + "]");
         } else {
-            character.loadCharacter("rebuildCharacterMap", serverInfo, this.playerUUID);
+            character.loadCharacter("rebuildCharacterMap", serverInfo, this.playerUUID, false);
         }
     }
 
@@ -252,7 +252,7 @@ public class PlayerData {
 
         for (Character character: characterMap.values()) {
             if (character.isEnabled() && !this.lastPlayedCharacter.equals(character.getUUID()) && character.getName().toLowerCase().startsWith(characterName.toLowerCase())) {
-                loadCharacter(serverInfo, character.getUUID());
+                loadCharacter(serverInfo, character.getUUID(), false);
                 return;
             }
         }

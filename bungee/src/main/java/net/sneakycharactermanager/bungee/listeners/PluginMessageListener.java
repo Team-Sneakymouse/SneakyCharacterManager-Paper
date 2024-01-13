@@ -88,7 +88,7 @@ public class PluginMessageListener implements Listener {
             case "selectCharacter" :
                 playerUUID = in.readUTF();
                 playerData = PlayerData.get(playerUUID);
-                playerData.loadCharacter(serverInfo, in.readUTF());
+                playerData.loadCharacter(serverInfo, in.readUTF(), false);
                 break;
             case "selectCharacterByName" :
                 playerUUID = in.readUTF();
@@ -122,7 +122,7 @@ public class PluginMessageListener implements Listener {
                 playerUUID = in.readUTF();
                 playerData = PlayerData.get(playerUUID);
                 characterUUID = playerData.createNewCharacter(ProxyServer.getInstance().getPlayer(UUID.fromString(playerUUID)).getName());
-                if (characterUUID != null) playerData.loadCharacter(serverInfo, characterUUID);
+                if (characterUUID != null) playerData.loadCharacter(serverInfo, characterUUID, true);
                 break;
             case "deleteCharacter" :
                 playerUUID = in.readUTF();
