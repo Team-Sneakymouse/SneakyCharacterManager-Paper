@@ -1,8 +1,5 @@
 package net.sneakycharactermanager.paper.handlers;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -45,9 +42,7 @@ public class Placeholders extends PlaceholderExpansion {
             case "character_name" :
                 return character.getName();
             case "character_name_noformat" :
-                Pattern pattern = Pattern.compile("\\<[^)]*\\>|&[0-9A-FK-OR]");
-                Matcher matcher = pattern.matcher(character.getName());
-                return matcher.replaceAll("");
+                return character.getNameUnformatted();
             case "character_skin" :
                 return character.getSkin();
             case "character_slim" :

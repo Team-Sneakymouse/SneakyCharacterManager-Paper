@@ -4,6 +4,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -145,7 +147,14 @@ public class Character {
     public String getName() {
         return this.name;
     }
+
     public void setName(String name) { this.name = name; }
+
+    public String getNameUnformatted() {
+        Pattern pattern = Pattern.compile("\\<[^)]*\\>|&[0-9A-FK-OR]");
+        Matcher matcher = pattern.matcher(this.name);
+        return matcher.replaceAll("");
+    }
 
     public String getSkin() {
         return this.skin;
