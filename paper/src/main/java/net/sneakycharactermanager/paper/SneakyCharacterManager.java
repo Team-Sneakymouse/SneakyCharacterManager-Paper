@@ -75,6 +75,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
         getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".*"));
         getServer().getPluginManager().addPermission(new Permission(CharacterSelectionMenu.CHARACTER_SLOTS_PERMISSION_NODE + "*"));
+        getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".character.*"));
 
         if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new Placeholders().register();

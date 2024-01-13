@@ -123,6 +123,33 @@ public class CharacterSelectionMenu implements Listener {
         private void addItem(Inventory inventory, Character character, int index) {
             if (index > inventory.getSize()) return;
 
+            if (this.getClass().equals(CharacterMenuHolder.class) && this.player != null && !this.player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".bypasscharacterlocks")) {
+                Boolean characterPerm = null;
+                for (PermissionAttachmentInfo permission : this.player.getEffectivePermissions()) {
+                    if (permission.getPermission().equals(SneakyCharacterManager.IDENTIFIER + ".character." + character.getCharacterUUID())) {
+                        characterPerm = permission.getValue();
+                    }
+                }
+
+                if (
+                    (characterPerm == null && !this.player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".character.*")) ||
+                    (characterPerm != null && !characterPerm)
+                ) {
+                    ItemStack skeletonHead = new ItemStack(Material.SKELETON_SKULL);
+                    ItemMeta meta = skeletonHead.getItemMeta();
+    
+                    meta.displayName(ChatUtility.convertToComponent("&4" + character.getNameUnformatted()));
+                    List<Component> lore = new ArrayList<>();
+                    lore.add(ChatUtility.convertToComponent("&eYou cannot access this character right now."));
+    
+                    meta.lore(lore);
+                    skeletonHead.setItemMeta(meta);
+    
+                    inventory.setItem(index, skeletonHead);
+                    return;
+                }
+            }
+
             ItemStack characterHead = new ItemStack(Material.PLAYER_HEAD);
             SkullMeta skullMeta = (SkullMeta) characterHead.getItemMeta();
 
