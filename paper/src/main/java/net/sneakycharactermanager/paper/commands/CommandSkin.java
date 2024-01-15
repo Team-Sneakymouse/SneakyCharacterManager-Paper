@@ -37,7 +37,7 @@ public class CommandSkin extends Command {
     public CommandSkin() {
         super("skin");
         this.description = "Change your skin!";
-        this.setUsage("/skin <URL (Must be direct image)>");
+        this.setUsage("/skin [URL (Must be direct image)] (slim/classic)");
         this.setPermission(SneakyCharacterManager.IDENTIFIER + ".command." + this.getName());
     }
 
@@ -64,7 +64,7 @@ public class CommandSkin extends Command {
 
         Boolean slim = null;
         if (args.length > 1) {
-            if (args[1].equals("SLIM")) slim = true;
+            if (args[1].equalsIgnoreCase("slim")) slim = true;
             else slim = false;
         }
 
@@ -80,7 +80,7 @@ public class CommandSkin extends Command {
         if (args.length == 1) {
             return Arrays.asList("revert");
         } else if (args.length == 2) {
-            return Arrays.asList("SLIM", "CLASSIC");
+            return Arrays.asList("slim", "classic");
         } else {
             return Collections.emptyList(); // or simply "return new ArrayList<>();"
         }
