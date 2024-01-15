@@ -36,17 +36,22 @@ public class Placeholders extends PlaceholderExpansion {
         Character character = Character.get(player);
         if (character == null) return "";
 
-        switch(params.toLowerCase()) {
-            case "character_uuid" :
-                return character.getCharacterUUID();
-            case "character_name" :
-                return character.getName();
-            case "character_name_noformat" :
-                return character.getNameUnformatted();
-            case "character_skin" :
-                return character.getSkin();
-            case "character_slim" :
-                return character.isSlim() + "";
+        String placeholder = params.toLowerCase();
+
+        if (placeholder.equals("character_uuid")) {
+            return character.getCharacterUUID();
+        } else if (placeholder.equals("character_name")) {
+            return character.getName();
+        } else if (placeholder.equals("character_name_noformat")) {
+            return character.getNameUnformatted();
+        } else if (placeholder.equals("character_skin")) {
+            return character.getSkin();
+        } else if (placeholder.equals("character_slim")) {
+            return character.isSlim() + "";
+        } else if (placeholder.equals("character_tags")) {
+            return character.getTagsJoined();
+        } else if (placeholder.startsWith("character_hastag_")) {
+            return character.hasTag(placeholder.replace("character_hastag_", "")) + "";
         }
 
         return null;

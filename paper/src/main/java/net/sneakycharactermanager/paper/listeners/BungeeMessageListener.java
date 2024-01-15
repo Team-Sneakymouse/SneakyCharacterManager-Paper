@@ -37,31 +37,23 @@ public class BungeeMessageListener implements PluginMessageListener
         switch (subChannel) {
             case "loadCharacter" :
                 String playerUUID = in.readUTF();
-                String characterUUID = in.readUTF();
-                String characterName = in.readUTF();
-                String skin = in.readUTF();
-                boolean slim = in.readBoolean();
+                Character character = readCharacter(playerUUID, in);
                 boolean forced = in.readBoolean();
 
                 Player pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
 
-                if (!forced && !Character.canPlayerLoadCharacter(player, characterUUID)) {
+                if (!forced && !Character.canPlayerLoadCharacter(player, character.getCharacterUUID())) {
                     pl.sendMessage(ChatUtility.convertToComponent("&4You cannot access this character right now."));
                     break;
                 }
                 
-                Character character = new Character(playerUUID, characterUUID, characterName, skin, slim);
                 character.load();
                 break;
             case "rebuildCharacterMap" :
                 playerUUID = in.readUTF();
-                characterUUID = in.readUTF();
-                characterName = in.readUTF();
-                skin = in.readUTF();
-                slim = in.readBoolean();
+                character = readCharacter(playerUUID, in);
                 forced = in.readBoolean();
                 
-                character = new Character(playerUUID, characterUUID, characterName, skin, slim);
                 character.map();
                 break;
             case "selectCharacterByNameFailed" :
@@ -103,14 +95,14 @@ public class BungeeMessageListener implements PluginMessageListener
                 break;
             case "defaultSkin" :
                 playerUUID = in.readUTF();
-                characterUUID = in.readUTF();
+                String characterUUID = in.readUTF();
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
                 if (pl == null) return;
                 PlayerProfile profile = pl.getPlayerProfile();
                 PlayerTextures textures = profile.getTextures();
                 if (textures.getSkin() == null) return;
                 String skinURL = textures.getSkin().toString();
-                slim = textures.getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
+                boolean slim = textures.getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
 
                 BungeeMessagingUtil.sendByteArray(player, "defaultSkin", playerUUID, characterUUID, skinURL, slim);
                 break;
@@ -153,7 +145,8 @@ public class BungeeMessageListener implements PluginMessageListener
         String name = in.readUTF();
         String skin = in.readUTF();
         boolean slim = in.readBoolean();
-        return new Character(playerUUID, uuid, name, skin, slim);
+        List<String> tags = readStringList(in);
+        return new Character(playerUUID, uuid, name, skin, slim, tags);
     }
 
 }

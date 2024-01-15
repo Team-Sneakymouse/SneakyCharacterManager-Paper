@@ -61,6 +61,7 @@ public class PaperMessagingUtil {
         out.writeUTF(character.getName());
         out.writeUTF(character.getSkin());
         out.writeBoolean(character.isSlim());
+        writeStringList(out, character.getTags());
     }
 
     private static void writeStringList(ByteArrayDataOutput out, List<String> strings) {

@@ -30,8 +30,6 @@ public class CharacterLoader {
     public static void loadCharacter(Character character) {
         String url = character.getSkin();
         Player player = character.getPlayer();
-    
-        ProfileProperty profileProperty = SkinCache.get(player.getUniqueId().toString(), url);
 
         LoadCharacterEvent event = new LoadCharacterEvent(
                 player,
@@ -39,12 +37,15 @@ public class CharacterLoader {
                 character.getCharacterUUID(),
                 character.getName(),
                 url,
-                character.isSlim()
+                character.isSlim(),
+                character.getTags()
         );
 
         Bukkit.getServer().getPluginManager().callEvent(event);
 
         if (!event.isCancelled()) {
+            ProfileProperty profileProperty = SkinCache.get(player.getUniqueId().toString(), url);
+
             character.setFirstLoad(false);
 
             if (profileProperty == null) {

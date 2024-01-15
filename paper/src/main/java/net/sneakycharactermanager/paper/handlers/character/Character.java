@@ -3,6 +3,7 @@ package net.sneakycharactermanager.paper.handlers.character;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,15 +38,17 @@ public class Character {
     private String name;
     private String skin;
     private boolean slim;
+    private List<String> tags = new ArrayList<>();
 
     private boolean firstLoad = false;
 
-    public Character(String playerUUID, String characterUUID, String characterName, String skin, boolean slim) {
+    public Character(String playerUUID, String characterUUID, String characterName, String skin, boolean slim, List<String> tags) {
         this.player = Bukkit.getPlayer(UUID.fromString(playerUUID));
         this.characterUUID = characterUUID;
         this.name = characterName;
         this.skin = skin;
         this.slim = slim;
+        this.tags = tags;
 
         File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID);
         boolean firstLogin = false;
@@ -175,6 +178,22 @@ public class Character {
     
     public boolean isSlim() {
         return this.slim;
+    }
+
+    public List<String> getTags() {
+        return this.tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
+    }
+
+    public String getTagsJoined() {
+        return String.join(",", this.tags);
+    }
+
+    public boolean hasTag(String tag) {
+        return this.tags.contains(tag.toLowerCase());
     }
 
     public void setSlim(boolean slim) {

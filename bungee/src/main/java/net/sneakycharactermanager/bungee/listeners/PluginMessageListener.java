@@ -108,6 +108,12 @@ public class PluginMessageListener implements Listener {
                         playerData.setCharacterName(lastPlayed, in.readUTF());
                         playerData.updateCharacterList(serverInfo);
                         break;
+                    case 3: //Updating enabled
+                        // This case is here for consistency only. A player should never be able to change the enabled state of their current character, so it does nothing.
+                        break;
+                    case 4: //Updating Tags
+                        playerData.setCharacterTags(lastPlayed, readStringList(in));
+                        break;
                 }
                 break;
             case "defaultSkin":
@@ -131,11 +137,6 @@ public class PluginMessageListener implements Listener {
 
                 Character character = playerData.getCharacter(characterUUID);
 
-                if (character == null) {
-                    SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager tried to delete a character that does not exist.");
-                    return;
-                }
-
                 playerData.setCharacterEnabled(characterUUID, false);
                 PaperMessagingUtil.sendByteArray(serverInfo, "deleteConfirmed", playerUUID, character.getName(), characterUUID);
                 playerData.updateCharacterList(serverInfo);
@@ -144,5 +145,16 @@ public class PluginMessageListener implements Listener {
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
                 break;
         }
+    }
+
+    public static List<String> readStringList(ByteArrayDataInput in) {
+        int size = in.readInt();
+
+        List<String> strings = new ArrayList<>();
+        while (strings.size() < size) {
+            strings.add(in.readUTF());
+        }
+
+        return strings;
     }
 }

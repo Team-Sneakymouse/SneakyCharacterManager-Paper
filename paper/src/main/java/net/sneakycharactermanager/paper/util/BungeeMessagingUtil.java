@@ -3,9 +3,12 @@ package net.sneakycharactermanager.paper.util;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import org.bukkit.entity.Player;
 
+import com.google.common.io.ByteArrayDataOutput;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 public class BungeeMessagingUtil {
@@ -33,6 +36,8 @@ public class BungeeMessagingUtil {
                     out.writeShort((int) object);
                 else if (object.getClass() == String.class)
                     out.writeUTF((String) object);
+                else if (object instanceof List && ((List<?>) object).size() > 0 && ((List<?>) object).get(0) instanceof String)
+                    writeStringList(out, (List<String>) object);
                 else {
                     SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager attempted to write an unidentified object to a ByteArray!");
                     return;
@@ -48,6 +53,13 @@ public class BungeeMessagingUtil {
 
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static void writeStringList(DataOutputStream out, List<String> strings) throws IOException {
+        out.writeInt(strings.size());
+        for (String string : strings) {
+            out.writeUTF(string);
         }
     }
 

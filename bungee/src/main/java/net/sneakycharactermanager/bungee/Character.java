@@ -1,5 +1,7 @@
 package net.sneakycharactermanager.bungee;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -14,6 +16,7 @@ public class Character {
     private String name;
     private String skin;
     private boolean slim;
+    private List<String> tags = new ArrayList<>();
 
     public Character(String uuid, Configuration config) {
         this.uuid = uuid;
@@ -21,6 +24,7 @@ public class Character {
         this.name = config.getString("name");
         this.skin = config.getString("skin");
         this.slim = config.getBoolean("slim");
+        this.tags = config.getStringList("tags");
     }
 
     public Character(String name) {
@@ -29,6 +33,7 @@ public class Character {
         this.name = name;
         this.skin = "";
         this.slim = false;
+        this.tags = new ArrayList<>();
     }
 
     public void loadCharacter(String subChannel, ServerInfo serverInfo, String playerUUID, boolean forced) {
@@ -74,6 +79,14 @@ public class Character {
 
     public boolean isSlim() {
         return slim;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
     }
 
     public void setSlim(boolean slim) {

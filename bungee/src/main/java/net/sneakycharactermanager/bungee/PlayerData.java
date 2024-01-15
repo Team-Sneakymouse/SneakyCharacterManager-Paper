@@ -60,6 +60,7 @@ public class PlayerData {
             section.set("name", ProxyServer.getInstance().getPlayer(UUID.fromString(playerUUID)).getName());
             section.set("skin", "");
             section.set("slim", false);
+            section.set("tags", new ArrayList<String>());
             saveConfig();
         }
 
@@ -160,6 +161,7 @@ public class PlayerData {
         section.set("name", character.getName());
         section.set("skin", character.getSkin());
         section.set("slim", character.isSlim());
+        section.set("tags", character.getTags());
 
         saveConfig();
 
@@ -177,19 +179,21 @@ public class PlayerData {
         section.set("name", character.getName());
         section.set("skin", character.getSkin());
         section.set("slim", character.isSlim());
+        section.set("tags", character.getTags());
 
         this.config.set(character.getUUID(), section);
 
         saveConfig();
     }
 
-    public void setCharacterEnabled(String characterUUID, boolean enabled) {
+    public void setCharacterSkin(String characterUUID, String skin, boolean slim) {
         Character character = this.characterMap.get(characterUUID);
 
         if (character == null) {
-            SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to enable/disable a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
+            SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to reskin a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
         } else {
-            character.setEnabled(enabled);
+            character.setSkin(skin);
+            character.setSlim(slim);
             this.characterMap.put(characterUUID, character);
             this.updateCharacterInYaml(character);
         }
@@ -207,14 +211,25 @@ public class PlayerData {
         }
     }
 
-    public void setCharacterSkin(String characterUUID, String skin, boolean slim) {
+    public void setCharacterEnabled(String characterUUID, boolean enabled) {
         Character character = this.characterMap.get(characterUUID);
 
         if (character == null) {
-            SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to reskin a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
+            SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to enable/disable a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
         } else {
-            character.setSkin(skin);
-            character.setSlim(slim);
+            character.setEnabled(enabled);
+            this.characterMap.put(characterUUID, character);
+            this.updateCharacterInYaml(character);
+        }
+    }
+
+    public void setCharacterTags(String characterUUID, List<String> tags) {
+        Character character = this.characterMap.get(characterUUID);
+
+        if (character == null) {
+            SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to tag a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
+        } else {
+            character.setTags(tags);
             this.characterMap.put(characterUUID, character);
             this.updateCharacterInYaml(character);
         }

@@ -1,5 +1,7 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
+import java.util.List;
+
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.HandlerList;
@@ -16,14 +18,16 @@ public class LoadCharacterEvent extends PlayerEvent implements Cancellable {
     private final String characterName;
     private final String skin;
     private final boolean slim;
+    private final List<String> tags;
 
-    public LoadCharacterEvent(@NotNull Player player, boolean firstLoad, String characterUUID, String characterName, String skin, boolean slim) {
+    public LoadCharacterEvent(@NotNull Player player, boolean firstLoad, String characterUUID, String characterName, String skin, boolean slim, List<String> tags) {
         super(player);
         this.firstLoad = firstLoad;
         this.characterUUID = characterUUID;
         this.characterName = characterName;
         this.skin = skin;
         this.slim = slim;
+        this.tags = tags;
     }
 
     @Override
@@ -59,6 +63,9 @@ public class LoadCharacterEvent extends PlayerEvent implements Cancellable {
 
     public boolean isSlim() {
         return slim;
+    }
+    public List<String> getTags() {
+        return tags;
     }
 
 }
