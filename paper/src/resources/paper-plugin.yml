@@ -10,7 +10,10 @@ dependencies:
   server:
     PlaceholderAPI:
       load: BEFORE
-      required: true
+      required: false
+    LuckPerms:
+      load: BEFORE
+      required: false
     GSit:
       load: AFTER
       required: true

@@ -14,6 +14,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import net.sneakycharactermanager.paper.commands.*;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
+import net.sneakycharactermanager.paper.handlers.ContextCalculatorCharacterTag;
 import net.sneakycharactermanager.paper.handlers.Placeholders;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
@@ -83,8 +84,12 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".command.*"));
         getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".commandadmin.*"));
 
-        if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new Placeholders().register();
+        }
+
+        if (Bukkit.getPluginManager().getPlugin("LuckPerms") != null) {
+            new ContextCalculatorCharacterTag().register();
         }
 
         for (Player player : getServer().getOnlinePlayers()) {

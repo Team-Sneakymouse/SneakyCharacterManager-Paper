@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -235,6 +236,10 @@ public class Character {
     @Nullable
     public static Character get(Player player) {
         return characterMap.get(player);
+    }
+
+    public static Collection<Character> getAll() {
+        return characterMap.values();
     }
 
     public static void remove(Player player) {
