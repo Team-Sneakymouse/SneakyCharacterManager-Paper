@@ -53,12 +53,12 @@ public class CommandCharTag extends Command {
 
         if (args[1].equalsIgnoreCase("add")) {
             tags.add(tag);
-            sender.sendMessage(ChatUtility.convertToComponent("&aThe tag &b`" + tag + "'&a has been added to the character &b'" + character.getNameUnformatted() + "'&a."));
+            sender.sendMessage(ChatUtility.convertToComponent("&aThe tag &b'" + tag + "'&a has been added to the character &b'" + character.getNameUnformatted() + "'&a."));
         } else if (args[1].equalsIgnoreCase("remove")) {
             if (tags.remove(tag)) {
-                sender.sendMessage(ChatUtility.convertToComponent("&aThe tag &b`" + tag + "'&a has been removed from the character &b'" + character.getNameUnformatted() + "'&a."));
+                sender.sendMessage(ChatUtility.convertToComponent("&aThe tag &b'" + tag + "'&a has been removed from the character &b'" + character.getNameUnformatted() + "'&a."));
             } else {
-                sender.sendMessage(ChatUtility.convertToComponent("&aThe character &b`" + character.getNameUnformatted() + "'&a does not have the tag &b'" + tag + "'&a so nothing was changed."));
+                sender.sendMessage(ChatUtility.convertToComponent("&aThe character &b'" + character.getNameUnformatted() + "'&a does not have the tag &b'" + tag + "'&a so nothing was changed."));
                 return false;
             }
         } else {
