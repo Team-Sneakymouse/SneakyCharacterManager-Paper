@@ -58,7 +58,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getCommandMap().register(IDENTIFIER, new CommandSkin());
         getServer().getCommandMap().register(IDENTIFIER, new CommandNames());
         getServer().getCommandMap().register(IDENTIFIER, new CommandNick());
-        getServer().getCommandMap().register(IDENTIFIER, new CommandCharadmin());
+        getServer().getCommandMap().register(IDENTIFIER, new CommandCharAdmin());
         getServer().getCommandMap().register(IDENTIFIER, new CommandCharScan());
 
         getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharDisable());
@@ -78,6 +78,8 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".*"));
         getServer().getPluginManager().addPermission(new Permission(CharacterSelectionMenu.CHARACTER_SLOTS_PERMISSION_NODE + "*"));
         getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".character.*"));
+        getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".command.*"));
+        getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".commandadmin.*"));
 
         if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new Placeholders().register();
