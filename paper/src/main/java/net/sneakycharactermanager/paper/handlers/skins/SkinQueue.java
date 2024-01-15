@@ -2,6 +2,9 @@ package net.sneakycharactermanager.paper.handlers.skins;
 
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Bukkit;
@@ -13,12 +16,14 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 
 public class SkinQueue {
 
-    private Map<Integer, List<SkinData>> queue = new LinkedHashMap<>();
+    private ConcurrentMap<Integer, List<SkinData>> queue = new ConcurrentHashMap<>();
     private ScheduledTask task = null;
 
-    public synchronized void add(SkinData skinData, int priority) {
-        this.queue.computeIfAbsent(priority, k -> new ArrayList<>()).add(skinData);
-        this.start();
+    public void add(SkinData skinData, int priority) {
+        Bukkit.getScheduler().runTaskAsynchronously(SneakyCharacterManager.getInstance(), () -> {
+            this.queue.computeIfAbsent(priority, k -> new CopyOnWriteArrayList<>()).add(skinData);
+            this.start();
+        });
     }
 
     public synchronized void remove(SkinData skinData) {
