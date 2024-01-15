@@ -35,6 +35,10 @@ public class LoadCharacterEvent extends PlayerEvent implements Cancellable {
         return handlers;
     }
 
+    public static @NotNull HandlerList getHandlerList() {
+        return handlers;
+    }
+
     @Override
     public boolean isCancelled() {
         return this.cancel;
