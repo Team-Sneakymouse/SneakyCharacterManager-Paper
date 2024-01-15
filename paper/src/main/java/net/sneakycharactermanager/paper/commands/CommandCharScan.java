@@ -24,7 +24,7 @@ public class CommandCharScan extends Command {
         super("charscan");
         this.description = "Scan all inventories for a item id or name";
         this.usageMessage = "/charscan <name/id> <Item Name / Item ID>";
-        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".command." + this.getName());
+        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".commandadmin." + this.getName());
 
         characterDataFolder = SneakyCharacterManager.getCharacterDataFolder();
     }

@@ -16,13 +16,13 @@ import org.jetbrains.annotations.NotNull;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
-public class CommandCharadmin extends Command {
+public class CommandCharAdmin extends Command {
 
-    public CommandCharadmin() {
+    public CommandCharAdmin() {
         super("charadmin");
         this.description = "Switch between your different characters!";
         this.setUsage("/charadmin [playerName]");
-        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".command." + this.getName());
+        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".commandadmin." + this.getName());
     }
 
     @Override
