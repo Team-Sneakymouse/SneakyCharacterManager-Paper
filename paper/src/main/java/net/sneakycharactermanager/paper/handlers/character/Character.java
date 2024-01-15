@@ -263,7 +263,7 @@ public class Character {
     }
 
     public static boolean canPlayerLoadCharacter(Player player, String characterUUID) {
-        if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".bypasscharacterlocks")) return true;
+        if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".admin.bypass.characterlocks")) return true;
 
         Boolean characterPerm = null;
         for (PermissionAttachmentInfo permission : player.getEffectivePermissions()) {
