@@ -15,7 +15,7 @@ public class CommandNames extends Command {
     public CommandNames() {
         super("names");
         this.description = "Change player Nickname settings. ON: Show nametags & player names, OFF: Hide Name Tags, Character: Show nicknames hide real names";
-        this.usageMessage = "/names <on/off/character>";
+        this.usageMessage = "/names [on/off/character]";
         this.setPermission(SneakyCharacterManager.IDENTIFIER + ".command." + this.getName());
     }
 

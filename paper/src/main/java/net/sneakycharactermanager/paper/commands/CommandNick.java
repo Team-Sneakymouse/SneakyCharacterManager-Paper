@@ -17,7 +17,7 @@ public class CommandNick extends Command {
     public CommandNick() {
         super("nick");
         this.description = "Change the name of your character!";
-        this.usageMessage = "/nick <Name>";
+        this.usageMessage = "/nick [Name]";
         this.setPermission(SneakyCharacterManager.IDENTIFIER + ".command." + this.getName());
     }
 
