@@ -21,7 +21,7 @@ public class CommandCharTag extends Command {
         super("chartag");
         this.description = "Add or remove a tag to a character.";
         this.usageMessage = "/chartag [playerName] [add/remove] [tagName]";
-        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".commandadmin." + this.getName());
+        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".admin.command." + this.getName());
     }
 
     @Override

@@ -22,7 +22,7 @@ public class CommandCharAdmin extends Command {
         super("charadmin");
         this.description = "Switch between your different characters!";
         this.setUsage("/charadmin [playerName]");
-        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".commandadmin." + this.getName());
+        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".admin.command." + this.getName());
     }
 
     @Override
