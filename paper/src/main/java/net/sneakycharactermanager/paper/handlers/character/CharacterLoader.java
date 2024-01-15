@@ -27,7 +27,7 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
 
 public class CharacterLoader {
 
-    public static void loadCharacter(Character character) {
+    public static boolean loadCharacter(Character character) {
         String url = character.getSkin();
         Player player = character.getPlayer();
 
@@ -57,7 +57,10 @@ public class CharacterLoader {
             }
 
             SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getName());
+            
+            return true;
         }
+        return false;
     }
 
     

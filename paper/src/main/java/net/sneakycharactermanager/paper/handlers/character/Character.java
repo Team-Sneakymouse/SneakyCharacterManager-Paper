@@ -119,30 +119,30 @@ public class Character {
 
         Entity vehicle = this.player.getVehicle();
 
-        if (vehicle != null) {
-            vehicle.removePassenger(this.player);
-        }
-
         List<Entity> passengers = this.player.getPassengers();
 
-        if (passengers.size() > 0) {
-            for (Entity passenger : passengers) {
-                if (passenger.getType() != EntityType.TEXT_DISPLAY) {
-                    this.player.removePassenger(passenger);
+        if (CharacterLoader.loadCharacter(this)) {
+            if (vehicle != null) {
+                vehicle.removePassenger(this.player);
+            }
+            
+            if (passengers.size() > 0) {
+                for (Entity passenger : passengers) {
+                    if (passenger.getType() != EntityType.TEXT_DISPLAY) {
+                        this.player.removePassenger(passenger);
+                    }
                 }
             }
+    
+            this.player.teleport(playerLocation.add(0, 1, 0));
+    
+            ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
+            this.player.getInventory().setContents(inventoryContents);
+
+            this.map();
+            ConsoleCommandCharDisable.playerCharEnable(this.player.getUniqueId().toString());
         }
 
-        this.player.teleport(playerLocation.add(0, 1, 0));
-
-        ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
-        this.player.getInventory().setContents(inventoryContents);
-
-        //Loading The Nickname
-        CharacterLoader.loadCharacter(this);
-
-        this.map();
-        ConsoleCommandCharDisable.playerCharEnable(this.player.getUniqueId().toString());
     }
 
     public void map() {
