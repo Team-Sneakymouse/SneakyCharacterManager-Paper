@@ -20,15 +20,13 @@ public class CommandCharTag extends Command {
     public CommandCharTag() {
         super("chartag");
         this.description = "Add or remove a tag to a character.";
-        this.usageMessage = "/chartag [playerName] [add/remove] [tagName]";
+        this.usageMessage = "/chartag [playerName] [add/remove] [tagName]\nA tag must be a single word and contain only alphanuerical characters or underscores.";
         this.setPermission(SneakyCharacterManager.IDENTIFIER + ".admin.command." + this.getName());
     }
 
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
-        if (!(sender instanceof Player)) return false;
-
-        if (args.length < 3) {
+        if (args.length != 3) {
             sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.usageMessage));
             return false;
         }
@@ -50,6 +48,11 @@ public class CommandCharTag extends Command {
         List<String> tags = character.getTags();
 
         String tag = args[2].toLowerCase();
+
+        if (!tag.matches("^[a-zA-Z0-9_]+$")) {
+            sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.usageMessage));
+            return false;
+        }
 
         if (args[1].equalsIgnoreCase("add")) {
             tags.add(tag);
