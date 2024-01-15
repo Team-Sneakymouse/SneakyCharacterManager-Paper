@@ -1,27 +1,24 @@
-package net.sneakycharactermanager.paper.commands;
+package net.sneakycharactermanager.paper.admincommands;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
-public class CommandCharTag extends Command {
+public class CommandCharTag extends CommandBaseAdmin {
 
     public CommandCharTag() {
         super("chartag");
         this.description = "Add or remove a tag to a character.";
         this.usageMessage = "/chartag [playerName] [add/remove] [tagName]\nA tag must be a single word and contain only alphanuerical characters or underscores.";
-        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".admin.command." + this.getName());
     }
 
     @Override

@@ -32,13 +32,12 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-public class CommandSkin extends Command {
+public class CommandSkin extends CommandBase {
 
     public CommandSkin() {
         super("skin");
         this.description = "Change your skin!";
         this.setUsage("/skin [URL (Must be direct image)] (slim/classic)");
-        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".command." + this.getName());
     }
 
     @Override

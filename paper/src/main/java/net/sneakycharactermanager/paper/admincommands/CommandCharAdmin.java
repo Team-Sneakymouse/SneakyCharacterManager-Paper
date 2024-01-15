@@ -1,4 +1,4 @@
-package net.sneakycharactermanager.paper.commands;
+package net.sneakycharactermanager.paper.admincommands;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -8,7 +8,6 @@ import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -16,13 +15,12 @@ import org.jetbrains.annotations.NotNull;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
-public class CommandCharAdmin extends Command {
+public class CommandCharAdmin extends CommandBaseAdmin {
 
     public CommandCharAdmin() {
         super("charadmin");
         this.description = "Switch between your different characters!";
         this.setUsage("/charadmin [playerName]");
-        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".admin.command." + this.getName());
     }
 
     @Override

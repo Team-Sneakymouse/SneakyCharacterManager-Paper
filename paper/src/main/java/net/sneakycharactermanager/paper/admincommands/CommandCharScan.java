@@ -1,4 +1,4 @@
-package net.sneakycharactermanager.paper.commands;
+package net.sneakycharactermanager.paper.admincommands;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -6,7 +6,6 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 import net.sneakycharactermanager.paper.util.InventoryUtility;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
@@ -17,14 +16,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class CommandCharScan extends Command {
+public class CommandCharScan extends CommandBaseAdmin {
 
     File characterDataFolder;
     public CommandCharScan() {
         super("charscan");
         this.description = "Scan all inventories for a item id or name";
         this.usageMessage = "/charscan [name/id] [Item Name / Item ID]";
-        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".admin.command." + this.getName());
 
         characterDataFolder = SneakyCharacterManager.getCharacterDataFolder();
     }

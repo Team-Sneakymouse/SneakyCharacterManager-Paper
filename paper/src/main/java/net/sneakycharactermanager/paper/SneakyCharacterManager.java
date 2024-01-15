@@ -12,6 +12,7 @@ import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.permissions.Permission;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import net.sneakycharactermanager.paper.admincommands.*;
 import net.sneakycharactermanager.paper.commands.*;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
 import net.sneakycharactermanager.paper.handlers.ContextCalculatorCharacterTag;
@@ -84,6 +85,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".command.*"));
         getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".admin.*"));
         getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".admin.command.*"));
+        getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".admin.bypass.*"));
 
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new Placeholders().register();

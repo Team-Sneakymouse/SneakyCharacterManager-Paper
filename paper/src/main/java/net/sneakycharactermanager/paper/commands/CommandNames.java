@@ -2,7 +2,6 @@ package net.sneakycharactermanager.paper.commands;
 
 import java.util.List;
 
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -10,13 +9,12 @@ import org.jetbrains.annotations.NotNull;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
-public class CommandNames extends Command {
+public class CommandNames extends CommandBase {
 
     public CommandNames() {
         super("names");
         this.description = "Change player Nickname settings. ON: Show nametags & player names, OFF: Hide Name Tags, Character: Show nicknames hide real names";
         this.usageMessage = "/names [on/off/character]";
-        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".command." + this.getName());
     }
 
     @Override

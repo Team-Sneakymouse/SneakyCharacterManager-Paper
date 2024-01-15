@@ -3,7 +3,6 @@ package net.sneakycharactermanager.paper.commands;
 import java.util.*;
 
 import org.bukkit.Location;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -12,7 +11,7 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
-public class CommandChar extends Command {
+public class CommandChar extends CommandBase {
 
     public static Map<Player, String> deleteConfirmationMap = new HashMap<>();
     public static Map<String, List<String>> tabCompleteMap = new HashMap<>();
@@ -21,7 +20,6 @@ public class CommandChar extends Command {
         super("char");
         this.description = "Switch between your different characters!";
         this.setUsage("/char (Character Name. The name is not case sensitive, and just the first characters is enough)");
-        this.setPermission(SneakyCharacterManager.IDENTIFIER + ".command." + this.getName());
     }
 
     @Override
