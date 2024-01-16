@@ -108,6 +108,21 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
             taskIdMap.put(player, taskId);
         }
 
+        if(getConfig().getBoolean("respawnNameTags", true)){
+            int respawnTimer = getConfig().getInt("respawnTimerSeconds", 600);
+            respawnTimer = respawnTimer*20;
+
+            Bukkit.getScheduler().scheduleSyncRepeatingTask(this, ()->{
+                for(Player player : Bukkit.getOnlinePlayers()){
+                    Character character = Character.get(player);
+                    if(character == null) continue;
+
+                    nametagManager.unnicknamePlayer(player);
+                    nametagManager.nicknamePlayer(player, character.getName());
+                }
+            }, respawnTimer, respawnTimer);
+        }
+
         Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
             Character.saveAll();
         }, 0, 1200);
