@@ -45,29 +45,24 @@ public class NametagManager {
             Nickname name = nicknames.get(player.getUniqueId().toString());
             if (name == null) return;
 
-            List<String> handled = new ArrayList<>();
-            for(String uuid : showingRealNames) {
-                Player requester = Bukkit.getPlayer(UUID.fromString(uuid));
-                if (requester == null || ! requester.isOnline()) continue;
-
-                name.showRealName(requester, true);
-                handled.add(uuid);
-            }
-
-            for(Map.Entry<String, Boolean> showingNameplates : isShowingNameplates.entrySet()) {
-                if (handled.contains(showingNameplates.getKey())) continue;
-                Player requester = Bukkit.getPlayer(UUID.fromString(showingNameplates.getKey()));
-
-                if (requester == null || ! requester.isOnline()) continue;
-
-                if (!showingNameplates.getValue()) {
-                    name.hideName(requester);
-                } else {
-                    name.showRealName(requester, false);
-                }
-            }
+            refreshNicknames(player, name, null);
         }, 5);
 
+    }
+
+    public List<Player> refreshNicknames(Player player, Nickname name, List<Player> trackingPlayersPrev) {
+        List<Player> trackingPlayers = new ArrayList<>();
+
+        for (Player tracking : player.getTrackedBy()) {
+            if (trackingPlayersPrev != null && trackingPlayersPrev.contains(tracking)) continue;
+            if (player.getLocation().distanceSquared(tracking.getLocation()) > 10000) continue;
+            
+            trackingPlayers.add(tracking);
+
+            refreshNickname(name, tracking);
+        }
+
+        return trackingPlayers;
     }
 
     public void refreshNickname(Nickname name, Player requester) {
