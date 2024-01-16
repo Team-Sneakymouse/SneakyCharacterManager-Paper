@@ -18,7 +18,7 @@ public class CommandCharTag extends CommandBaseAdmin {
     public CommandCharTag() {
         super("chartag");
         this.description = "Add or remove a tag to a character.";
-        this.usageMessage = "/chartag [playerName] [add/remove] [tagName]\nA tag must be a single word and contain only alphanuerical characters or underscores.";
+        this.usageMessage = "/chartag [playerName] [add/remove] [tagName]\nA tag must be a single word and contain only alphanumerical characters or underscores.";
     }
 
     @Override
