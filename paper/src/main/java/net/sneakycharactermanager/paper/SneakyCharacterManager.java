@@ -34,6 +34,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
     private static SneakyCharacterManager instance = null;
     private static Map<Player, Integer> taskIdMap = new HashMap<>();
+    public boolean papiActive = false;
 
     public NametagManager nametagManager;
     public CharacterSelectionMenu selectionMenu;
@@ -88,6 +89,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".admin.bypass.*"));
 
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            papiActive = true;
             new Placeholders().register();
         }
 

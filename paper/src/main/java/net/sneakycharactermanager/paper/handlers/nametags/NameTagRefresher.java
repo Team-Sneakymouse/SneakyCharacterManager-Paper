@@ -33,7 +33,7 @@ public class NameTagRefresher extends BukkitRunnable {
             Nickname name = SneakyCharacterManager.getInstance().nametagManager.getNickname(player);
             if (player.isDead() ||
                 player.getGameMode() == GameMode.SPECTATOR ||
-                (PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%") != null && !PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%").isEmpty()) ||
+                (SneakyCharacterManager.getInstance().papiActive && PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%") != null && !PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%").isEmpty()) ||
                 name == null
             ) {
                 trackedByPrev.put(player, new ArrayList<>());
