@@ -164,7 +164,7 @@ public class Character {
     public void setName(String name) { this.name = name; }
 
     public String getNameUnformatted() {
-        Pattern pattern = Pattern.compile("\\<[^)]*\\>|&[0-9A-FK-OR]");
+        Pattern pattern = Pattern.compile("\\<[^)]*\\>|&[0-9A-FK-ORa-fk-or]");
         Matcher matcher = pattern.matcher(this.name);
         return matcher.replaceAll("");
     }

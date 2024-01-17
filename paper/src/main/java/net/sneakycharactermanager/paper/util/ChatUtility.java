@@ -20,22 +20,34 @@ public class ChatUtility {
         message = message.replace("&0", "<black>");
 
         message = message.replace("&a", "<green>");
+        message = message.replace("&A", "<green>");
         message = message.replace("&b", "<aqua>");
+        message = message.replace("&B", "<aqua>");
         message = message.replace("&c", "<red>");
+        message = message.replace("&C", "<red>");
         message = message.replace("&d", "<light_purple>");
+        message = message.replace("&D", "<light_purple>");
         message = message.replace("&e", "<yellow>");
+        message = message.replace("&E", "<yellow>");
         message = message.replace("&f", "<white>");
+        message = message.replace("&F", "<white>");
 
 
         message = message.replace("&k", "<obf>");
+        message = message.replace("&K", "<obf>");
         message = message.replace("&l", "<b>");
+        message = message.replace("&L", "<b>");
         message = message.replace("&m", "<st>");
+        message = message.replace("&M", "<st>");
         message = message.replace("&n", "<u>");
+        message = message.replace("&N", "<u>");
         message = message.replace("&o", "<i>");
+        message = message.replace("&O", "<i>");
 
         message = message.replaceAll("&#([A-Fa-f0-9]{6})", "<color:#$1>");
 
         message = message.replace("&r", "<reset>");
+        message = message.replace("&R", "<reset>");
 
         return MiniMessage.miniMessage().deserialize(message).decoration(TextDecoration.ITALIC, false);
     }
