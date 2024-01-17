@@ -21,14 +21,18 @@ public class SkinQueue {
 
     public void add(SkinData skinData, int priority) {
         Bukkit.getScheduler().runTaskAsynchronously(SneakyCharacterManager.getInstance(), () -> {
-            this.queue.computeIfAbsent(priority, k -> new CopyOnWriteArrayList<>()).add(skinData);
-            this.start();
+            synchronized (this) {
+                this.queue.computeIfAbsent(priority, k -> new CopyOnWriteArrayList<>()).add(skinData);
+                this.start();
+            }
         });
     }
 
     public void remove(SkinData skinData) {
         Bukkit.getScheduler().runTaskAsynchronously(SneakyCharacterManager.getInstance(), () -> {
-            this.queue.values().forEach(list -> list.removeIf(s -> s.equals(skinData)));
+            synchronized (this) {
+                this.queue.values().forEach(list -> list.removeIf(s -> s.equals(skinData)));
+            }
         });
     }
 
@@ -54,6 +58,7 @@ public class SkinQueue {
     }
 
     public synchronized void run() {
+        if (this.task == null) return;
         SkinData next = this.getNext();
 
         if (next == null) {
