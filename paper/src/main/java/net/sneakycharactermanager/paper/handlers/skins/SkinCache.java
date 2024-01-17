@@ -1,7 +1,10 @@
 package net.sneakycharactermanager.paper.handlers.skins;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import javax.annotation.Nullable;
 
 import com.destroystokyo.paper.profile.ProfileProperty;
 
@@ -9,26 +12,26 @@ public class SkinCache {
 
     private static Map<String, Map<String, ProfileProperty>> skinCache = new ConcurrentHashMap<>();
 
+    @Nullable
     public synchronized static ProfileProperty get(String playerUUID, String url) {
-        return Optional.ofNullable(skinCache.compute(playerUUID, (key, value) -> {
-            if (value != null) {
-                ProfileProperty p = value.get(url);
-                if (p != null && p.isSigned()) {
-                    return value;
-                } else {
-                    value.remove(url);
-                    if (value.isEmpty()) {
-                        return null;  // Remove the entry if the map is empty
-                    }
-                }
-            }
+        Map<String, ProfileProperty> cachedProperties = skinCache.get(playerUUID);
+
+        if (cachedProperties == null) return null;
+
+        ProfileProperty profileProperty = cachedProperties.get(url);
+
+        if (profileProperty == null) return null;
+
+        if (profileProperty.isSigned()) return profileProperty;
+        else {
+            cachedProperties.remove(url);
             return null;
-        })).flatMap(map -> Optional.ofNullable(map.get(url))).orElse(null);
+        }
     }
 
     public synchronized static void put(String playerUUID, String url, ProfileProperty profileProperty) {
-        if (!skinCache.containsKey(playerUUID)) skinCache.put(playerUUID, new HashMap<String,ProfileProperty>());
-        skinCache.get(playerUUID).put(url, profileProperty);
+        Map<String, ProfileProperty> cachedProperties = skinCache.computeIfAbsent(playerUUID, key -> new HashMap<String,ProfileProperty>());
+        cachedProperties.put(url, profileProperty);
     }
 
     public synchronized static void remove(String playerUUID) {

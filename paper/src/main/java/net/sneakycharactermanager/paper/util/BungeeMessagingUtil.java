@@ -1,15 +1,14 @@
 package net.sneakycharactermanager.paper.util;
 
-import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import org.bukkit.entity.Player;
-
-import com.google.common.io.ByteArrayDataOutput;
-
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+
+import org.bukkit.entity.Player;
+
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
 
 public class BungeeMessagingUtil {
 
