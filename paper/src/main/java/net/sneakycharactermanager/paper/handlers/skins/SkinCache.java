@@ -29,7 +29,7 @@ public class SkinCache {
     }
 
     public static void put(String playerUUID, String url, ProfileProperty profileProperty) {
-        ConcurrentMap<String, ProfileProperty> cachedProperties = skinCache.computeIfAbsent(playerUUID, ConcurrentHashMap::new);
+        ConcurrentMap<String, ProfileProperty> cachedProperties = skinCache.computeIfAbsent(playerUUID, key -> new ConcurrentHashMap<>());
         cachedProperties.put(url, profileProperty);
     }
 
