@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.config.ServerInfo;
@@ -19,7 +20,7 @@ import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
 
 public class PlayerData {
 
-    private static final Map<String, PlayerData> playerDataMap = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<String, PlayerData> playerDataMap = new ConcurrentHashMap<>();
 
     private final String playerUUID;
     private Configuration config;

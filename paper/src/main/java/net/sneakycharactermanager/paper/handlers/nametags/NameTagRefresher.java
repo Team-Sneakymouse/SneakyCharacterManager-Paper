@@ -2,8 +2,8 @@ package net.sneakycharactermanager.paper.handlers.nametags;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -17,7 +17,7 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 public class NameTagRefresher extends BukkitRunnable {
 
     private BukkitTask task = null;
-    private Map<Player, List<Player>> trackedByPrev = new ConcurrentHashMap<>();
+    private ConcurrentMap<Player, List<Player>> trackedByPrev = new ConcurrentHashMap<>();
 
     public NameTagRefresher() {
         this.task = runTaskTimer(SneakyCharacterManager.getInstance(), 0, 20);
