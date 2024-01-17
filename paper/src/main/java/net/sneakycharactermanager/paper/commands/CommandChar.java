@@ -47,7 +47,7 @@ public class CommandChar extends CommandBase {
                 return true;
             } else {
                 String name = String.join(" ", args);
-                player.sendMessage(ChatUtility.convertToComponent("&aLoading character &b`" + name + "`&a... Please Wait..."));
+                player.sendMessage(ChatUtility.convertToComponent("&aLoading character &b`" + name + "`&r&a... Please Wait..."));
                 BungeeMessagingUtil.sendByteArray(player, "selectCharacterByName", player.getUniqueId().toString(), name);
                 return true;
             }
