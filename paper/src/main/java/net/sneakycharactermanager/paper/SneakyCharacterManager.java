@@ -110,7 +110,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
             taskIdMap.put(player, taskId);
         }
 
-        if(getConfig().getBoolean("respawnNameTags", true)){
+        if(getConfig().getBoolean("respawnNameTags", false)){
             int respawnTimer = getConfig().getInt("respawnTimerSeconds", 600);
             respawnTimer = respawnTimer*20;
 

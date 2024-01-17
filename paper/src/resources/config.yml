@@ -1,5 +1,5 @@
 deleteCharacterDataOnServerStart: false
-respawnNameTags: true
+respawnNameTags: false
 respawnTimerSeconds: 600
 bannedWords:
   - badword
