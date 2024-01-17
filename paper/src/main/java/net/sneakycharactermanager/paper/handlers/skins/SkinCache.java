@@ -1,8 +1,7 @@
 package net.sneakycharactermanager.paper.handlers.skins;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import javax.annotation.Nullable;
 
@@ -10,11 +9,11 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 
 public class SkinCache {
 
-    private static Map<String, Map<String, ProfileProperty>> skinCache = new ConcurrentHashMap<>();
+    private static ConcurrentMap<String, ConcurrentMap<String, ProfileProperty>> skinCache = new ConcurrentHashMap<>();
 
     @Nullable
-    public synchronized static ProfileProperty get(String playerUUID, String url) {
-        Map<String, ProfileProperty> cachedProperties = skinCache.get(playerUUID);
+    public static ProfileProperty get(String playerUUID, String url) {
+        ConcurrentMap<String, ProfileProperty> cachedProperties = skinCache.get(playerUUID);
 
         if (cachedProperties == null) return null;
 
@@ -29,13 +28,12 @@ public class SkinCache {
         }
     }
 
-    public synchronized static void put(String playerUUID, String url, ProfileProperty profileProperty) {
-        Map<String, ProfileProperty> cachedProperties = skinCache.computeIfAbsent(playerUUID, key -> new HashMap<String,ProfileProperty>());
+    public static void put(String playerUUID, String url, ProfileProperty profileProperty) {
+        ConcurrentMap<String, ProfileProperty> cachedProperties = skinCache.computeIfAbsent(playerUUID, ConcurrentHashMap::new);
         cachedProperties.put(url, profileProperty);
     }
 
-    public synchronized static void remove(String playerUUID) {
+    public static void remove(String playerUUID) {
         skinCache.remove(playerUUID);
     }
-
 }
