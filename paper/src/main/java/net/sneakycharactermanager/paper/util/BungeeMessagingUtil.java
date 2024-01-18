@@ -35,7 +35,9 @@ public class BungeeMessagingUtil {
                     out.writeShort((int) object);
                 else if (object.getClass() == String.class)
                     out.writeUTF((String) object);
-                else if (object instanceof List && ((List<?>) object).size() > 0 && ((List<?>) object).get(0) instanceof String)
+                else if (object instanceof List && ((List<?>) object).isEmpty())
+                    out.writeInt(0);
+                else if (object instanceof List && ((List<?>) object).get(0) instanceof String)
                     writeStringList(out, (List<String>) object);
                 else {
                     SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager attempted to write an unidentified object to a ByteArray!");
