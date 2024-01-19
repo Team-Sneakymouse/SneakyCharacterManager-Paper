@@ -1,6 +1,6 @@
 package net.sneakycharactermanager.paper.admincommands;
 
-import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -119,12 +119,39 @@ public class CommandUniform extends CommandBaseAdmin {
                             BufferedImage image = ImageIO.read(inputStream);
                             BufferedImage overlayImage = ImageIO.read(uniformFinal);
 
+                            int width = Math.min(image.getWidth(), overlayImage.getWidth());
+                            int height = Math.min(image.getHeight(), overlayImage.getHeight());
+
                             BufferedImage combined = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 
-                            Graphics2D g = combined.createGraphics();
-                            g.drawImage(image, 0, 0, null);
-                            g.drawImage(overlayImage, 0, 0, null);
-                            g.dispose();
+                            for (int x = 0; x < width; x++) {
+                                for (int y = 0; y < height; y++) {
+                                    int pixelImage = image.getRGB(x, y);
+                                    int pixelOverlay = overlayImage.getRGB(x, y);
+                                    int outerAlpha = (pixelOverlay >> 24) & 0xFF;
+
+                                    if (outerAlpha > 0) {
+                                        // If the overlay image contains a pixel, definitely use this pixel
+                                        combined.setRGB(x, y, pixelOverlay);
+                                    } else {
+                                        Point outerToInnerOffset = calculateOuterToInnerOffset(x, y);
+                                        if (outerToInnerOffset == null) {
+                                            // If the overlay image does not contain a pixel, and it is not an outer skin layer part, use the original pixel
+                                            combined.setRGB(x, y, pixelImage);
+                                        } else {
+                                            int relativeInnerAlpha = (overlayImage.getRGB(x + (int) outerToInnerOffset.getX(), y + (int) outerToInnerOffset.getY()) >> 24) & 0xFF;
+
+                                            if (relativeInnerAlpha == 0) {
+                                                // If the overlay image does not contain a pixel, and its relative inner layer also does not, use the original pixel
+                                                combined.setRGB(x, y, pixelImage);
+                                            } else {
+                                                // If the overlay image does not contain a pixel, and its relative inner layer does, use the overlay pixel (which is in this case empty)
+                                                combined.setRGB(x, y, pixelOverlay);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
 
                             // Convert the merged images into a ByteArray
                             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
@@ -231,6 +258,20 @@ public class CommandUniform extends CommandBaseAdmin {
                 }
             }
         });
+    }
+
+    public static Point calculateOuterToInnerOffset(int x, int y) {
+        if (y < 16 && x >= 32) {
+            return new Point(-32, 0);
+        } else if (y >= 32 && y < 48) {
+            return new Point(0, -16);
+        } else if (y >= 48 && x < 16) {
+            return new Point(16, 0);
+        } else if (y >= 48 && x >= 48) {
+            return new Point(-16, 0);
+        }
+
+        return null;
     }
 
 }
