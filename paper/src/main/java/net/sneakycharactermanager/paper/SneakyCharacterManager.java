@@ -61,6 +61,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getCommandMap().register(IDENTIFIER, new CommandSkin());
         getServer().getCommandMap().register(IDENTIFIER, new CommandNames());
         getServer().getCommandMap().register(IDENTIFIER, new CommandNick());
+        getServer().getCommandMap().register(IDENTIFIER, new CommandUniform());
 
         getServer().getCommandMap().register(IDENTIFIER, new CommandCharAdmin());
         getServer().getCommandMap().register(IDENTIFIER, new CommandCharScan());
@@ -149,6 +150,16 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
     public static File getCharacterDataFolder() {
         File dir = new File(getInstance().getDataFolder(), "characterdata");
+
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        return dir;
+    }
+
+    public static File getUniformFolder() {
+        File dir = new File(getInstance().getDataFolder(), "uniforms");
 
         if (!dir.exists()) {
             dir.mkdirs();

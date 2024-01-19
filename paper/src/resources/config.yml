@@ -1,5 +1,7 @@
 deleteCharacterDataOnServerStart: false
 respawnNameTags: false
 respawnTimerSeconds: 600
+ImgurApiUrl: 'https://api.imgur.com/3/image'
+imgurClientId: ''
 bannedWords:
   - badword
