@@ -1,6 +1,8 @@
 deleteCharacterDataOnServerStart: false
 respawnNameTags: false
 respawnTimerSeconds: 600
+mineskinApiUrl: 'https://api.mineskin.org/generate/url'
+mineskinAuth: ''
 imgurApiUrl: 'https://api.imgur.com/3/image'
 imgurClientId: ''
 bannedWords:

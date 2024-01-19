@@ -76,7 +76,8 @@ public class SkinData {
 
     private static ConcurrentMap<String, SkinData> skinDataMap = new ConcurrentHashMap<>();
 
-    private static final String MINESKIN_API_URL = "https://api.mineskin.org/generate/url";
+    private static final String MINESKIN_API_URL = SneakyCharacterManager.getInstance().getConfig().getString("mineskinApiUrl", "https://api.mineskin.org/generate/url");
+    private static final String MINESKIN_AUTH = SneakyCharacterManager.getInstance().getConfig().getString("mineskinAuth", null);;
 
     /**
      * Load custom skill data from a normal web URL.
@@ -107,6 +108,7 @@ public class SkinData {
      * */
     public boolean convertSkinURL() {
         this.attempts++;
+        if (MINESKIN_AUTH == null) SneakyCharacterManager.getInstance().getLogger().warning("You must set a mineskin auth token in the config.yml file to apply skins.");
         SneakyCharacterManager.getInstance().skinPreloader.requestsThisMinute++;
         //Make a request to MineSkin to change skin data!
 
@@ -121,7 +123,7 @@ public class SkinData {
 
             StringEntity skinReq = new StringEntity(requestBodyJson.toString());
             request.addHeader("content-type", "application/json");
-            request.addHeader("Authorization", "Bearer d5ec4e50664ef47655788f4b1409c0a47eaa5489598688a9bffeb865b8884882");
+            request.addHeader("Authorization", MINESKIN_AUTH);
             request.setEntity(skinReq);
             HttpResponse response = httpClient.execute(request);
 
