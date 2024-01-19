@@ -15,17 +15,40 @@ public class SkinCache {
     public static ProfileProperty get(String playerUUID, String url) {
         ConcurrentMap<String, ProfileProperty> cachedProperties = skinCache.get(playerUUID);
 
-        if (cachedProperties == null) return null;
+        if (cachedProperties == null) return getFromAll(playerUUID, url);
 
         ProfileProperty profileProperty = cachedProperties.get(url);
 
-        if (profileProperty == null) return null;
+        if (profileProperty == null) return getFromAll(playerUUID, url);
 
         if (profileProperty.isSigned()) return profileProperty;
         else {
             cachedProperties.remove(url);
-            return null;
+            return getFromAll(playerUUID, url);
         }
+    }
+
+    private static ProfileProperty getFromAll(String playerUUID, String url) {
+        for (String uuid : skinCache.keySet()) {
+            if (uuid.equals(playerUUID)) continue;
+
+            ConcurrentMap<String, ProfileProperty> cachedProperties = skinCache.get(uuid);
+
+            if (cachedProperties == null) continue;
+
+            ProfileProperty profileProperty = cachedProperties.get(url);
+    
+            if (profileProperty == null) continue;
+    
+            if (profileProperty.isSigned()) {
+                put(playerUUID, url, profileProperty);
+                return profileProperty;
+            } else {
+                cachedProperties.remove(url);
+                continue;
+            }
+        }
+        return null;
     }
 
     public static void put(String playerUUID, String url, ProfileProperty profileProperty) {
