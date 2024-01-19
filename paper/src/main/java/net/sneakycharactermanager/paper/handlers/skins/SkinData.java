@@ -203,18 +203,15 @@ public class SkinData {
                     BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), 1, skinURL, this.isSlim());
 
                     SkinCache.put(this.player.getUniqueId().toString(), skinURL, property);
-                } else {
-                    SkinCache.put(this.player.getUniqueId().toString(), this.url, property);
+                    return;
                 }
             } else if (SneakyCharacterManager.getInstance().selectionMenu.menuExists(this.player.getUniqueId().toString())) {
                 this.skullMeta.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, property));
                 this.characterHead.setItemMeta(this.skullMeta);
                 this.inventory.setItem(this.index, this.characterHead);
-                SkinCache.put(this.player.getUniqueId().toString(), this.url, property);
             }
-        } else {
-            SkinCache.put(this.player.getUniqueId().toString(), this.url, property);
         }
+        SkinCache.put(this.player.getUniqueId().toString(), this.url, property);
     }
     
     public String getUrl() {
