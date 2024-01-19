@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 
-public class CommandBaseAdmin extends Command {
+public abstract class CommandBaseAdmin extends Command {
 
     public CommandBaseAdmin(String name) {
         super(name);
@@ -14,6 +14,6 @@ public class CommandBaseAdmin extends Command {
     }
 
     @Override
-    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {return true;}
+    public abstract boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args);
     
 }
