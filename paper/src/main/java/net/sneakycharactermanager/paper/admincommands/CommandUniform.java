@@ -188,7 +188,7 @@ public class CommandUniform extends CommandBaseAdmin {
                                 
                                 // Make skindata and add to skinqueue
                                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                                    SkinData.getOrCreate(imgUrl, character.isSlim(), 4, player);
+                                    SkinData.getOrCreate(imgUrl, character.isSlim(), 3, player);
                                 });
                             }
                         }

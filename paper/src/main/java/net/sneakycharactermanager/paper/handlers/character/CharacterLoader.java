@@ -129,7 +129,7 @@ public class CharacterLoader {
     }
 
     private static void setSkin(String url, boolean isSlimSkin, Player player) {
-        SkinData.getOrCreate(url, isSlimSkin, 2, player);
+        SkinData.getOrCreate(url, isSlimSkin, 3, player);
 
         Character character = Character.get(player);
 
