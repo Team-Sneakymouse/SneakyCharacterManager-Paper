@@ -39,7 +39,7 @@ import net.sneakycharactermanager.paper.util.ChatUtility;
 
 public class CommandUniform extends CommandBaseAdmin {
 
-    private static final String IMGUR_API_URL = SneakyCharacterManager.getInstance().getConfig().getString("ImgurApiUrl", "https://api.imgur.com/3/image");
+    private static final String IMGUR_API_URL = SneakyCharacterManager.getInstance().getConfig().getString("imgurApiUrl", "https://api.imgur.com/3/image");
     private static final String IMGUR_CLIENT_ID = SneakyCharacterManager.getInstance().getConfig().getString("imgurClientId", null);;
 
     ConcurrentMap<String, File> uniforms = new ConcurrentHashMap<>();
