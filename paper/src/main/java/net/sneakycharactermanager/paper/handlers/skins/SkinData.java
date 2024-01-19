@@ -6,8 +6,8 @@ import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -74,7 +74,7 @@ public class SkinData {
     private boolean cancelled = false;
     private int attempts = 0;
 
-    private static ConcurrentMap<String, SkinData> skinDataMap = new ConcurrentHashMap<>();
+    private static List<SkinData> skinDataList = new ArrayList<>();
 
     private static final String MINESKIN_API_URL = SneakyCharacterManager.getInstance().getConfig().getString("mineskinApiUrl", "https://api.mineskin.org/generate/url");
     private static final String MINESKIN_AUTH = SneakyCharacterManager.getInstance().getConfig().getString("mineskinAuth", null);;
@@ -99,6 +99,10 @@ public class SkinData {
         this.inventory = inventory;
         this.index = index;
         SneakyCharacterManager.getInstance().skinQueue.add(this, priority);
+    }
+
+    private SkinData(@NotNull String url, boolean isSlim, int priority, Player player) {
+        this(url, isSlim, priority, player, null, null, null, 0);
     }
 
     /**
@@ -182,6 +186,34 @@ public class SkinData {
     public String getUrl() {
         return url;
     }
+    
+    public boolean isSlim() {
+        return isSlim;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public SkullMeta getSkullMeta() {
+        return skullMeta;
+    }
+
+    public ItemStack getCharacterHead() {
+        return characterHead;
+    }
+
+    public Inventory getInventory() {
+        return inventory;
+    }
+
+    public int getIndex() {
+        return index;
+    }
 
     public boolean isValid() {
         return (isValid && !cancelled);
@@ -191,9 +223,6 @@ public class SkinData {
         return (isValid() || this.attempts > 5);
     }
 
-    public Player getPlayer() {
-        return player;
-    }
 
     public void cancel() {
         if (this.isProcessed()) return;
@@ -204,15 +233,43 @@ public class SkinData {
 
     public void remove() {
         SneakyCharacterManager.getInstance().skinQueue.remove(this);
-        skinDataMap.values().removeIf(value -> value == this);
+        skinDataList.remove(this);
     }
 
     public static SkinData getOrCreate(@NotNull String url, boolean isSlim, int priority, Player player) {
-        return skinDataMap.computeIfAbsent(url, key -> new SkinData(key, isSlim, priority, player, null, null, null, 0));
+        for (SkinData skinData : skinDataList) {
+            if (
+                skinData.getUrl().equals(url) && 
+                skinData.isSlim() == isSlim &&
+                skinData.getIndex() == priority &&
+                skinData.getPlayer().equals(player) &&
+                skinData.getSkullMeta() == null &&
+                skinData.getCharacterHead() == null &&
+                skinData.getInventory() == null &&
+                skinData.index == 0
+            ) {
+                return skinData;
+            }
+        }
+        return new SkinData(url, isSlim, priority, player);
     }
 
     public static SkinData getOrCreate(@NotNull String url, boolean isSlim, int priority, Player player, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
-        return skinDataMap.computeIfAbsent(url, key -> new SkinData(key, isSlim, priority, player, skullMeta, characterHead, inventory, index));
+        for (SkinData skinData : skinDataList) {
+            if (
+                skinData.getUrl().equals(url) && 
+                skinData.isSlim() == isSlim &&
+                skinData.getIndex() == priority &&
+                skinData.getPlayer().equals(player) &&
+                skinData.getSkullMeta().equals(skullMeta) &&
+                skinData.getCharacterHead().equals(characterHead) &&
+                skinData.getInventory().equals(inventory) &&
+                skinData.index == index
+            ) {
+                return skinData;
+            }
+        }
+        return new SkinData(url, isSlim, priority, player, skullMeta, characterHead, inventory, index);
     }
 
 }

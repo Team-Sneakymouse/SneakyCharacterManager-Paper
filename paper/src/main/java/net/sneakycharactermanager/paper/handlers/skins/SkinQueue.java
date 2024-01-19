@@ -76,7 +76,9 @@ public class SkinQueue {
                         next.apply();
                     });
                 }
-                next.remove();
+                Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+                    next.remove();
+                });
             }
             this.task = Bukkit.getAsyncScheduler().runDelayed(SneakyCharacterManager.getInstance(), (s) -> {
                 this.run();
