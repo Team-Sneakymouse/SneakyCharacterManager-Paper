@@ -60,6 +60,8 @@ public class CommandUniform extends CommandBaseAdmin {
             return false;
         }
 
+        this.updateUniforms();
+
         if (args.length != 2) {
             sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
             return false;
