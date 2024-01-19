@@ -97,7 +97,7 @@ public class CharacterLoader {
         try {
             HttpClient httpClient = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder().uri(
-                new URI(url))
+                new URI(url.replace("imgur", "filmot")))
                 .timeout(Duration.ofSeconds(2))
                 .build();
             HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());

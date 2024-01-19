@@ -106,7 +106,7 @@ public class CommandUniform extends CommandBaseAdmin {
                 // Grab character skin from remote web server
                 HttpClient httpClient = HttpClient.newHttpClient();
                 HttpRequest request = HttpRequest.newBuilder().uri(
-                    new URI(character.getSkin()))
+                    new URI(character.getSkin().replace("imgur", "filmot")))
                     .timeout(Duration.ofSeconds(2))
                     .build();
                 HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
