@@ -5,10 +5,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.net.http.HttpRequest;
-import java.net.http.HttpClient;
 
 import javax.imageio.ImageIO;
 
@@ -22,7 +22,6 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
 public class CharacterLoader {
@@ -89,7 +88,7 @@ public class CharacterLoader {
                 checkSlimThenSetSkin(url, playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM), player);
             });
         } else {
-            setSkin(url, slim, player);
+            SkinData.getOrCreate(url, slim, 3, player);
         }
     }
 
@@ -124,20 +123,8 @@ public class CharacterLoader {
 
         final boolean slimFinal = slim;
         Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-            setSkin(url, slimFinal, player);
+            SkinData.getOrCreate(url, slimFinal, 3, player);
         });
-    }
-
-    private static void setSkin(String url, boolean isSlimSkin, Player player) {
-        SkinData.getOrCreate(url, isSlimSkin, 3, player);
-
-        Character character = Character.get(player);
-
-        if (character == null) return;
-
-        character.setSkin(url);
-        character.setSlim(isSlimSkin);
-        BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), 1, url, isSlimSkin);
     }
 
 }

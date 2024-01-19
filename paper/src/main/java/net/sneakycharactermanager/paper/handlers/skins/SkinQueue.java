@@ -68,11 +68,6 @@ public class SkinQueue {
             if (next.isProcessed()) {
                 if (next.isValid()) {
                     Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                        ProfileProperty property = next.getTextureProperty();
-
-                        if (property == null) return;
-
-                        SkinCache.put(next.getPlayer().getUniqueId().toString(), next.getUrl(), property);
                         next.apply();
                     });
                 }

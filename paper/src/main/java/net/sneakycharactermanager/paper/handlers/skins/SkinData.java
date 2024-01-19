@@ -20,15 +20,19 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.profile.PlayerTextures;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
 public class SkinData {
@@ -168,18 +172,48 @@ public class SkinData {
     }
 
     public void apply() {
-        //Priority 0 is only used for pre-caching skins. So priority 0 skindatas should not be applied.
+        ProfileProperty property = this.getTextureProperty();
+        if (property == null) return;
+
+        // Priority 0 is used exclusively for pre-caching skins. So priority 0 skindatas should not be applied.
         if (this.priority > 0) {
             if (this.skullMeta == null) {
-                this.player.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, this.getTextureProperty()));
+                this.player.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, property));
                 Entity vehicle = player.getVehicle();
                 if (vehicle != null) vehicle.removePassenger(player);
                 player.teleport(player.getLocation().add(0, 1, 0));
+
+                // Priority 3 is used exclusively for /skin updates
+                if (this.priority == 3) {
+                    Character character = Character.get(this.player);
+
+                    if (character == null) return;
+
+                    PlayerProfile profile = this.player.getPlayerProfile();
+                    PlayerTextures textures = profile.getTextures();
+
+                    if (textures.getSkin() == null) return;
+
+                    String skinURL = textures.getSkin().toString();
+
+                    SneakyCharacterManager.getInstance().getLogger().info("Skin Update: [" + this.player.getName() + "," + character.getNameUnformatted() + "," + skinURL + "]");
+
+                    character.setSkin(skinURL);
+                    character.setSlim(this.isSlim());
+                    BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), 1, skinURL, this.isSlim());
+
+                    SkinCache.put(this.player.getUniqueId().toString(), skinURL, property);
+                } else {
+                    SkinCache.put(this.player.getUniqueId().toString(), this.url, property);
+                }
             } else if (SneakyCharacterManager.getInstance().selectionMenu.menuExists(this.player.getUniqueId().toString())) {
-                this.skullMeta.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, this.getTextureProperty()));
+                this.skullMeta.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, property));
                 this.characterHead.setItemMeta(this.skullMeta);
                 this.inventory.setItem(this.index, this.characterHead);
+                SkinCache.put(this.player.getUniqueId().toString(), this.url, property);
             }
+        } else {
+            SkinCache.put(this.player.getUniqueId().toString(), this.url, property);
         }
     }
     
