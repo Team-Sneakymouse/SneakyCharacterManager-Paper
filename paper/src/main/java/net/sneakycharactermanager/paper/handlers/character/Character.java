@@ -137,8 +137,10 @@ public class Character {
             this.player.teleport(playerLocation.add(0, 1, 0));
     
             if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
-                ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
-                this.player.getInventory().setContents(inventoryContents);
+                if (config.getString("inventory") != null) {
+                    ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
+                    this.player.getInventory().setContents(inventoryContents);
+                }
             }
 
             characterMap.put(this.player, this);
