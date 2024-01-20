@@ -10,6 +10,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -66,6 +68,30 @@ public class CommandSkin extends CommandBase {
             resetPlayerSkin(player);
             return true;
         }
+        else if(args[0].equalsIgnoreCase("fetch")){
+            Player target = player;
+            if(args.length > 1){
+                target = Bukkit.getPlayer(args[1]);
+                if(target == null){
+                    player.sendMessage(ChatUtility.convertToComponent("&cCould not find requested player!"));
+                    return true;
+                }
+            }
+
+            PlayerProfile profile = target.getPlayerProfile();
+            PlayerTextures textures = profile.getTextures();
+            URL skinURL = textures.getSkin();
+            if(skinURL == null){
+                player.sendMessage(ChatUtility.convertToComponent("&cPlayer doesn't not have a valid Skin URL!"));
+                return true;
+            }
+
+            player.sendMessage(ChatUtility.convertToComponent("&eHere is " + target.getName() + "'s skin url! Click to Copy!"));
+            player.sendMessage(ChatUtility.convertToComponent("&6" + skinURL)
+                    .clickEvent(ClickEvent.copyToClipboard(skinURL.toString()))
+                    .hoverEvent(HoverEvent.showText(ChatUtility.convertToComponent("&aClick to Copy!"))));
+            return true;
+        }
 
         String url = args[0];
         if (!url.startsWith("http")) {
@@ -89,7 +115,7 @@ public class CommandSkin extends CommandBase {
     @Override
     public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
         if (args.length == 1) {
-            return Arrays.asList("revert");
+            return Arrays.asList("revert", "fetch");
         } else if (args.length == 2) {
             return Arrays.asList("slim", "classic");
         } else {
