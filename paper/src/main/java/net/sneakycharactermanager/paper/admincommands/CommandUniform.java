@@ -249,6 +249,8 @@ public class CommandUniform extends CommandBaseAdmin {
     
     private void updateUniforms() {
         Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
+            this.uniforms_classic.clear();
+            this.uniforms_slim.clear();
             this.uniforms.clear();
             for (File file : SneakyCharacterManager.getUniformFolder().listFiles()) {
                 if (file.getName().toLowerCase().endsWith("_classic.png")) {
