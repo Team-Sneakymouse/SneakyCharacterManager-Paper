@@ -113,13 +113,13 @@ public class CommandSkin extends CommandBase {
     }
 
     @Override
-    public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args, Location location) {
         if (args.length == 1) {
             return Arrays.asList("revert", "fetch");
-        } else if (args.length == 2) {
+        } else if (args.length == 2 && !args[0].equalsIgnoreCase("fetch")) {
             return Arrays.asList("slim", "classic");
         } else {
-            return Collections.emptyList(); // or simply "return new ArrayList<>();"
+            return super.tabComplete(sender, alias, args, location); // or simply "return new ArrayList<>();"
         }
     }
 
