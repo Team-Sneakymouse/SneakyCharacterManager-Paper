@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -18,6 +19,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -116,7 +118,13 @@ public class CommandSkin extends CommandBase {
     public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args, Location location) {
         if (args.length == 1) {
             return Arrays.asList("revert", "fetch");
-        } else if (args.length == 2 && !args[0].equalsIgnoreCase("fetch")) {
+        } else if(args.length == 2 && args[0].equalsIgnoreCase("fetch")){
+            List<String> playerNames = new ArrayList<>();
+            for (@NotNull Player player : Bukkit.getOnlinePlayers()) {
+                if (player.getName().toLowerCase().startsWith(args[1].toLowerCase()) && !player.getName().equals("CMI-Fake-Operator")) playerNames.add(player.getName());
+            }
+            return playerNames;
+        } else if (args.length == 2) {
             return Arrays.asList("slim", "classic");
         } else {
             return super.tabComplete(sender, alias, args, location); // or simply "return new ArrayList<>();"
