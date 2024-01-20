@@ -221,8 +221,10 @@ public class Character {
         Location playerLocation = this.player.getLocation();
         config.set("location", playerLocation);
 
-        String inventoryB64 = InventoryUtility.inventoryToBase64(this.player.getInventory());
-        config.set("inventory", inventoryB64);
+        if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
+            String inventoryB64 = InventoryUtility.inventoryToBase64(this.player.getInventory());
+            config.set("inventory", inventoryB64);
+        }
 
         try {
             config.save(characterFile);
