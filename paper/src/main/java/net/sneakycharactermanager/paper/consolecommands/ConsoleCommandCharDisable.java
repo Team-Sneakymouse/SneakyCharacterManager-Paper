@@ -17,7 +17,7 @@ public class ConsoleCommandCharDisable extends CommandBaseConsole {
 
     public ConsoleCommandCharDisable() {
         super("chardisable");
-        this.description = "The given player is locked out of their character save file. Use this when a player is temporarily acting as something that isn't their own character.";
+        this.description = "The given player is locked out of their character save file. Use this when a player is temporarily acting as something that isn't their own character. The player's status will be restores on server reboot or when they load a character.";
         this.setUsage("chardisable <Player>)");
     }
 
