@@ -63,7 +63,7 @@ public class Character {
 
         if (!characterFile.exists()) {
             this.firstLoad = true;
-            if (firstLogin && !SneakyCharacterManager.getInstance().getConfig().getBoolean("deleteCharacterDataOnServerStart")) {
+            if (firstLogin && !SneakyCharacterManager.getInstance().getConfig().getBoolean("deleteCharacterDataOnServerStart", false)) {
                 this.save();
             } else {
                 YamlConfiguration config = new YamlConfiguration();
@@ -136,8 +136,10 @@ public class Character {
     
             this.player.teleport(playerLocation.add(0, 1, 0));
     
-            ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
-            this.player.getInventory().setContents(inventoryContents);
+            if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
+                ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
+                this.player.getInventory().setContents(inventoryContents);
+            }
 
             characterMap.put(this.player, this);
             ConsoleCommandCharDisable.playerCharEnable(this.player.getUniqueId().toString());
@@ -219,8 +221,10 @@ public class Character {
         Location playerLocation = this.player.getLocation();
         config.set("location", playerLocation);
 
-        String inventoryB64 = InventoryUtility.inventoryToBase64(this.player.getInventory());
-        config.set("inventory", inventoryB64);
+        if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
+            String inventoryB64 = InventoryUtility.inventoryToBase64(this.player.getInventory());
+            config.set("inventory", inventoryB64);
+        }
 
         try {
             config.save(characterFile);

@@ -29,6 +29,10 @@ public class CommandCharScan extends CommandBaseAdmin {
 
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+        if (!SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
+            sender.sendMessage(ChatUtility.convertToComponent("&cmanageInventories is currently set to false in the config, so you probably don't want this command."));
+            return false;
+        }
 
         if(args.length < 2) {
             sender.sendMessage(ChatUtility.convertToComponent("&cInvalid Usage: " + this.usageMessage));

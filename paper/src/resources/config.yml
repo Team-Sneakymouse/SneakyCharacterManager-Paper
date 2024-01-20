@@ -1,4 +1,5 @@
 deleteCharacterDataOnServerStart: false
+manageInventories: true
 respawnNameTags: false
 respawnTimerSeconds: 600
 mineskinApiUrl: 'https://api.mineskin.org/generate/url'

@@ -320,6 +320,11 @@ public class CharacterSelectionMenu implements Listener {
         protected void swapItem(ItemStack clickedItem) {
             if (!clickedItem.getType().equals(Material.PLAYER_HEAD)) return;
 
+            if (!SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
+                this.opener.sendMessage(ChatUtility.convertToComponent("&cmanageInventories is currently set to false in the config. Use direct inventory editing instead."));
+                return;
+            }
+
             SkullMeta meta = (SkullMeta) clickedItem.getItemMeta();
 
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);

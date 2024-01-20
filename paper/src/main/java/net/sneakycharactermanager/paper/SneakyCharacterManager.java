@@ -54,7 +54,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
         saveDefaultConfig();
 
-        if (getConfig().getBoolean("deleteCharacterDataOnServerStart")) {
+        if (getConfig().getBoolean("deleteCharacterDataOnServerStart", false)) {
             deleteFolderContents(getCharacterDataFolder());
         }
 
