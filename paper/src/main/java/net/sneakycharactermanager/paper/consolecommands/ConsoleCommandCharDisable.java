@@ -25,19 +25,19 @@ public class ConsoleCommandCharDisable extends CommandBaseConsole {
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (sender instanceof Player) {
             sender.sendMessage("This command can only be run from the console.");
-            return true;
+            return false;
         }
 
         if (args.length != 1) {
             sender.sendMessage("Invalid Usage: " + this.getUsage());
-            return true;
+            return false;
         }
 
         Player player = Bukkit.getPlayer(args[0]);
 
         if (player == null) {
             sender.sendMessage("Invalid Player: '" + args[0] + "'");
-            return true;
+            return false;
         }
 
         Character character = Character.get(player);

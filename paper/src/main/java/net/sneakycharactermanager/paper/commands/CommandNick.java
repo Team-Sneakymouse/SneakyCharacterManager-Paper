@@ -86,7 +86,7 @@ public class CommandNick extends CommandBase {
         SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, nickname);
         BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), 2, nickname);
         player.sendMessage(ChatUtility.convertToComponent("&eName updated to: " + nickname));
-        return false;
+        return true;
     }
 
     @Override

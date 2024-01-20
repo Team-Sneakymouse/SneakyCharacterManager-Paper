@@ -26,7 +26,7 @@ public class CommandChar extends CommandBase {
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(ChatUtility.convertToComponent("&4Must be a player to run this command"));
-            return true;
+            return false;
         }
 
         if (args != null && args.length > 0) {
@@ -37,14 +37,16 @@ public class CommandChar extends CommandBase {
                         BungeeMessagingUtil.sendByteArray(player, "deleteCharacter", player.getUniqueId().toString(), s[1]);
                         sender.sendMessage(ChatUtility.convertToComponent("&aDeleting character..."));
                         deleteConfirmationMap.remove(player);
+                        return true;
                     } else {
                         sender.sendMessage(ChatUtility.convertToComponent("&aYou tried to confirm a character deletion but it appears that you took more than 10 seconds to confirm. Please start over."));
                         deleteConfirmationMap.remove(player);
+                        return false;
                     }
                 } else {
                     sender.sendMessage(ChatUtility.convertToComponent("&aYou tried to confirm a character deletion but you aren't deleting a character right now."));
+                    return false;
                 }
-                return true;
             } else {
                 String name = String.join(" ", args);
                 player.sendMessage(ChatUtility.convertToComponent("&aLoading character &b`" + name + "`&r&a... Please Wait..."));

@@ -27,7 +27,7 @@ public class CommandCharAdmin extends CommandBaseAdmin {
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (!(sender instanceof Player opener)) {
             sender.sendMessage(ChatUtility.convertToComponent("&4Must be a player to run this command"));
-            return true;
+            return false;
         }
 
         if (args.length != 1) {

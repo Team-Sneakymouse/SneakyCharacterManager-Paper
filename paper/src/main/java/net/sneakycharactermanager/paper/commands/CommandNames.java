@@ -43,9 +43,10 @@ public class CommandNames extends CommandBase {
         }
         else {
             player.sendMessage(ChatUtility.convertToComponent("&4Unknown argument: " + this.usageMessage));
+            return false;
         }
 
-        return false;
+        return true;
     }
 
     @Override
