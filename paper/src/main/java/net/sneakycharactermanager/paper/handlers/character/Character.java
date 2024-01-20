@@ -139,14 +139,10 @@ public class Character {
             ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
             this.player.getInventory().setContents(inventoryContents);
 
-            this.map();
+            characterMap.put(this.player, this);
             ConsoleCommandCharDisable.playerCharEnable(this.player.getUniqueId().toString());
         }
 
-    }
-
-    public void map() {
-        characterMap.put(this.player, this);
     }
 
     public Player getPlayer() {

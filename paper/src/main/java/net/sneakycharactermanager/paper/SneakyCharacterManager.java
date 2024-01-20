@@ -15,6 +15,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import net.sneakycharactermanager.paper.admincommands.*;
 import net.sneakycharactermanager.paper.commands.*;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
+import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.ContextCalculatorCharacterTag;
 import net.sneakycharactermanager.paper.handlers.Placeholders;
 import net.sneakycharactermanager.paper.handlers.character.Character;
@@ -61,13 +62,14 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getCommandMap().register(IDENTIFIER, new CommandSkin());
         getServer().getCommandMap().register(IDENTIFIER, new CommandNames());
         getServer().getCommandMap().register(IDENTIFIER, new CommandNick());
-        getServer().getCommandMap().register(IDENTIFIER, new CommandUniform());
 
         getServer().getCommandMap().register(IDENTIFIER, new CommandCharAdmin());
         getServer().getCommandMap().register(IDENTIFIER, new CommandCharScan());
         getServer().getCommandMap().register(IDENTIFIER, new CommandCharTag());
+        getServer().getCommandMap().register(IDENTIFIER, new CommandUniform());
 
         getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharDisable());
+        getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharTemp());
 
         getServer().getMessenger().registerIncomingPluginChannel(this, "sneakymouse:" + IDENTIFIER, new BungeeMessageListener());
         getServer().getMessenger().registerOutgoingPluginChannel(this, "sneakymouse:" + IDENTIFIER);
@@ -104,7 +106,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
                     Bukkit.getScheduler().cancelTask(taskIdMap.get(player));
                     taskIdMap.remove(player);
                 } else {
-                    BungeeMessagingUtil.sendByteArray(player, "rebuildCharacterMap", player.getUniqueId());
+                    BungeeMessagingUtil.sendByteArray(player, "playerJoin", player.getUniqueId().toString());
                 }
             }, 0, 20);
         

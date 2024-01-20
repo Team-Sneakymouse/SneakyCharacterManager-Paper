@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
@@ -25,6 +26,11 @@ public class CommandNick extends CommandBase {
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 
         if (!(sender instanceof Player player)) return false;
+
+        if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
+            player.sendMessage(ChatUtility.convertToComponent("&4You are currently on a template character, which do not support /nick and /skin."));
+            return false;
+        };
 
         if (args.length == 0) {
             player.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.usageMessage));

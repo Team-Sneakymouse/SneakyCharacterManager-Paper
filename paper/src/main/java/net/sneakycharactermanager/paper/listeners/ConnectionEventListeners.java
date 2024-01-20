@@ -12,6 +12,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
+import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
@@ -32,7 +33,11 @@ public class ConnectionEventListeners implements Listener {
                     Bukkit.getScheduler().cancelTask(taskIdMap.get(player));
                     taskIdMap.remove(player);
                 } else {
-                    BungeeMessagingUtil.sendByteArray(player, "playerJoin", player.getUniqueId().toString());
+                    if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
+                        ConsoleCommandCharTemp.reApply(player);
+                    } else {
+                        BungeeMessagingUtil.sendByteArray(player, "playerJoin", player.getUniqueId().toString());
+                    }
                 }
             }, 5, 20);
         

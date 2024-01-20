@@ -32,7 +32,6 @@ public class PlayerData {
         this.playerUUID = playerUUID;
         playerFile = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID + ".yml");
 
-
         //Loading YML Configuration
         try {
             if (!playerFile.exists()) {
@@ -58,8 +57,13 @@ public class PlayerData {
             Configuration section = this.config.getSection(firstCharacterUUID);
 
             section.set("enabled", true);
-            section.set("name", ProxyServer.getInstance().getPlayer(UUID.fromString(playerUUID)).getName());
-            section.set("skin", "");
+            if (playerUUID.equals("template")) {
+                section.set("name", "template");
+                section.set("skin", "http://textures.minecraft.net/texture/b90696ebc74ce7a900ec8abeec0dc1ccb3534c1b8ba6cbd9e83c5cd7f381fb48");
+            } else {
+                section.set("name", ProxyServer.getInstance().getPlayer(UUID.fromString(playerUUID)).getName());
+                section.set("skin", "");
+            }
             section.set("slim", false);
             section.set("tags", new ArrayList<String>());
             saveConfig();
@@ -74,14 +78,7 @@ public class PlayerData {
             return;
         }
         characterMap.clear();
-//        Iterator<String> iterator = this.config.getKeys().iterator();
-//        while (iterator.hasNext()) {
-//            String key = iterator.next();
-//            if (key.equalsIgnoreCase("lastPlayedCharacter")) continue;
-//
-//            Character character = new Character(key, this.config.getSection(key));
-//            this.characterMap.put(key, character);
-//        }
+        
         for(String key : config.getKeys()){
             if(key.equalsIgnoreCase("lastPlayedCharacter")) continue;
             Character character = new Character(key, this.config.getSection(key));
@@ -119,7 +116,7 @@ public class PlayerData {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to load a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
             return;
         } else {
-            character.loadCharacter("loadCharacter", serverInfo, this.playerUUID, forced);
+            character.loadCharacter(serverInfo, this.playerUUID, forced);
         }
 
         if (!this.lastPlayedCharacter.equals(characterUUID)) {
@@ -130,6 +127,21 @@ public class PlayerData {
         }
 
         this.updateCharacterList(serverInfo);
+    }
+
+    public void loadTempCharacter(ServerInfo serverInfo, String requesterUUID, String characterUUID) {
+        storeCharacters();
+        Character character = this.characterMap.get(characterUUID);
+        if (!loadConfig()) {
+            SneakyCharacterManager.getInstance().getLogger().severe("Failed to load config! (Load Character)");
+            return;
+        }
+
+        if (character == null) {
+            PaperMessagingUtil.sendByteArray(serverInfo, "loadTempCharacterFailed", requesterUUID, characterUUID);
+        } else {
+            character.loadTempCharacter(serverInfo, requesterUUID, this.playerUUID);
+        }
     }
 
     public void loadLastPlayedCharacter(ServerInfo serverInfo) {
@@ -251,16 +263,6 @@ public class PlayerData {
 
     public String getLastPlayedCharacter() {
         return lastPlayedCharacter;
-    }
-
-    public void rebuildCharacterMap(ServerInfo serverInfo) {
-        Character character = this.characterMap.get(this.lastPlayedCharacter);
-
-        if (character == null) {
-            SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to load a character that does not exist! [" + this.playerUUID + ", " + this.lastPlayedCharacter + "]");
-        } else {
-            character.loadCharacter("rebuildCharacterMap", serverInfo, this.playerUUID, false);
-        }
     }
 
     public void loadCharacterByName(ServerInfo serverInfo, String characterName) {

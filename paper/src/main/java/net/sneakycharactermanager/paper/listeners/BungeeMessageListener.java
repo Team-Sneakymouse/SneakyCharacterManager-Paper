@@ -15,6 +15,7 @@ import com.google.common.io.ByteStreams;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.commands.CommandChar;
+import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
@@ -49,13 +50,6 @@ public class BungeeMessageListener implements PluginMessageListener
                 
                 character.load();
                 break;
-            case "rebuildCharacterMap" :
-                playerUUID = in.readUTF();
-                character = readCharacter(playerUUID, in);
-                forced = in.readBoolean();
-                
-                character.map();
-                break;
             case "selectCharacterByNameFailed" :
                 playerUUID = in.readUTF();
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
@@ -64,11 +58,25 @@ public class BungeeMessageListener implements PluginMessageListener
                 pl.sendMessage(ChatUtility.convertToComponent("&aNo character found. Loading character menu..."));
                 SneakyCharacterManager.getInstance().selectionMenu.openMenu(pl);
                 break;
+            case "loadTempCharacter" :
+                String requesterUUID = in.readUTF();
+                pl = Bukkit.getPlayer(UUID.fromString(requesterUUID));
+                character = readCharacter(requesterUUID, in);
+                String characterSource = in.readUTF();
+                
+                character.load();
+                ConsoleCommandCharTemp.playerTempCharAdd(requesterUUID, characterSource, character.getCharacterUUID());
+                break;
+            case "loadTempCharacterFailed" :
+                playerUUID = in.readUTF();
+                String characterUUID = in.readUTF();
+
+                SneakyCharacterManager.getInstance().getLogger().warning("An attempt was made to load a temp character but it did not exist: [" + playerUUID + "," + characterUUID + "]");
+                break;
             case "characterSelectionGUI" :
                 playerUUID = in.readUTF();
-                String requesterUUID = in.readUTF();
+                requesterUUID = in.readUTF();
                 List<Character> characters = readCharacterList(playerUUID, in);
-
 
                 SneakyCharacterManager.getInstance().selectionMenu.updateInventory(requesterUUID, characters);
                 break;
@@ -76,7 +84,7 @@ public class BungeeMessageListener implements PluginMessageListener
                 playerUUID = in.readUTF();
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
                 if (pl == null) return;
-                requesterUUID = in.readUTF(); // This is only read to clear it from the Input.
+                requesterUUID = in.readUTF();
                 characters = readCharacterList(requesterUUID, in);
 
                 for (Character c : characters) {
@@ -95,7 +103,7 @@ public class BungeeMessageListener implements PluginMessageListener
                 break;
             case "defaultSkin" :
                 playerUUID = in.readUTF();
-                String characterUUID = in.readUTF();
+                characterUUID = in.readUTF();
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
                 if (pl == null) return;
                 PlayerProfile profile = pl.getPlayerProfile();

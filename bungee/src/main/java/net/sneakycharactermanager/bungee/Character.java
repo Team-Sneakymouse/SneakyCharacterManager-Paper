@@ -11,6 +11,7 @@ import net.md_5.bungee.config.Configuration;
 import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
 
 public class Character {
+    
     private final String uuid;
     private boolean enabled;
     private String name;
@@ -36,11 +37,15 @@ public class Character {
         this.tags = new ArrayList<>();
     }
 
-    public void loadCharacter(String subChannel, ServerInfo serverInfo, String playerUUID, boolean forced) {
-        PaperMessagingUtil.sendByteArray(serverInfo, subChannel, playerUUID, this, forced);
+    public void loadCharacter(ServerInfo serverInfo, String playerUUID, boolean forced) {
+        PaperMessagingUtil.sendByteArray(serverInfo, "loadCharacter", playerUUID, this, forced);
         if (this.skin.isEmpty()) {
             PaperMessagingUtil.sendByteArray(serverInfo, "defaultSkin", playerUUID, this.uuid);
         }
+    }
+
+    public void loadTempCharacter(ServerInfo serverInfo, String requesterUUID, String sourceUUID) {
+        PaperMessagingUtil.sendByteArray(serverInfo, "loadTempCharacter", requesterUUID, this, sourceUUID);
     }
 
     public String getUUID() {

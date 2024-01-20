@@ -68,12 +68,6 @@ public class PluginMessageListener implements Listener {
                 playerUUID = in.readUTF();
                 PlayerData.remove(playerUUID);
                 break;
-            case "rebuildCharacterMap" :
-                playerUUID = in.readUTF();
-                playerData = PlayerData.get(playerUUID);
-                playerData.rebuildCharacterMap(serverInfo);
-                playerData.updateCharacterList(serverInfo);
-                break;
             case "characterSelectionGUI" :
                 playerUUID = in.readUTF();
                 playerData = PlayerData.get(playerUUID);
@@ -89,6 +83,12 @@ public class PluginMessageListener implements Listener {
                 playerUUID = in.readUTF();
                 playerData = PlayerData.get(playerUUID);
                 playerData.loadCharacter(serverInfo, in.readUTF(), false);
+                break;
+            case "tempCharacter" :
+                requesterUUID = in.readUTF();
+                playerUUID = in.readUTF();
+                playerData = PlayerData.get(playerUUID);
+                playerData.loadTempCharacter(serverInfo, requesterUUID, in.readUTF());
                 break;
             case "selectCharacterByName" :
                 playerUUID = in.readUTF();
@@ -157,4 +157,5 @@ public class PluginMessageListener implements Listener {
 
         return strings;
     }
+    
 }

@@ -29,6 +29,7 @@ import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterLoader;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
@@ -44,7 +45,13 @@ public class CommandSkin extends CommandBase {
 
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+        
         if (!(sender instanceof Player player)) return true;
+
+        if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
+            player.sendMessage(ChatUtility.convertToComponent("&4You are currently on a template character, which do not support /nick and /skin."));
+            return false;
+        };
 
         if (args.length < 1) {
             player.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
