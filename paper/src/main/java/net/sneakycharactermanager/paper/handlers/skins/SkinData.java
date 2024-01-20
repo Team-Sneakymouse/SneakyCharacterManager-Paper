@@ -175,6 +175,8 @@ public class SkinData {
         ProfileProperty property = this.getTextureProperty();
         if (property == null) return;
 
+        if (this.player == null) return;
+
         // Priority 0 is used exclusively for pre-caching skins. So priority 0 skindatas should not be applied.
         if (this.priority > 0) {
             if (this.skullMeta == null) {
