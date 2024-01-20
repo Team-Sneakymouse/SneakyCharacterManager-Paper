@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -12,7 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 
-public class ConsoleCommandCharDisable extends Command {
+public class ConsoleCommandCharDisable extends CommandBaseConsole {
 
     private static List<String> disabledPlayerUUIDs = new ArrayList<>();
 
@@ -20,7 +19,6 @@ public class ConsoleCommandCharDisable extends Command {
         super("chardisable");
         this.description = "The given player is locked out of their character save file. Use this when a player is temporarily acting as something that isn't their own character.";
         this.setUsage("chardisable <Player>)");
-        this.setPermission(SneakyCharacterManager.IDENTIFIER + "console.command." + this.getName());
     }
 
     @Override
