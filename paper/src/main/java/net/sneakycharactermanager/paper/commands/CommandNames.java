@@ -20,7 +20,10 @@ public class CommandNames extends CommandBase {
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 
-        if (!(sender instanceof Player player)) return false;
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(ChatUtility.convertToComponent("&4Must be a player to run this command"));
+            return false;
+        }
 
         if (args.length != 1) {
             player.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.usageMessage));
