@@ -11,6 +11,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.config.Configuration;
@@ -148,6 +150,7 @@ public class PlayerData {
         this.loadCharacter(serverInfo, this.lastPlayedCharacter, true);
     }
 
+    @NonNull
     public static synchronized PlayerData get(String playerUUID) {
         return playerDataMap.computeIfAbsent(playerUUID, key -> new PlayerData(playerUUID));
     }
@@ -161,11 +164,20 @@ public class PlayerData {
     }
 
     public String createNewCharacter(String name) {
+        return createNewCharacter(
+            UUID.randomUUID().toString(),
+            name,
+            "",
+            false
+        );
+    }
+
+    public String createNewCharacter(String uuid, String name, String skin, boolean slim) {
         if (!loadConfig()){
             SneakyCharacterManager.getInstance().getLogger().severe("Failed to load config! (Create new Character)");
             return null;
         }
-        Character character = new Character(name);
+        Character character = new Character(uuid, name, skin, slim);
 
         this.characterMap.put(character.getUUID(), character);
 

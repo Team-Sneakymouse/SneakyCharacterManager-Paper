@@ -141,6 +141,17 @@ public class PluginMessageListener implements Listener {
                 PaperMessagingUtil.sendByteArray(serverInfo, "deleteConfirmed", playerUUID, character.getName(), characterUUID);
                 playerData.updateCharacterList(serverInfo);
                 break;
+            case "saveTemplateChar" :
+                String characterID = in.readUTF();
+                String characterName = in.readUTF();
+                String characterSkin = in.readUTF();
+                boolean characterSlim = in.readBoolean();
+
+                playerData = PlayerData.get("template");
+
+                playerData.createNewCharacter(characterID, characterName, characterSkin, characterSlim);
+                
+                break;
             default:
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
                 break;

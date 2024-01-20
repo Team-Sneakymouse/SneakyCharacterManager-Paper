@@ -19,22 +19,35 @@ public class Character {
     private boolean slim;
     private List<String> tags = new ArrayList<>();
 
-    public Character(String uuid, Configuration config) {
+    public Character(String uuid, boolean enabled, String name, String skin, boolean slim, List<String> tags) {
         this.uuid = uuid;
-        this.enabled = config.getBoolean("enabled");
-        this.name = config.getString("name");
-        this.skin = config.getString("skin");
-        this.slim = config.getBoolean("slim");
-        this.tags = config.getStringList("tags");
+        this.enabled = enabled;
+        this.name = name;
+        this.skin = skin;
+        this.slim = slim;
+        this.tags = tags;
     }
 
-    public Character(String name) {
-        this.uuid = UUID.randomUUID().toString();
-        this.enabled = true;
-        this.name = name;
-        this.skin = "";
-        this.slim = false;
-        this.tags = new ArrayList<>();
+    public Character(String uuid, String name, String skin, boolean slim) {
+        this(
+            uuid,
+        true,
+            name,
+            skin,
+            slim,
+            new ArrayList<>()
+        );
+    }
+
+    public Character(String uuid, Configuration config) {
+        this(
+            uuid,
+            config.getBoolean("enabled"),
+            config.getString("name"),
+            config.getString("skin"),
+            config.getBoolean("slim"),
+            config.getStringList("tags")
+        );
     }
 
     public void loadCharacter(ServerInfo serverInfo, String playerUUID, boolean forced) {
