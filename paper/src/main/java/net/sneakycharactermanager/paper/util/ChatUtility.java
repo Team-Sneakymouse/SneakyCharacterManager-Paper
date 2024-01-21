@@ -7,6 +7,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 public class ChatUtility {
 
     public static Component convertToComponent(String message) {
+        message = message.replaceAll("\\x{00A7}", "&");
 
         message = message.replace("&1", "<dark_blue>");
         message = message.replace("&2", "<dark_green>");
