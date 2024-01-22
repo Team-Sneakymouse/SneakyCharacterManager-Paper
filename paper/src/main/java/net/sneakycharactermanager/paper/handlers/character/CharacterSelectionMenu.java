@@ -76,16 +76,16 @@ public class CharacterSelectionMenu implements Listener {
                     size = Math.min((int) Math.floor((CommandChar.tabCompleteMap.get(this.player.getUniqueId().toString()).size() + 1) / 9) * 9 + 9, 54);
                 }
             }else {
-                if (CommandChar.tabCompleteMap.containsKey(this.offlinePlayer.getUniqueId().toString())) {
+                if (this.offlinePlayer.getUniqueId() != null && CommandChar.tabCompleteMap.containsKey(this.offlinePlayer.getUniqueId().toString())) {
                     size = Math.min((int) Math.floor((CommandChar.tabCompleteMap.get(this.offlinePlayer.getUniqueId().toString()).size() + 1) / 9) * 9 + 9, 54);
                 }
             }
 
             this.opener = opener;
             if (this.player == null){
-                this.playerUUID = this.offlinePlayer.getUniqueId().toString();
+                this.playerUUID = this.offlinePlayer.getUniqueId() == null ? "" : this.offlinePlayer.getUniqueId().toString();
                 inventory = Bukkit.createInventory(this, size,
-                        ChatUtility.convertToComponent("&e" + this.offlinePlayer.getName() + "'s Characters")
+                        ChatUtility.convertToComponent("&e" + this.offlinePlayer.getName() == null ? "" : this.offlinePlayer.getName() + "'s Characters")
                 );
             }else{
                 this.playerUUID = this.player.getUniqueId().toString();

@@ -51,11 +51,11 @@ public class ConsoleCommandCharTemp extends CommandBaseConsole {
 
         if (!valid) {
             for (@NotNull OfflinePlayer opl : Bukkit.getOfflinePlayers()) {
-                if (opl.getName().equals(uuid)) {
+                if (opl.getName() != null && opl.getName().equals(uuid)) {
                     valid = true;
                     uuid = opl.getUniqueId().toString();
                     break;
-                } else if (opl.getUniqueId().toString().equals(uuid)) {
+                } else if (opl.getUniqueId() != null && opl.getUniqueId().toString().equals(uuid)) {
                     valid = true;
                     break;
                 }
@@ -86,7 +86,7 @@ public class ConsoleCommandCharTemp extends CommandBaseConsole {
             playerNames.add("template");
 
             for (@NotNull OfflinePlayer opl : Bukkit.getOfflinePlayers()) {
-                if (opl.getName().toLowerCase().startsWith(args[1].toLowerCase()) && !opl.getName().equals("CMI-Fake-Operator")) playerNames.add(opl.getName());
+                if (opl.getName() != null && opl.getName().toLowerCase().startsWith(args[1].toLowerCase()) && !opl.getName().equals("CMI-Fake-Operator")) playerNames.add(opl.getName());
             }
 
             return playerNames;
