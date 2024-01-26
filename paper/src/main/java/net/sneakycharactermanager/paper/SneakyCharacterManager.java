@@ -81,6 +81,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(new DeathListener(), this);
         getServer().getPluginManager().registerEvents(new GamemodeEvents(), this);
         getServer().getPluginManager().registerEvents(new VanishEvents(), this);
+        getServer().getPluginManager().registerEvents(new TeleportEvents(), this);
 
         //getServer().getPluginManager().registerEvents(new net.sneakycharactermanager.paper.listeners.GSitListener(), this);
 
