@@ -142,7 +142,6 @@ public class BungeeMessageListener implements PluginMessageListener
 
             for(String information : characterData){
                 String[] data = information.split("\\$");
-                Bukkit.getLogger().info(data[0] + " | " + data[1]);
                 String playerUUID = data[0];
                 String characterName = data[1];
                 OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(UUID.fromString(playerUUID));
