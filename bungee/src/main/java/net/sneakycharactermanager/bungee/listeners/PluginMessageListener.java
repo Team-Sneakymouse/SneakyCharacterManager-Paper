@@ -1,5 +1,6 @@
 package net.sneakycharactermanager.bungee.listeners;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -37,8 +38,10 @@ public class PluginMessageListener implements Listener {
 
         Connection connection = event.getSender();
         ServerInfo serverInfo = null;
+        ProxiedPlayer player = null;
         if (connection instanceof ProxiedPlayer proxiedPlayer) {
             serverInfo = proxiedPlayer.getServer().getInfo();
+            player = proxiedPlayer;
         } else if (connection instanceof Server server) {
             serverInfo = server.getInfo();
         }
@@ -151,6 +154,15 @@ public class PluginMessageListener implements Listener {
 
                 playerData.createNewCharacter(characterID, characterName, characterSkin, characterSlim);
                 
+                break;
+
+            case "getAllCharacters":
+                requesterUUID = in.readUTF();
+                String filter = in.readUTF();
+                try {
+                    List<String> data = PlayerData.getAllCharacters(filter);
+                    PaperMessagingUtil.sendByteArray(serverInfo, "getAllCharacters", requesterUUID, data);
+                } catch(IOException e) { break; }
                 break;
             default:
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);

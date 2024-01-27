@@ -68,6 +68,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getCommandMap().register(IDENTIFIER, new CommandCharTag());
         getServer().getCommandMap().register(IDENTIFIER, new CommandUniform());
         getServer().getCommandMap().register(IDENTIFIER, new CommandSaveTemplateChar());
+        getServer().getCommandMap().register(IDENTIFIER, new CommandUserify());
 
         getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharDisable());
         getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharTemp());

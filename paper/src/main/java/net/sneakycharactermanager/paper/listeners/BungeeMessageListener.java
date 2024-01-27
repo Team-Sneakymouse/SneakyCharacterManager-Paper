@@ -2,7 +2,10 @@ package net.sneakycharactermanager.paper.listeners;
 
 import java.util.*;
 
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.bukkit.profile.PlayerTextures;
@@ -119,10 +122,43 @@ public class BungeeMessageListener implements PluginMessageListener
                 pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
                 pl.sendMessage(ChatUtility.convertToComponent("&aThe following character has been deleted: &b`" + in.readUTF() + "`&a (" + in.readUTF() + ")"));
                 break;
+            case "getAllCharacters":
+                playerUUID = in.readUTF();
+                List<String> characterData = readStringList(in);
+                handleCharacterOutput(playerUUID, characterData);
+                break;
             default:
                 SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
                 break;
         }
+    }
+
+    public static void handleCharacterOutput(String requesterUUID, List<String> characterData){
+        Player requester = Bukkit.getPlayer(UUID.fromString(requesterUUID));
+        if(requester == null) return;
+
+        requester.sendMessage(ChatUtility.convertToComponent("&eFound the following usernames: "));
+        Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (_s)->{
+
+            for(String information : characterData){
+                String[] data = information.split("\\$");
+                Bukkit.getLogger().info(data[0] + " | " + data[1]);
+                String playerUUID = data[0];
+                String characterName = data[1];
+                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(UUID.fromString(playerUUID));
+
+                if(!offlinePlayer.hasPlayedBefore()) continue; //This shouldn't happen but just in case
+
+                Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> requester.sendMessage(
+                        ChatUtility.convertToComponent("&eUser: " + offlinePlayer.getName() + " &7| &aCharacter: " + characterName)
+                                .hoverEvent(HoverEvent.showText(ChatUtility.convertToComponent("&6Player UUID: " + playerUUID)))
+                                .clickEvent(ClickEvent.copyToClipboard(playerUUID))
+                ));
+
+            }
+
+        });
+
     }
 
     public static List<String> readStringList(ByteArrayDataInput in) {

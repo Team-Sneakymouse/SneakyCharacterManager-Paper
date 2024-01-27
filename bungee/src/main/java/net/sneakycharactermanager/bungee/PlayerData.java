@@ -2,12 +2,7 @@ package net.sneakycharactermanager.bungee;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -153,6 +148,28 @@ public class PlayerData {
     @NonNull
     public static synchronized PlayerData get(String playerUUID) {
         return playerDataMap.computeIfAbsent(playerUUID, key -> new PlayerData(playerUUID));
+    }
+
+    public static synchronized List<String> getAllCharacters(String filter) throws IOException {
+        File characterData = SneakyCharacterManager.getCharacterDataFolder();
+
+        if(!characterData.exists() || characterData.listFiles() == null) return null;
+
+        List<String> characterInformation = new ArrayList<>();
+
+        for(File playerFile : Objects.requireNonNull(characterData.listFiles())){
+            Configuration playerConfig = ConfigurationProvider.getProvider(YamlConfiguration.class).load(playerFile);
+            String playerUUID = playerFile.getName().replace(".yml", "");
+
+            for(String key : playerConfig.getKeys()){
+                if(key.equalsIgnoreCase("lastPlayedCharacter")) continue;
+                String name = playerConfig.getString(key+".name");
+
+                //Using the $ as a character separator for the paper server to handle.
+                if(name.toLowerCase().contains(filter.toLowerCase())) characterInformation.add(playerUUID + "$" + name);
+            }
+        }
+        return characterInformation;
     }
 
     public static synchronized void remove(String playerUUID) {
