@@ -17,11 +17,11 @@ public class TeleportEvents implements Listener {
 
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
 
-        Character character = Character.get(player);
-
-        if(character == null) return;
-
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), ()->{
+            Character character = Character.get(player);
+
+            if(character == null) return;
+
             SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getName());
         }, 2);
     }
