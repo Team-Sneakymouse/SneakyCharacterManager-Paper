@@ -46,7 +46,7 @@ public class BungeeMessageListener implements PluginMessageListener
 
                 Player pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
 
-                if (!forced && !Character.canPlayerLoadCharacter(player, character.getCharacterUUID())) {
+                if (!forced && !Character.canPlayerLoadCharacter(pl, character.getCharacterUUID())) {
                     pl.sendMessage(ChatUtility.convertToComponent("&4You cannot access this character right now."));
                     break;
                 }
