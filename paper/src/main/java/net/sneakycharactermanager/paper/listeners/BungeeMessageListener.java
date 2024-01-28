@@ -115,7 +115,7 @@ public class BungeeMessageListener implements PluginMessageListener
                 String skinURL = textures.getSkin().toString();
                 boolean slim = textures.getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
 
-                BungeeMessagingUtil.sendByteArray(player, "defaultSkin", playerUUID, characterUUID, skinURL, slim);
+                BungeeMessagingUtil.sendByteArray(pl, "defaultSkin", playerUUID, characterUUID, skinURL, slim);
                 break;
             case "deleteConfirmed" :
                 playerUUID = in.readUTF();
