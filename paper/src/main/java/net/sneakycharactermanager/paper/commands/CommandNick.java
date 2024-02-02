@@ -69,7 +69,7 @@ public class CommandNick extends CommandBase {
         }
 
         //Name Filtering:
-        String pattern = "[^\\p{L}\\p{M}0-9\\-\"'` ]+";
+        String pattern = "[^\\p{L}\\p{M}0-9\\-\"'` _]+";
         if(nickname.matches(".*" + pattern + ".*")){
             player.sendMessage(ChatUtility.convertToComponent("&4Invalid name! It cannot contain special characters! Quotes, Spaces, and Diacritics are okay."));
             return false;
