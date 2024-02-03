@@ -14,8 +14,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import net.sneakycharactermanager.paper.admincommands.*;
 import net.sneakycharactermanager.paper.commands.*;
-import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
-import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
+import net.sneakycharactermanager.paper.consolecommands.*;
+import net.sneakycharactermanager.paper.listeners.*;
 import net.sneakycharactermanager.paper.handlers.ContextCalculatorCharacterTag;
 import net.sneakycharactermanager.paper.handlers.Placeholders;
 import net.sneakycharactermanager.paper.handlers.character.Character;
@@ -24,7 +24,6 @@ import net.sneakycharactermanager.paper.handlers.nametags.NameTagRefresher;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinPreloader;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
-import net.sneakycharactermanager.paper.listeners.*;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 
 public class SneakyCharacterManager extends JavaPlugin implements Listener {
@@ -71,6 +70,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getCommandMap().register(IDENTIFIER, new CommandUserify());
 
         getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharDisable());
+        getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharEnable());
         getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharTemp());
 
         getServer().getMessenger().registerIncomingPluginChannel(this, "sneakymouse:" + IDENTIFIER, new BungeeMessageListener());

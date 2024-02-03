@@ -27,25 +27,25 @@ public class ConnectionEventListeners implements Listener {
         //We need to load other players names when a person joins
         SneakyCharacterManager.getInstance().nametagManager.loadNames(player);
 
-        if (!ConsoleCommandCharDisable.isPlayerCharDisabled(player.getUniqueId().toString())) {
-            int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(SneakyCharacterManager.getInstance(), () -> {
-                if (!player.isOnline() || Character.isPlayedMapped(player)) {
-                    Bukkit.getScheduler().cancelTask(taskIdMap.get(player));
-                    taskIdMap.remove(player);
-                } else {
-                    if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
-                        ConsoleCommandCharTemp.reApply(player);
-                    } else {
-                        BungeeMessagingUtil.sendByteArray(player, "playerJoin", player.getUniqueId().toString());
-                    }
-                }
-            }, 5, 20);
-        
-            taskIdMap.put(player, taskId);
-        }
-
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
             SneakyCharacterManager.getInstance().skinPreloader.preload(player);
+
+            if (!ConsoleCommandCharDisable.isPlayerCharDisabled(player.getUniqueId().toString())) {
+                int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(SneakyCharacterManager.getInstance(), () -> {
+                    if (!player.isOnline() || Character.isPlayedMapped(player)) {
+                        Bukkit.getScheduler().cancelTask(taskIdMap.get(player));
+                        taskIdMap.remove(player);
+                    } else {
+                        if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
+                            ConsoleCommandCharTemp.reApply(player);
+                        } else {
+                            BungeeMessagingUtil.sendByteArray(player, "playerJoin", player.getUniqueId().toString());
+                        }
+                    }
+                }, 1, 20);
+            
+                taskIdMap.put(player, taskId);
+            }
         }, 5);
     }
 
