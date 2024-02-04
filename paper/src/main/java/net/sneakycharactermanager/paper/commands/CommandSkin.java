@@ -53,28 +53,18 @@ public class CommandSkin extends CommandBase {
             return false;
         }
 
-        if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
-            player.sendMessage(ChatUtility.convertToComponent("&4You are currently on a template character, which do not support /nick and /skin."));
-            return false;
-        };
-
         if (args.length < 1) {
             player.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
             return true;
         }
 
-        if(args[0].equalsIgnoreCase("default") || args[0].equalsIgnoreCase("revert")){
-            player.sendMessage(ChatUtility.convertToComponent("&eFetching skin.. Please wait..!"));
-            resetPlayerSkin(player);
-            return true;
-        }
-        else if(args[0].equalsIgnoreCase("fetch")){
+        if(args[0].equalsIgnoreCase("fetch")){
             Player target = player;
             if(args.length > 1){
                 target = Bukkit.getPlayer(args[1]);
                 if(target == null){
                     player.sendMessage(ChatUtility.convertToComponent("&cCould not find requested player!"));
-                    return true;
+                    return false;
                 }
             }
 
@@ -83,13 +73,24 @@ public class CommandSkin extends CommandBase {
             URL skinURL = textures.getSkin();
             if(skinURL == null){
                 player.sendMessage(ChatUtility.convertToComponent("&cPlayer doesn't not have a valid Skin URL!"));
-                return true;
+                return false;
             }
 
             player.sendMessage(ChatUtility.convertToComponent("&eHere is " + target.getName() + "'s skin url! Click to Copy!"));
             player.sendMessage(ChatUtility.convertToComponent("&6" + skinURL)
                     .clickEvent(ClickEvent.copyToClipboard(skinURL.toString()))
                     .hoverEvent(HoverEvent.showText(ChatUtility.convertToComponent("&aClick to Copy!"))));
+            return true;
+        }
+
+        if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
+            player.sendMessage(ChatUtility.convertToComponent("&4You are currently on a template character, which do not support /nick and /skin."));
+            return false;
+        };
+
+        if(args[0].equalsIgnoreCase("default") || args[0].equalsIgnoreCase("revert")){
+            player.sendMessage(ChatUtility.convertToComponent("&eFetching skin.. Please wait..!"));
+            resetPlayerSkin(player);
             return true;
         }
 
