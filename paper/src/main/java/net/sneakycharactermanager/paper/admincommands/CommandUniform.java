@@ -28,9 +28,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.profile.PlayerTextures;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+
+import com.destroystokyo.paper.profile.PlayerProfile;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
@@ -98,6 +101,15 @@ public class CommandUniform extends CommandBaseAdmin {
             return false;
         }
 
+        PlayerProfile profile = player.getPlayerProfile();
+        PlayerTextures textures = profile.getTextures();
+        URL skinURL = textures.getSkin();
+
+        if(skinURL == null){
+            sender.sendMessage(ChatUtility.convertToComponent("&cPlayer doesn't not have a valid Skin URL!"));
+            return false;
+        }
+
         // Store as final so it can be used async
         File uniformFinal = uniformFile;
         
@@ -106,7 +118,7 @@ public class CommandUniform extends CommandBaseAdmin {
                 // Grab character skin from remote web server
                 HttpClient httpClient = HttpClient.newHttpClient();
                 HttpRequest request = HttpRequest.newBuilder().uri(
-                    new URI(character.getSkin().replace("imgur", "filmot")))
+                    skinURL.toURI())
                     .timeout(Duration.ofSeconds(2))
                     .build();
                 HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
