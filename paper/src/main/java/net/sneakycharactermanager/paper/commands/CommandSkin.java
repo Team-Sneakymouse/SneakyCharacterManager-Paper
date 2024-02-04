@@ -88,6 +88,13 @@ public class CommandSkin extends CommandBase {
             return false;
         };
 
+        Character character = Character.get(player);
+
+        if (character == null) {
+            player.sendMessage(ChatUtility.convertToComponent("&4You aren't on a character right now, so you cannot use /skin."));
+            return false;
+        };
+
         if(args[0].equalsIgnoreCase("default") || args[0].equalsIgnoreCase("revert")){
             player.sendMessage(ChatUtility.convertToComponent("&eFetching skin.. Please wait..!"));
             resetPlayerSkin(player);
