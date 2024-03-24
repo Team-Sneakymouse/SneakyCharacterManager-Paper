@@ -9,15 +9,18 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -171,6 +174,9 @@ public class CommandUniform extends CommandBaseAdmin {
                             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                             ImageIO.write(combined, "png", byteArrayOutputStream);
                             byte[] imageBytes = byteArrayOutputStream.toByteArray();
+                            String dataImage = Base64.getEncoder().encodeToString(imageBytes);
+                            String data = URLEncoder.encode("image", "UTF-8") + "="
+                            + URLEncoder.encode(dataImage, "UTF-8");
 
                             // Upload image to Imgur
                             URL imgurUrl = new URL(IMGUR_API_URL);
@@ -178,9 +184,14 @@ public class CommandUniform extends CommandBaseAdmin {
                             imgurConnection.setRequestMethod("POST");
                             imgurConnection.setDoOutput(true);
                             imgurConnection.setRequestProperty("Authorization", "Client-ID " + IMGUR_CLIENT_ID);
+                            imgurConnection.setRequestMethod("POST");
+                            imgurConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 
-                            DataOutputStream wr = new DataOutputStream(imgurConnection.getOutputStream());
-                            wr.write(imageBytes);
+                            imgurConnection.connect();
+                            
+                            OutputStreamWriter wr = new OutputStreamWriter(imgurConnection.getOutputStream());
+                            wr.write(data);
+                            wr.flush();
 
                             // Check response and build response json
                             int imgurResponsecode = imgurConnection.getResponseCode();
@@ -197,8 +208,8 @@ public class CommandUniform extends CommandBaseAdmin {
                                 // Grab the response URL
                                 JSONParser parser = new JSONParser();
                                 JSONObject imgurJson = (JSONObject) parser.parse(imgurResponse);
-                                JSONObject data = (JSONObject) imgurJson.get("data");
-                                String imgUrl = ((String) data.get("link")).replace("\\", "");
+                                JSONObject jsonData = (JSONObject) imgurJson.get("data");
+                                String imgUrl = ((String) jsonData.get("link")).replace("\\", "");
                                 
                                 // Make skindata and add to skinqueue
                                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
