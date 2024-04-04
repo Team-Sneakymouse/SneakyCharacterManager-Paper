@@ -53,7 +53,7 @@ public class CommandUniform extends CommandBaseAdmin {
     public CommandUniform() {
         super("uniform");
         this.description = "Apply a uniform to your current skin. The uniform will not be saved to your character.";
-        this.setUsage("/" +  this.getName() + " [uniform]");
+        this.setUsage("/" +  this.getName() + " [playerName] (uniform)");
         this.updateUniforms();
     }
 
