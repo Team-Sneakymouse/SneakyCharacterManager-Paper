@@ -65,6 +65,11 @@ public class CommandUniform extends CommandBaseAdmin {
         }
 
         this.updateUniforms();
+
+        if (args.length < 1) {
+            sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
+            return false;
+        }
         
         Player player = Bukkit.getPlayer(args[0]);
 
