@@ -65,11 +65,6 @@ public class CommandUniform extends CommandBaseAdmin {
         }
 
         this.updateUniforms();
-
-        if (args.length != 2) {
-            sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
-            return false;
-        }
         
         Player player = Bukkit.getPlayer(args[0]);
 
@@ -82,6 +77,14 @@ public class CommandUniform extends CommandBaseAdmin {
 
         if (character == null) {
             sender.sendMessage(ChatUtility.convertToComponent("&aThe player is not on a character: &b" + player.getName()));
+            return false;
+        }
+
+        if (args.length == 1) {
+            SkinData.getOrCreate(character.getSkin(), character.isSlim(), 4, player);
+            return true;
+        } else if (args.length > 2) {
+            sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
             return false;
         }
 
