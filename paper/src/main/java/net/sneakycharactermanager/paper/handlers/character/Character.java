@@ -111,30 +111,32 @@ public class Character {
             return;
         }
 
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
-
-        Location playerLocation = config.getLocation("location");
-        if (playerLocation == null)
-            playerLocation = this.player.getLocation(); //No config location? Leave where they are
-
-        Entity vehicle = this.player.getVehicle();
-
-        List<Entity> passengers = this.player.getPassengers();
-
         if (CharacterLoader.loadCharacter(this)) {
-            if (vehicle != null) {
-                vehicle.removePassenger(this.player);
-            }
-            
-            if (passengers.size() > 0) {
-                for (Entity passenger : passengers) {
-                    if (passenger.getType() != EntityType.TEXT_DISPLAY) {
-                        this.player.removePassenger(passenger);
+            YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
+
+            if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageLocations", true)) {
+                Location playerLocation = config.getLocation("location");
+                if (playerLocation == null)
+                    playerLocation = this.player.getLocation(); //No config location? Leave where they are
+        
+                Entity vehicle = this.player.getVehicle();
+        
+                List<Entity> passengers = this.player.getPassengers();
+
+                if (vehicle != null) {
+                    vehicle.removePassenger(this.player);
+                }
+                
+                if (passengers.size() > 0) {
+                    for (Entity passenger : passengers) {
+                        if (passenger.getType() != EntityType.TEXT_DISPLAY) {
+                            this.player.removePassenger(passenger);
+                        }
                     }
                 }
+        
+                this.player.teleport(playerLocation.add(0, 1, 0));
             }
-    
-            this.player.teleport(playerLocation.add(0, 1, 0));
     
             if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
                 if (config.getString("inventory") != null) {

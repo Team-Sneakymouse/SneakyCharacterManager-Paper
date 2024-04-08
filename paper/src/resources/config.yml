@@ -1,4 +1,5 @@
 deleteCharacterDataOnServerStart: false
+manageLocations: true
 manageInventories: true
 respawnNameTags: false
 respawnTimerSeconds: 600
