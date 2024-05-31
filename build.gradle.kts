@@ -17,9 +17,13 @@ dependencies {
     implementation(project(":bungee")){
         exclude(group = "org.jetbrains.kotlin")
     }
-    implementation(project(path=":paper", configuration="reobf")){
+    implementation(project(path=":paper")){
         exclude(group = "org.jetbrains.kotlin")
     }
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
 }
 
 subprojects {
@@ -28,17 +32,18 @@ subprojects {
 
     repositories {
         mavenCentral()
-        maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://oss.sonatype.org/content/repositories/snapshots")
         maven("https://jitpack.io")
     }
 
     dependencies {
         compileOnly("net.md-5:bungeecord-api:1.20-R0.1")
-        compileOnly("io.papermc.paper:paper-api:1.20.2-R0.1-SNAPSHOT")
         compileOnly("com.github.Gecolay.GSit:core:1.7.0")
     }
 
+    java {
+        toolchain.languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
 tasks {
@@ -58,6 +63,9 @@ tasks {
 
         archiveBaseName.set("SneakyCharacterManager")
         archiveClassifier.set("")
+    }
+    compileJava {
+        options.release = 21
     }
 }
 
