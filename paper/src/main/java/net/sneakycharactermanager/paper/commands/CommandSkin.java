@@ -28,6 +28,7 @@ import org.json.simple.parser.ParseException;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
+import me.clip.placeholderapi.PlaceholderAPI;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
@@ -39,155 +40,173 @@ import net.sneakycharactermanager.paper.util.ChatUtility;
 
 public class CommandSkin extends CommandBase {
 
-    public CommandSkin() {
-        super("skin");
-        this.description = "Change your skin!";
-        this.setUsage("/skin [URL (Must be direct image)] (slim/classic)");
-    }
+	public CommandSkin() {
+		super("skin");
+		this.description = "Change your skin!";
+		this.setUsage("/skin [URL (Must be direct image)] (slim/classic)");
+	}
 
-    @Override
-    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
-        
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatUtility.convertToComponent("&4Must be a player to run this command"));
-            return false;
-        }
+	@Override
+	public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 
-        if (args.length < 1) {
-            player.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
-            return true;
-        }
+		if (!(sender instanceof Player player)) {
+			sender.sendMessage(ChatUtility.convertToComponent("&4Must be a player to run this command"));
+			return false;
+		}
 
-        if(args[0].equalsIgnoreCase("fetch")){
-            Player target = player;
-            if(args.length > 1){
-                target = Bukkit.getPlayer(args[1]);
-                if(target == null){
-                    player.sendMessage(ChatUtility.convertToComponent("&cCould not find requested player!"));
-                    return false;
-                }
-            }
+		if (args.length < 1) {
+			player.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
+			return true;
+		}
 
-            PlayerProfile profile = target.getPlayerProfile();
-            PlayerTextures textures = profile.getTextures();
-            URL skinURL = textures.getSkin();
-            if(skinURL == null){
-                player.sendMessage(ChatUtility.convertToComponent("&cPlayer doesn't not have a valid Skin URL!"));
-                return false;
-            }
+		if (args[0].equalsIgnoreCase("fetch")) {
+			Player target = player;
+			if (args.length > 1 && sender.hasPermission(SneakyCharacterManager.IDENTIFIER + ".skinfetch.others")) {
+				target = Bukkit.getPlayer(args[1]);
+				if (target == null) {
+					player.sendMessage(ChatUtility.convertToComponent("&cCould not find requested player!"));
+					return false;
+				}
+			}
 
-            player.sendMessage(ChatUtility.convertToComponent("&eHere is " + target.getName() + "'s skin url! Click to Copy!"));
-            player.sendMessage(ChatUtility.convertToComponent("&6" + skinURL)
-                    .clickEvent(ClickEvent.copyToClipboard(skinURL.toString()))
-                    .hoverEvent(HoverEvent.showText(ChatUtility.convertToComponent("&aClick to Copy!"))));
-            return true;
-        }
+			PlayerProfile profile = target.getPlayerProfile();
+			PlayerTextures textures = profile.getTextures();
+			URL skinURL = textures.getSkin();
+			if (skinURL == null) {
+				player.sendMessage(ChatUtility.convertToComponent("&cPlayer doesn't not have a valid Skin URL!"));
+				return false;
+			}
 
-        if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
-            player.sendMessage(ChatUtility.convertToComponent("&4You are currently on a template character, which do not support /nick and /skin."));
-            return false;
-        };
+			player.sendMessage(
+					ChatUtility.convertToComponent("&eHere is " + target.getName() + "'s skin url! Click to Copy!"));
+			player.sendMessage(ChatUtility.convertToComponent("&6" + skinURL)
+					.clickEvent(ClickEvent.copyToClipboard(skinURL.toString()))
+					.hoverEvent(HoverEvent.showText(ChatUtility.convertToComponent("&aClick to Copy!"))));
+			return true;
+		}
 
-        Character character = Character.get(player);
+		if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
+			player.sendMessage(ChatUtility.convertToComponent(
+					"&4You are currently on a template character, which do not support /nick and /skin."));
+			return false;
+		}
+		;
 
-        if (character == null) {
-            player.sendMessage(ChatUtility.convertToComponent("&4You aren't on a character right now, so you cannot use /skin."));
-            return false;
-        };
+		Character character = Character.get(player);
 
-        if(args[0].equalsIgnoreCase("default") || args[0].equalsIgnoreCase("revert")){
-            player.sendMessage(ChatUtility.convertToComponent("&eFetching skin.. Please wait..!"));
-            resetPlayerSkin(player);
-            return true;
-        }
+		if (character == null) {
+			player.sendMessage(
+					ChatUtility.convertToComponent("&4You aren't on a character right now, so you cannot use /skin."));
+			return false;
+		}
+		;
 
-        String url = args[0];
-        if (!url.startsWith("http")) {
-            player.sendMessage(ChatUtility.convertToComponent("&4Invalid URL.. Please make sure it starts with HTTP(s)"));
-            return true;
-        }
+		if (args[0].equalsIgnoreCase("default") || args[0].equalsIgnoreCase("revert")) {
+			player.sendMessage(ChatUtility.convertToComponent("&eFetching skin.. Please wait..!"));
+			resetPlayerSkin(player);
+			return true;
+		}
 
-        Boolean slim = null;
-        if (args.length > 1) {
-            if (args[1].equalsIgnoreCase("slim")) slim = true;
-            else slim = false;
-        }
+		String url = args[0];
+		if (!url.startsWith("http")) {
+			player.sendMessage(
+					ChatUtility.convertToComponent("&4Invalid URL.. Please make sure it starts with HTTP(s)"));
+			return true;
+		}
 
-        player.sendMessage(ChatUtility.convertToComponent("&aUpdating your skin!"));
+		Boolean slim = null;
+		if (args.length > 1) {
+			if (args[1].equalsIgnoreCase("slim"))
+				slim = true;
+			else
+				slim = false;
+		}
 
-        CharacterLoader.updateSkin(player, url, slim);
+		player.sendMessage(ChatUtility.convertToComponent("&aUpdating your skin!"));
 
-        return true;
-    }
+		CharacterLoader.updateSkin(player, url, slim);
 
-    @Override
-    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args, Location location) {
-        if (args.length == 1) {
-            return Arrays.asList("revert", "fetch");
-        } else if(args.length == 2 && args[0].equalsIgnoreCase("fetch")){
-            List<String> playerNames = new ArrayList<>();
-            for (@NotNull Player player : Bukkit.getOnlinePlayers()) {
-                if (player.getName().toLowerCase().startsWith(args[1].toLowerCase()) && !player.getName().equals("CMI-Fake-Operator")) playerNames.add(player.getName());
-            }
-            return playerNames;
-        } else if (args.length == 2) {
-            return Arrays.asList("slim", "classic");
-        } else {
-            return super.tabComplete(sender, alias, args, location); // or simply "return new ArrayList<>();"
-        }
-    }
+		return true;
+	}
 
+	@Override
+	public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args,
+			Location location) {
+		if (args.length == 1) {
+			return Arrays.asList("revert", "fetch");
+		} else if (args.length == 2 && args[0].equalsIgnoreCase("fetch")
+				&& sender.hasPermission(SneakyCharacterManager.IDENTIFIER + ".skinfetch.others")) {
+			List<String> playerNames = new ArrayList<>();
+			for (@NotNull
+			Player player : Bukkit.getOnlinePlayers()) {
+				if (player.getName().toLowerCase().startsWith(args[1].toLowerCase()) &&
+						!player.getName().equals("CMI-Fake-Operator") &&
+						!(SneakyCharacterManager.getInstance().papiActive
+								&& PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%") != null
+								&& !PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%").isEmpty()))
+					playerNames.add(player.getName());
+			}
+			return playerNames;
+		} else if (args.length == 2 && !args[0].equalsIgnoreCase("fetch")) {
+			return Arrays.asList("slim", "classic");
+		} else {
+			return super.tabComplete(sender, alias, args, location); // or simply "return new ArrayList<>();"
+		}
+	}
 
-    private void resetPlayerSkin(Player player){
-        Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s)->{
-            try(CloseableHttpClient httpClient = HttpClientBuilder.create().build()){
-                URL url = new URL(String.format("https://sessionserver.mojang.com/session/minecraft/profile/%s?unsigned=false",
-                        player.getUniqueId().toString().replace("-", "")));
-                HttpGet httpGet = new HttpGet(url.toURI());
-                HttpResponse response = httpClient.execute(httpGet);
-                if(response != null){
-                    InputStream in = response.getEntity().getContent();
-                    JSONParser parser = new JSONParser();
-                    JSONObject result = (JSONObject) parser.parse(new InputStreamReader(in, StandardCharsets.UTF_8));
-                    if(result.containsKey("properties")){
+	private void resetPlayerSkin(Player player) {
+		Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
+			try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
+				URL url = new URL(
+						String.format("https://sessionserver.mojang.com/session/minecraft/profile/%s?unsigned=false",
+								player.getUniqueId().toString().replace("-", "")));
+				HttpGet httpGet = new HttpGet(url.toURI());
+				HttpResponse response = httpClient.execute(httpGet);
+				if (response != null) {
+					InputStream in = response.getEntity().getContent();
+					JSONParser parser = new JSONParser();
+					JSONObject result = (JSONObject) parser.parse(new InputStreamReader(in, StandardCharsets.UTF_8));
+					if (result.containsKey("properties")) {
 
-                        List<JSONObject> properties = (List<JSONObject>) result.get("properties");
+						List<JSONObject> properties = (List<JSONObject>) result.get("properties");
 
-                        JSONObject textureProp = properties.get(0);
-                        if(!((String)textureProp.get("name")).equalsIgnoreCase("textures")) throw new RuntimeException("That didn't work...");
+						JSONObject textureProp = properties.get(0);
+						if (!((String) textureProp.get("name")).equalsIgnoreCase("textures"))
+							throw new RuntimeException("That didn't work...");
 
-                        String textureValue = (String)textureProp.get("value");
-                        String signatureValue = (String)textureProp.get("signature");
-                        ProfileProperty property = new ProfileProperty("textures", textureValue, signatureValue);
-                        Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), ()->{
-                            PlayerProfile profile = player.getPlayerProfile();
-                            profile.setProperty(property);
-                            player.sendMessage(ChatUtility.convertToComponent("&aUpdating your skin!"));
+						String textureValue = (String) textureProp.get("value");
+						String signatureValue = (String) textureProp.get("signature");
+						ProfileProperty property = new ProfileProperty("textures", textureValue, signatureValue);
+						Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+							PlayerProfile profile = player.getPlayerProfile();
+							profile.setProperty(property);
+							player.sendMessage(ChatUtility.convertToComponent("&aUpdating your skin!"));
 
+							String textureURL = profile.getTextures().getSkin().toString();
+							boolean isSlim = profile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
+							Character character = Character.get(player);
 
-                            String textureURL = profile.getTextures().getSkin().toString();
-                            boolean isSlim = profile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
-                            Character character = Character.get(player);
+							if (character == null)
+								return;
 
-                            if (character == null) return;
+							character.setSkin(textureURL);
+							character.setSlim(isSlim);
+							BungeeMessagingUtil.sendByteArray(player, "updateCharacter",
+									player.getUniqueId().toString(), 1, textureURL, isSlim);
+							player.setPlayerProfile(profile);
 
-                            character.setSkin(textureURL);
-                            character.setSlim(isSlim);
-                            BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), 1, textureURL, isSlim);
-                            player.setPlayerProfile(profile);
+							Entity vehicle = player.getVehicle();
+							if (vehicle != null)
+								vehicle.removePassenger(player);
+							player.teleport(player.getLocation().add(0, 1, 0));
+						});
+					}
+				}
+			} catch (IOException | URISyntaxException | ParseException | RuntimeException exception) {
+				exception.printStackTrace();
+				Bukkit.getLogger().severe("Something went very wrong!");
+			}
+		});
+	}
 
-                            Entity vehicle = player.getVehicle();
-                            if (vehicle != null) vehicle.removePassenger(player);
-                            player.teleport(player.getLocation().add(0, 1, 0));
-                        });
-                    }
-                }
-            } catch(IOException | URISyntaxException | ParseException | RuntimeException exception){
-                exception.printStackTrace();
-                Bukkit.getLogger().severe("Something went very wrong!");
-            }
-        });
-    }
-    
-    
 }

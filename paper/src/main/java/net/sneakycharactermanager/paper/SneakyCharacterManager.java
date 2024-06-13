@@ -93,7 +93,8 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
         getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".admin.*"));
         getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".admin.command.*"));
         getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".admin.bypass.*"));
-
+        getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".skinfetch.others"));
+		
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             papiActive = true;
             new Placeholders().register();
