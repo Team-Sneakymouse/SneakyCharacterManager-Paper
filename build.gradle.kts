@@ -2,6 +2,7 @@ plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.8.10"
     id("com.github.johnrengelman.shadow") version "8.1.0"
+    id("xyz.jpenilla.run-paper") version "2.2.0"
 }
 
 allprojects {
@@ -66,6 +67,10 @@ tasks {
     }
     compileJava {
         options.release = 21
+    }
+    runServer {
+        dependsOn(shadowJar)
+        minecraftVersion("1.20.6")
     }
 }
 
