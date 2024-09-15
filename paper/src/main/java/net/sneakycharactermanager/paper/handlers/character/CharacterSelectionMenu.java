@@ -101,7 +101,7 @@ public class CharacterSelectionMenu implements Listener {
 
         protected void setTooltipStrings() {
             LEFT = "&eL-Click: &bSelect character.";
-            SWAP_OFFHAND = "&eF: &bBegin character deletion. You will be asked to confirm.";
+            SWAP_OFFHAND = "&eF: &bBegin character deletion.";
         }
 
         private void requestCharacterList() {
