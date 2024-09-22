@@ -49,7 +49,7 @@ public class NicknameEntity {
 
         player.addPassenger(mounted);
 
-        packetOff = makePacket(Component.text(""), 0.01F);
+        packetOff = makePacket(Component.text(" "), 0.01F);
     }
 
     public void updatePackets(String name) {
@@ -70,7 +70,7 @@ public class NicknameEntity {
         temp.setTransformation(new com.mojang.math.Transformation(new Vector3f(0F,height,0F), new Quaternionf(), new Vector3f(1), new Quaternionf()));
 
         SynchedEntityData entityData = temp.getEntityData();
-        entityData.set(net.minecraft.world.entity.Display.TextDisplay.DATA_BACKGROUND_COLOR_ID, ((TextComponent) name).content().equals("") ? 0 : 956301312);
+        entityData.set(net.minecraft.world.entity.Display.TextDisplay.DATA_BACKGROUND_COLOR_ID, ((TextComponent) name).content().equals(" ") ? 0 : 956301312);
 
         List<DataValue<?>> nonDefault = new ArrayList<>();
 
