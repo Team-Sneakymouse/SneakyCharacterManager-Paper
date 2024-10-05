@@ -210,6 +210,10 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		}
 	}
 
+	public PrivateKey getPrivateKey() {
+		return privateKey;
+	}
+
 	public PublicKey getPublicKey() {
 		return publicKey;
 	}

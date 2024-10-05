@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.Base64;
+import java.security.Signature;
+import java.nio.charset.StandardCharsets;
 
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
@@ -23,162 +26,192 @@ import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
 
 public class PluginMessageListener implements Listener {
 
-    private List<String> handledRequests;
-    public PluginMessageListener(){
-        handledRequests = new ArrayList<>();
-    }
+	private List<String> handledRequests;
 
-    @EventHandler
-    public void on(PluginMessageEvent event)
-    {
-        if (!event.getTag().equalsIgnoreCase("sneakymouse:" + SneakyCharacterManager.IDENTIFIER))
-        {
-            return;
-        }
+	public PluginMessageListener() {
+		handledRequests = new ArrayList<>();
+	}
 
-        Connection connection = event.getSender();
-        ServerInfo serverInfo = null;
-        ProxiedPlayer player = null;
-        if (connection instanceof ProxiedPlayer proxiedPlayer) {
-            serverInfo = proxiedPlayer.getServer().getInfo();
-            player = proxiedPlayer;
-        } else if (connection instanceof Server server) {
-            serverInfo = server.getInfo();
-        }
+	public boolean verifySignature(byte[] messageBytes, String receivedSignature) {
+		try {
+			Signature signature = Signature.getInstance("SHA256withRSA");
+			signature.initVerify(SneakyCharacterManager.getInstance().getPublicKey());
+			signature.update(messageBytes);
+			byte[] decodedSignature = Base64.getDecoder().decode(receivedSignature);
+			return signature.verify(decodedSignature);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
 
-        ByteArrayDataInput in = ByteStreams.newDataInput(event.getData());
-        String channelData = in.readUTF();
+	@EventHandler
+	public void on(PluginMessageEvent event) {
+		if (!event.getTag().equalsIgnoreCase("sneakymouse:" + SneakyCharacterManager.IDENTIFIER)) {
+			return;
+		}
 
-        String[] _data = channelData.split("_UUID:");
+		Connection connection = event.getSender();
+		ServerInfo serverInfo = null;
+		if (connection instanceof ProxiedPlayer proxiedPlayer) {
+			serverInfo = proxiedPlayer.getServer().getInfo();
+		} else if (connection instanceof Server server) {
+			serverInfo = server.getInfo();
+		}
 
-        String subChannel = _data[0];
-        String uuid = _data[1];
+		ByteArrayDataInput in = ByteStreams.newDataInput(event.getData());
 
-        if(handledRequests.contains(uuid)){
-            SneakyCharacterManager.getInstance().getLogger().warning("Recieved duplicated message! Ignoring");
-            return;
-        }
+		String receivedSignature = in.readUTF();
 
-        handledRequests.add(uuid);
+		byte[] messageBytes = new byte[event.getData().length - receivedSignature.getBytes(StandardCharsets.UTF_8).length - 2];
+		in.readFully(messageBytes);
 
-        switch (subChannel) {
-            case "playerJoin" :
-                String playerUUID = in.readUTF();
-                PlayerData playerData = PlayerData.get(playerUUID);
-                playerData.loadLastPlayedCharacter(serverInfo);
-                break;
-            case "playerQuit" :
-                playerUUID = in.readUTF();
-                PlayerData.remove(playerUUID);
-                break;
-            case "characterSelectionGUI" :
-                playerUUID = in.readUTF();
-                playerData = PlayerData.get(playerUUID);
-                String requesterUUID = in.readUTF();
-                playerData.sendEnabledCharacters(serverInfo, subChannel, requesterUUID);
-                break;
-            case "preloadSkins" :
-                playerUUID = in.readUTF();
-                playerData = PlayerData.get(playerUUID);
-                playerData.sendEnabledCharacters(serverInfo, subChannel, playerUUID);
-                break;
-            case "selectCharacter" :
-                playerUUID = in.readUTF();
-                playerData = PlayerData.get(playerUUID);
-                playerData.loadCharacter(serverInfo, in.readUTF(), false);
-                break;
-            case "tempCharacter" :
-                requesterUUID = in.readUTF();
-                playerUUID = in.readUTF();
-                playerData = PlayerData.get(playerUUID);
-                playerData.loadTempCharacter(serverInfo, requesterUUID, in.readUTF());
-                break;
-            case "selectCharacterByName" :
-                playerUUID = in.readUTF();
-                playerData = PlayerData.get(playerUUID);
-                playerData.loadCharacterByName(serverInfo, in.readUTF());
-                break;
-            case "updateCharacter" :
-                playerUUID = in.readUTF();
-                playerData = PlayerData.get(playerUUID);
-                String lastPlayed = playerData.getLastPlayedCharacter();
-                int type = in.readInt();
-                switch (type) {
-                    case 1: //Updating Skin
-                        playerData.setCharacterSkin(lastPlayed, in.readUTF(), in.readBoolean());
-                        break;
-                    case 2: //Updating Name
-                        playerData.setCharacterName(lastPlayed, in.readUTF());
-                        playerData.updateCharacterList(serverInfo);
-                        break;
-                    case 3: //Updating enabled
-                        // This case is here for consistency only. A player should never be able to change the enabled state of their current character, so it does nothing.
-                        break;
-                    case 4: //Updating Tags
-                        playerData.setCharacterTags(lastPlayed, readStringList(in));
-                        break;
-                }
-                break;
-            case "defaultSkin":
-                playerUUID = in.readUTF();
-                String characterUUID = in.readUTF();
-                String url = in.readUTF();
-                boolean slim = in.readBoolean();
-                playerData = PlayerData.get(playerUUID);
-                playerData.setCharacterSkin(characterUUID, url, slim);
-                break;
-            case "createNewCharacter" :
-                playerUUID = in.readUTF();
-                playerData = PlayerData.get(playerUUID);
-                characterUUID = playerData.createNewCharacter(ProxyServer.getInstance().getPlayer(UUID.fromString(playerUUID)).getName());
-                if (characterUUID != null) playerData.loadCharacter(serverInfo, characterUUID, true);
-                break;
-            case "deleteCharacter" :
-                playerUUID = in.readUTF();
-                characterUUID = in.readUTF();
-                playerData = PlayerData.get(playerUUID);
+		if (!verifySignature(messageBytes, receivedSignature)) {
+			SneakyCharacterManager.getInstance().getLogger()
+					.severe("Received a message with an invalid signature! Ignoring.");
+			return;
+		}
 
-                Character character = playerData.getCharacter(characterUUID);
+		ByteArrayDataInput messageIn = ByteStreams.newDataInput(messageBytes);
 
-                playerData.setCharacterEnabled(characterUUID, false);
-                PaperMessagingUtil.sendByteArray(serverInfo, "deleteConfirmed", playerUUID, character.getName(), characterUUID);
-                playerData.updateCharacterList(serverInfo);
-                break;
-            case "saveTemplateChar" :
-                String characterID = in.readUTF();
-                String characterName = in.readUTF();
-                String characterSkin = in.readUTF();
-                boolean characterSlim = in.readBoolean();
+        String channelData = messageIn.readUTF();
+		String[] _data = channelData.split("_UUID:");
 
-                playerData = PlayerData.get("template");
+		String subChannel = _data[0];
+		String uuid = _data[1];
 
-                playerData.createNewCharacter(characterID, characterName, characterSkin, characterSlim);
-                
-                break;
+		if (handledRequests.contains(uuid)) {
+			SneakyCharacterManager.getInstance().getLogger().warning("Received duplicated message! Ignoring");
+			return;
+		}
 
-            case "getAllCharacters":
-                requesterUUID = in.readUTF();
-                String filter = in.readUTF();
-                try {
-                    List<String> data = PlayerData.getAllCharacters(filter);
-                    PaperMessagingUtil.sendByteArray(serverInfo, "getAllCharacters", requesterUUID, data);
-                } catch(IOException e) { break; }
-                break;
-            default:
-                SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
-                break;
-        }
-    }
+		handledRequests.add(uuid);
 
-    public static List<String> readStringList(ByteArrayDataInput in) {
-        int size = in.readInt();
+		switch (subChannel) {
+			case "playerJoin":
+				String playerUUID = messageIn.readUTF();
+				PlayerData playerData = PlayerData.get(playerUUID);
+				playerData.loadLastPlayedCharacter(serverInfo);
+				break;
+			case "playerQuit":
+				playerUUID = messageIn.readUTF();
+				PlayerData.remove(playerUUID);
+				break;
+			case "characterSelectionGUI":
+				playerUUID = messageIn.readUTF();
+				playerData = PlayerData.get(playerUUID);
+				String requesterUUID = messageIn.readUTF();
+				playerData.sendEnabledCharacters(serverInfo, subChannel, requesterUUID);
+				break;
+			case "preloadSkins":
+				playerUUID = messageIn.readUTF();
+				playerData = PlayerData.get(playerUUID);
+				playerData.sendEnabledCharacters(serverInfo, subChannel, playerUUID);
+				break;
+			case "selectCharacter":
+				playerUUID = messageIn.readUTF();
+				playerData = PlayerData.get(playerUUID);
+				playerData.loadCharacter(serverInfo, messageIn.readUTF(), false);
+				break;
+			case "tempCharacter":
+				requesterUUID = messageIn.readUTF();
+				playerUUID = messageIn.readUTF();
+				playerData = PlayerData.get(playerUUID);
+				playerData.loadTempCharacter(serverInfo, requesterUUID, messageIn.readUTF());
+				break;
+			case "selectCharacterByName":
+				playerUUID = messageIn.readUTF();
+				playerData = PlayerData.get(playerUUID);
+				playerData.loadCharacterByName(serverInfo, messageIn.readUTF());
+				break;
+			case "updateCharacter":
+				playerUUID = messageIn.readUTF();
+				playerData = PlayerData.get(playerUUID);
+				String lastPlayed = playerData.getLastPlayedCharacter();
+				int type = messageIn.readInt();
+				switch (type) {
+					case 1: // Updating Skin
+						playerData.setCharacterSkin(lastPlayed, messageIn.readUTF(), messageIn.readBoolean());
+						break;
+					case 2: // Updating Name
+						playerData.setCharacterName(lastPlayed, messageIn.readUTF());
+						playerData.updateCharacterList(serverInfo);
+						break;
+					case 3: // Updating enabled
+						// This case is here for consistency only. A player should never be able to
+						// change the enabled state of their current character, so it does nothing.
+						break;
+					case 4: // Updating Tags
+						playerData.setCharacterTags(lastPlayed, readStringList(messageIn));
+						break;
+				}
+				break;
+			case "defaultSkin":
+				playerUUID = messageIn.readUTF();
+				String characterUUID = messageIn.readUTF();
+				String url = messageIn.readUTF();
+				boolean slim = messageIn.readBoolean();
+				playerData = PlayerData.get(playerUUID);
+				playerData.setCharacterSkin(characterUUID, url, slim);
+				break;
+			case "createNewCharacter":
+				playerUUID = messageIn.readUTF();
+				playerData = PlayerData.get(playerUUID);
+				characterUUID = playerData
+						.createNewCharacter(ProxyServer.getInstance().getPlayer(UUID.fromString(playerUUID)).getName());
+				if (characterUUID != null)
+					playerData.loadCharacter(serverInfo, characterUUID, true);
+				break;
+			case "deleteCharacter":
+				playerUUID = messageIn.readUTF();
+				characterUUID = messageIn.readUTF();
+				playerData = PlayerData.get(playerUUID);
 
-        List<String> strings = new ArrayList<>();
-        while (strings.size() < size) {
-            strings.add(in.readUTF());
-        }
+				Character character = playerData.getCharacter(characterUUID);
 
-        return strings;
-    }
-    
+				playerData.setCharacterEnabled(characterUUID, false);
+				PaperMessagingUtil.sendByteArray(serverInfo, "deleteConfirmed", playerUUID, character.getName(),
+						characterUUID);
+				playerData.updateCharacterList(serverInfo);
+				break;
+			case "saveTemplateChar":
+				String characterID = messageIn.readUTF();
+				String characterName = messageIn.readUTF();
+				String characterSkin = messageIn.readUTF();
+				boolean characterSlim = messageIn.readBoolean();
+
+				playerData = PlayerData.get("template");
+
+				playerData.createNewCharacter(characterID, characterName, characterSkin, characterSlim);
+
+				break;
+
+			case "getAllCharacters":
+				requesterUUID = messageIn.readUTF();
+				String filter = messageIn.readUTF();
+				try {
+					List<String> data = PlayerData.getAllCharacters(filter);
+					PaperMessagingUtil.sendByteArray(serverInfo, "getAllCharacters", requesterUUID, data);
+				} catch (IOException e) {
+					break;
+				}
+				break;
+			default:
+				SneakyCharacterManager.getInstance().getLogger().severe(
+						"SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
+				break;
+		}
+	}
+
+	public static List<String> readStringList(ByteArrayDataInput in) {
+		int size = in.readInt();
+
+		List<String> strings = new ArrayList<>();
+		while (strings.size() < size) {
+			strings.add(in.readUTF());
+		}
+
+		return strings;
+	}
+
 }
