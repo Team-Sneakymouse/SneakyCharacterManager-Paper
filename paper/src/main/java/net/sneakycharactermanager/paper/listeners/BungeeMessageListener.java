@@ -1,5 +1,7 @@
 package net.sneakycharactermanager.paper.listeners;
 
+import java.security.PublicKey;
+import java.security.Signature;
 import java.util.*;
 
 import net.kyori.adventure.text.event.ClickEvent;
@@ -25,171 +27,213 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
-public class BungeeMessageListener implements PluginMessageListener
-{
-    
-    @Override
-    public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, @NotNull byte[] message) {
-        if (!channel.equalsIgnoreCase("sneakymouse:" + SneakyCharacterManager.IDENTIFIER))
-        {
-            return;
-        }
+public class BungeeMessageListener implements PluginMessageListener {
 
-        ByteArrayDataInput in = ByteStreams.newDataInput(message);
-        String subChannel = in.readUTF();
-        
-        switch (subChannel) {
-            case "loadCharacter" :
-                String playerUUID = in.readUTF();
-                Character character = readCharacter(playerUUID, in);
-                boolean forced = in.readBoolean();
+	private boolean verifySignature(byte[] messageBytes, String receivedSignature) {
+		try {
+			PublicKey publicKey = SneakyCharacterManager.getInstance().getPublicKey();
+			if (publicKey == null) {
+				SneakyCharacterManager.getInstance().getLogger().severe("No valid public key file was found.");
+				return false;
+			}
 
-                Player pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+			Signature signature = Signature.getInstance("SHA256withRSA");
+			signature.initVerify(publicKey);
+			signature.update(messageBytes);
+			return signature.verify(Base64.getDecoder().decode(receivedSignature));
+		} catch (Exception e) {
+			SneakyCharacterManager.getInstance().getLogger().severe("Error verifying signature: " + e.getMessage());
+			return false;
+		}
+	}
 
-                if (!forced && !Character.canPlayerLoadCharacter(pl, character.getCharacterUUID())) {
-                    pl.sendMessage(ChatUtility.convertToComponent("&4You cannot access this character right now."));
-                    break;
-                }
-                
-                character.load();
-                break;
-            case "selectCharacterByNameFailed" :
-                playerUUID = in.readUTF();
-                pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-                if (pl == null) return;
+	@Override
+	public void onPluginMessageReceived(@NotNull String channel, @NotNull Player player, @NotNull byte[] message) {
+		if (!channel.equalsIgnoreCase("sneakymouse:" + SneakyCharacterManager.IDENTIFIER)) {
+			return;
+		}
 
-                pl.sendMessage(ChatUtility.convertToComponent("&aNo character found. Loading character menu..."));
-                SneakyCharacterManager.getInstance().selectionMenu.openMenu(pl);
-                break;
-            case "loadTempCharacter" :
-                String requesterUUID = in.readUTF();
-                pl = Bukkit.getPlayer(UUID.fromString(requesterUUID));
-                character = readCharacter(requesterUUID, in);
-                String characterSource = in.readUTF();
-                
-                character.load();
-                ConsoleCommandCharTemp.playerTempCharAdd(requesterUUID, characterSource, character.getCharacterUUID());
-                break;
-            case "loadTempCharacterFailed" :
-                playerUUID = in.readUTF();
-                String characterUUID = in.readUTF();
+		ByteArrayDataInput in = ByteStreams.newDataInput(message);
 
-                SneakyCharacterManager.getInstance().getLogger().warning("An attempt was made to load a temp character but it did not exist: [" + playerUUID + "," + characterUUID + "]");
-                break;
-            case "characterSelectionGUI" :
-                playerUUID = in.readUTF();
-                requesterUUID = in.readUTF();
-                List<Character> characters = readCharacterList(playerUUID, in);
+		String receivedSignature = in.readUTF();
 
-                SneakyCharacterManager.getInstance().selectionMenu.updateInventory(requesterUUID, characters);
-                break;
-            case "preloadSkins" :
-                playerUUID = in.readUTF();
-                pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-                if (pl == null) return;
-                requesterUUID = in.readUTF();
-                characters = readCharacterList(requesterUUID, in);
+		int remainingBytes = message.length - (receivedSignature.length() + 2);
 
-                for (Character c : characters) {
-                    ProfileProperty p = SkinCache.get(playerUUID, c.getSkin());
+		byte[] messageBytes = new byte[remainingBytes];
+		in.readFully(messageBytes);
 
-                    if (p == null) {
-                        SkinData.getOrCreate(c.getSkin(), c.isSlim(), 0, pl);
-                    }
-                }
-                break;
-            case "updateCharacterList" :
-                playerUUID = in.readUTF();
-                pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-                assert pl != null;
-                CommandChar.tabCompleteMap.put(pl.getUniqueId().toString(), readStringList(in));
-                break;
-            case "defaultSkin" :
-                playerUUID = in.readUTF();
-                characterUUID = in.readUTF();
-                pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-                if (pl == null) return;
-                PlayerProfile profile = pl.getPlayerProfile();
-                PlayerTextures textures = profile.getTextures();
-                if (textures.getSkin() == null) return;
-                String skinURL = textures.getSkin().toString();
-                boolean slim = textures.getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
+		if (!verifySignature(messageBytes, receivedSignature)) {
+			SneakyCharacterManager.getInstance().getLogger().severe("Received a message with an invalid signature!");
+			return;
+		}
 
-                BungeeMessagingUtil.sendByteArray(pl, "defaultSkin", playerUUID, characterUUID, skinURL, slim);
-                break;
-            case "deleteConfirmed" :
-                playerUUID = in.readUTF();
-                pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-                pl.sendMessage(ChatUtility.convertToComponent("&aThe following character has been deleted: &b`" + in.readUTF() + "`&a (" + in.readUTF() + ")"));
-                break;
-            case "getAllCharacters":
-                playerUUID = in.readUTF();
-                List<String> characterData = readStringList(in);
-                handleCharacterOutput(playerUUID, characterData);
-                break;
-            default:
-                SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
-                break;
-        }
-    }
+		ByteArrayDataInput messageIn = ByteStreams.newDataInput(messageBytes);
+		String subChannel = messageIn.readUTF();
 
-    public static void handleCharacterOutput(String requesterUUID, List<String> characterData){
-        Player requester = Bukkit.getPlayer(UUID.fromString(requesterUUID));
-        if(requester == null) return;
+		switch (subChannel) {
+			case "loadCharacter":
+				String playerUUID = messageIn.readUTF();
+				Character character = readCharacter(playerUUID, messageIn);
+				boolean forced = messageIn.readBoolean();
 
-        requester.sendMessage(ChatUtility.convertToComponent("&eFound the following usernames: "));
-        Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (_s)->{
+				Player pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
 
-            for(String information : characterData){
-                String[] data = information.split("\\$");
-                String playerUUID = data[0];
-                String characterName = data[1];
-                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(UUID.fromString(playerUUID));
+				if (!forced && !Character.canPlayerLoadCharacter(pl, character.getCharacterUUID())) {
+					pl.sendMessage(ChatUtility.convertToComponent("&4You cannot access this character right now."));
+					break;
+				}
 
-                if(!offlinePlayer.hasPlayedBefore()) continue; //This shouldn't happen but just in case
+				character.load();
+				break;
+			case "selectCharacterByNameFailed":
+				playerUUID = messageIn.readUTF();
+				pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+				if (pl == null)
+					return;
 
-                Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> requester.sendMessage(
-                        ChatUtility.convertToComponent("&eUser: " + offlinePlayer.getName() + " &7| &aCharacter: " + characterName)
-                                .hoverEvent(HoverEvent.showText(ChatUtility.convertToComponent("&6Player UUID: " + playerUUID)))
-                                .clickEvent(ClickEvent.copyToClipboard(playerUUID))
-                ));
+				pl.sendMessage(ChatUtility.convertToComponent("&aNo character found. Loading character menu..."));
+				SneakyCharacterManager.getInstance().selectionMenu.openMenu(pl);
+				break;
+			case "loadTempCharacter":
+				String requesterUUID = messageIn.readUTF();
+				pl = Bukkit.getPlayer(UUID.fromString(requesterUUID));
+				character = readCharacter(requesterUUID, messageIn);
+				String characterSource = messageIn.readUTF();
 
-            }
+				character.load();
+				ConsoleCommandCharTemp.playerTempCharAdd(requesterUUID, characterSource, character.getCharacterUUID());
+				break;
+			case "loadTempCharacterFailed":
+				playerUUID = messageIn.readUTF();
+				String characterUUID = messageIn.readUTF();
 
-        });
+				SneakyCharacterManager.getInstance().getLogger()
+						.warning("An attempt was made to load a temp character but it did not exist: [" + playerUUID
+								+ "," + characterUUID + "]");
+				break;
+			case "characterSelectionGUI":
+				playerUUID = messageIn.readUTF();
+				requesterUUID = messageIn.readUTF();
+				List<Character> characters = readCharacterList(playerUUID, messageIn);
 
-    }
+				SneakyCharacterManager.getInstance().selectionMenu.updateInventory(requesterUUID, characters);
+				break;
+			case "preloadSkins":
+				playerUUID = messageIn.readUTF();
+				pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+				if (pl == null)
+					return;
+				requesterUUID = messageIn.readUTF();
+				characters = readCharacterList(requesterUUID, messageIn);
 
-    public static List<String> readStringList(ByteArrayDataInput in) {
-        int size = in.readInt();
+				for (Character c : characters) {
+					ProfileProperty p = SkinCache.get(playerUUID, c.getSkin());
 
-        List<String> strings = new ArrayList<>();
-        while (strings.size() < size) {
-            strings.add(in.readUTF());
-        }
+					if (p == null) {
+						SkinData.getOrCreate(c.getSkin(), c.isSlim(), 0, pl);
+					}
+				}
+				break;
+			case "updateCharacterList":
+				playerUUID = messageIn.readUTF();
+				pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+				assert pl != null;
+				CommandChar.tabCompleteMap.put(pl.getUniqueId().toString(), readStringList(messageIn));
+				break;
+			case "defaultSkin":
+				playerUUID = messageIn.readUTF();
+				characterUUID = messageIn.readUTF();
+				pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+				if (pl == null)
+					return;
+				PlayerProfile profile = pl.getPlayerProfile();
+				PlayerTextures textures = profile.getTextures();
+				if (textures.getSkin() == null)
+					return;
+				String skinURL = textures.getSkin().toString();
+				boolean slim = textures.getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
 
-        return strings;
-    }
+				BungeeMessagingUtil.sendByteArray(pl, "defaultSkin", playerUUID, characterUUID, skinURL, slim);
+				break;
+			case "deleteConfirmed":
+				playerUUID = messageIn.readUTF();
+				pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+				pl.sendMessage(ChatUtility.convertToComponent("&aThe following character has been deleted: &b`"
+						+ messageIn.readUTF() + "`&a (" + messageIn.readUTF() + ")"));
+				break;
+			case "getAllCharacters":
+				playerUUID = messageIn.readUTF();
+				List<String> characterData = readStringList(messageIn);
+				handleCharacterOutput(playerUUID, characterData);
+				break;
+			default:
+				SneakyCharacterManager.getInstance().getLogger().severe(
+						"SneakyCharacterManager received a packet but the subchannel was unknown: " + subChannel);
+				break;
+		}
+	}
 
-    public static List<Character> readCharacterList(String uuid, ByteArrayDataInput in) {
-        int size = in.readInt();
+	public static void handleCharacterOutput(String requesterUUID, List<String> characterData) {
+		Player requester = Bukkit.getPlayer(UUID.fromString(requesterUUID));
+		if (requester == null)
+			return;
 
-        List<Character> characters = new ArrayList<>();
-        while (characters.size() < size) {
-            Character character = readCharacter(uuid, in);
-            characters.add(character);
-        }
+		requester.sendMessage(ChatUtility.convertToComponent("&eFound the following usernames: "));
+		Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (_s) -> {
 
-        return characters;
-    }
+			for (String information : characterData) {
+				String[] data = information.split("\\$");
+				String playerUUID = data[0];
+				String characterName = data[1];
+				OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(UUID.fromString(playerUUID));
 
-    private static Character readCharacter(String playerUUID, ByteArrayDataInput in) {
-        String uuid = in.readUTF();
-        String name = in.readUTF();
-        String skin = in.readUTF();
-        boolean slim = in.readBoolean();
-        List<String> tags = readStringList(in);
-        return new Character(playerUUID, uuid, name, skin, slim, tags);
-    }
+				if (!offlinePlayer.hasPlayedBefore())
+					continue; // This shouldn't happen but just in case
+
+				Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> requester.sendMessage(
+						ChatUtility
+								.convertToComponent(
+										"&eUser: " + offlinePlayer.getName() + " &7| &aCharacter: " + characterName)
+								.hoverEvent(HoverEvent
+										.showText(ChatUtility.convertToComponent("&6Player UUID: " + playerUUID)))
+								.clickEvent(ClickEvent.copyToClipboard(playerUUID))));
+
+			}
+
+		});
+
+	}
+
+	public static List<String> readStringList(ByteArrayDataInput in) {
+		int size = in.readInt();
+
+		List<String> strings = new ArrayList<>();
+		while (strings.size() < size) {
+			strings.add(in.readUTF());
+		}
+
+		return strings;
+	}
+
+	public static List<Character> readCharacterList(String uuid, ByteArrayDataInput in) {
+		int size = in.readInt();
+
+		List<Character> characters = new ArrayList<>();
+		while (characters.size() < size) {
+			Character character = readCharacter(uuid, in);
+			characters.add(character);
+		}
+
+		return characters;
+	}
+
+	private static Character readCharacter(String playerUUID, ByteArrayDataInput in) {
+		String uuid = in.readUTF();
+		String name = in.readUTF();
+		String skin = in.readUTF();
+		boolean slim = in.readBoolean();
+		List<String> tags = readStringList(in);
+		return new Character(playerUUID, uuid, name, skin, slim, tags);
+	}
 
 }
