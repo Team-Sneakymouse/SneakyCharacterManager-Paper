@@ -142,7 +142,7 @@ public class PluginMessageListener implements Listener {
 						// change the enabled state of their current character, so it does nothing.
 						break;
 					case 4: // Updating Tags
-						playerData.setCharacterTags(lastPlayed, readStringList(messageIn));
+						playerData.setCharacterTags(lastPlayed, messageIn.readUTF());
 						break;
 				}
 				break;
@@ -203,6 +203,7 @@ public class PluginMessageListener implements Listener {
 		}
 	}
 
+	/*
 	public static List<String> readStringList(ByteArrayDataInput in) {
 		int size = in.readInt();
 
@@ -213,5 +214,6 @@ public class PluginMessageListener implements Listener {
 
 		return strings;
 	}
+	*/
 
 }

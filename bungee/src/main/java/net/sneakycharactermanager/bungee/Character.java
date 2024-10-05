@@ -1,8 +1,5 @@
 package net.sneakycharactermanager.bungee;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -17,9 +14,9 @@ public class Character {
     private String name;
     private String skin;
     private boolean slim;
-    private List<String> tags = new ArrayList<>();
+    private String tags;
 
-    public Character(String uuid, boolean enabled, String name, String skin, boolean slim, List<String> tags) {
+    public Character(String uuid, boolean enabled, String name, String skin, boolean slim, String tags) {
         this.uuid = uuid;
         this.enabled = enabled;
         this.name = name;
@@ -35,7 +32,7 @@ public class Character {
             name,
             skin,
             slim,
-            new ArrayList<>()
+            ""
         );
     }
 
@@ -46,7 +43,7 @@ public class Character {
             config.getString("name"),
             config.getString("skin"),
             config.getBoolean("slim"),
-            config.getStringList("tags")
+            config.getString("tags")
         );
     }
 
@@ -99,11 +96,11 @@ public class Character {
         return slim;
     }
 
-    public List<String> getTags() {
+    public String getTags() {
         return tags;
     }
 
-    public void setTags(List<String> tags) {
+    public void setTags(String tags) {
         this.tags = tags;
     }
 

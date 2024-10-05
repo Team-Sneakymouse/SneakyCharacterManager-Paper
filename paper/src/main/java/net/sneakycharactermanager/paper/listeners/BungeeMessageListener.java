@@ -232,7 +232,7 @@ public class BungeeMessageListener implements PluginMessageListener {
 		String name = in.readUTF();
 		String skin = in.readUTF();
 		boolean slim = in.readBoolean();
-		List<String> tags = readStringList(in);
+		String tags = in.readUTF();
 		return new Character(playerUUID, uuid, name, skin, slim, tags);
 	}
 

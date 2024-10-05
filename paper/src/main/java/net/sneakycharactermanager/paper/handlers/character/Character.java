@@ -3,7 +3,6 @@ package net.sneakycharactermanager.paper.handlers.character;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -30,260 +29,275 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
 import net.sneakycharactermanager.paper.util.InventoryUtility;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 public class Character {
 
-    private static Map<Player, Character> characterMap = new HashMap<>();
+	private static Map<Player, Character> characterMap = new HashMap<>();
 
-    private Player player;
-    private String characterUUID;
-    private String name;
-    private String skin;
-    private boolean slim;
-    private List<String> tags = new ArrayList<>();
+	private Player player;
+	private String characterUUID;
+	private String name;
+	private String skin;
+	private boolean slim;
+	private JsonObject tags = null;
 
-    private boolean firstLoad = false;
+	private boolean firstLoad = false;
 
-    public Character(String playerUUID, String characterUUID, String characterName, String skin, boolean slim, List<String> tags) {
-        this.player = Bukkit.getPlayer(UUID.fromString(playerUUID));
-        this.characterUUID = characterUUID;
-        this.name = characterName;
-        this.skin = skin;
-        this.slim = slim;
-        this.tags = tags;
+	public Character(String playerUUID, String characterUUID, String characterName, String skin, boolean slim,
+			String tags) {
+		this.player = Bukkit.getPlayer(UUID.fromString(playerUUID));
+		this.characterUUID = characterUUID;
+		this.name = characterName;
+		this.skin = skin;
+		this.slim = slim;
+		this.tags = tags.isEmpty() ? new JsonObject() : JsonParser.parseString(tags).getAsJsonObject();
+		;
 
-        File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID);
-        boolean firstLogin = false;
+		File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID);
+		boolean firstLogin = false;
 
-        if (!playerDir.exists()) {
-            firstLogin = true;
-            playerDir.mkdirs();
-        }
+		if (!playerDir.exists()) {
+			firstLogin = true;
+			playerDir.mkdirs();
+		}
 
-        File characterFile = new File(playerDir, this.characterUUID + ".yml");
+		File characterFile = new File(playerDir, this.characterUUID + ".yml");
 
-        if (!characterFile.exists()) {
-            this.firstLoad = true;
-            if (firstLogin && !SneakyCharacterManager.getInstance().getConfig().getBoolean("deleteCharacterDataOnServerStart", false)) {
-                this.save();
-            } else {
-                YamlConfiguration config = new YamlConfiguration();
+		if (!characterFile.exists()) {
+			this.firstLoad = true;
+			if (firstLogin && !SneakyCharacterManager.getInstance().getConfig()
+					.getBoolean("deleteCharacterDataOnServerStart", false)) {
+				this.save();
+			} else {
+				YamlConfiguration config = new YamlConfiguration();
 
-                config.set("location", Bukkit.getWorlds().get(0).getSpawnLocation());
+				config.set("location", Bukkit.getWorlds().get(0).getSpawnLocation());
 
-                try {
-                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                    BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream);
+				try {
+					ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+					BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream);
 
-                    dataOutput.writeInt(this.player.getInventory().getSize());
+					dataOutput.writeInt(this.player.getInventory().getSize());
 
-                    for (int i = 0; i < this.player.getInventory().getSize(); i++) {
-                        dataOutput.writeObject(new ItemStack(Material.AIR));
-                    }
+					for (int i = 0; i < this.player.getInventory().getSize(); i++) {
+						dataOutput.writeObject(new ItemStack(Material.AIR));
+					}
 
-                    dataOutput.close();
-                    config.set("inventory", Base64Coder.encodeLines(outputStream.toByteArray()));
+					dataOutput.close();
+					config.set("inventory", Base64Coder.encodeLines(outputStream.toByteArray()));
 
-                    //Converts the inventory and its contents to base64, This also saves item meta-data and inventory type
-                } catch (Exception e) {
-                    throw new IllegalStateException("Could not convert inventory to base64.", e);
-                }
+					// Converts the inventory and its contents to base64, This also saves item
+					// meta-data and inventory type
+				} catch (Exception e) {
+					throw new IllegalStateException("Could not convert inventory to base64.", e);
+				}
 
-                try {
-                    config.save(characterFile);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
+				try {
+					config.save(characterFile);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
 
-    public void load() {
-        if (this.player != null && characterMap.containsKey(this.player)) {
-            Character character = get(this.player);
-            if (character != null) character.save();
-        }
+	public void load() {
+		if (this.player != null && characterMap.containsKey(this.player)) {
+			Character character = get(this.player);
+			if (character != null)
+				character.save();
+		}
 
-        File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), this.player.getUniqueId().toString());
-        File characterFile = new File(playerDir, this.characterUUID + ".yml");
+		File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(),
+				this.player.getUniqueId().toString());
+		File characterFile = new File(playerDir, this.characterUUID + ".yml");
 
-        if (!characterFile.exists()) {
-            SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager attempted to load character data from a file that does not exist: " + this.characterUUID);
-            return;
-        }
+		if (!characterFile.exists()) {
+			SneakyCharacterManager.getInstance().getLogger()
+					.severe("SneakyCharacterManager attempted to load character data from a file that does not exist: "
+							+ this.characterUUID);
+			return;
+		}
 
-        if (CharacterLoader.loadCharacter(this)) {
-            YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
+		if (CharacterLoader.loadCharacter(this)) {
+			YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
 
-            if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageLocations", true)) {
-                Location playerLocation = config.getLocation("location");
-                if (playerLocation == null)
-                    playerLocation = this.player.getLocation(); //No config location? Leave where they are
-        
-                Entity vehicle = this.player.getVehicle();
-        
-                List<Entity> passengers = this.player.getPassengers();
+			if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageLocations", true)) {
+				Location playerLocation = config.getLocation("location");
+				if (playerLocation == null)
+					playerLocation = this.player.getLocation(); // No config location? Leave where they are
 
-                if (vehicle != null) {
-                    vehicle.removePassenger(this.player);
-                }
-                
-                if (passengers.size() > 0) {
-                    for (Entity passenger : passengers) {
-                        if (passenger.getType() != EntityType.TEXT_DISPLAY) {
-                            this.player.removePassenger(passenger);
-                        }
-                    }
-                }
-        
-                this.player.teleport(playerLocation.add(0, 1, 0));
-            }
-    
-            if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
-                if (config.getString("inventory") != null) {
-                    ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
-                    this.player.getInventory().setContents(inventoryContents);
-                }
-            }
+				Entity vehicle = this.player.getVehicle();
 
-            characterMap.put(this.player, this);
-            ConsoleCommandCharDisable.playerCharEnable(this.player.getUniqueId().toString());
-        }
+				List<Entity> passengers = this.player.getPassengers();
 
-    }
+				if (vehicle != null) {
+					vehicle.removePassenger(this.player);
+				}
 
-    public Player getPlayer() {
-        return this.player;
-    }
+				if (passengers.size() > 0) {
+					for (Entity passenger : passengers) {
+						if (passenger.getType() != EntityType.TEXT_DISPLAY) {
+							this.player.removePassenger(passenger);
+						}
+					}
+				}
 
-    public String getCharacterUUID() {
-        return this.characterUUID;
-    }
+				this.player.teleport(playerLocation.add(0, 1, 0));
+			}
 
-    public String getName() {
-        return this.name;
-    }
+			if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
+				if (config.getString("inventory") != null) {
+					ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
+					this.player.getInventory().setContents(inventoryContents);
+				}
+			}
 
-    public void setName(String name) { this.name = name; }
+			characterMap.put(this.player, this);
+			ConsoleCommandCharDisable.playerCharEnable(this.player.getUniqueId().toString());
+		}
 
-    public String getNameUnformatted() {
-        Pattern pattern = Pattern.compile("<[^>]*>|&[0-9A-FK-ORa-fk-or]");
-        Matcher matcher = pattern.matcher(this.name);
-        return matcher.replaceAll("");
-    }
+	}
 
-    public String getSkin() {
-        return this.skin;
-    }
+	public Player getPlayer() {
+		return this.player;
+	}
 
-    public void setSkin(String skin) {
-        this.skin = skin;
-    }
-    
-    public boolean isSlim() {
-        return this.slim;
-    }
+	public String getCharacterUUID() {
+		return this.characterUUID;
+	}
 
-    public List<String> getTags() {
-        return this.tags;
-    }
+	public String getName() {
+		return this.name;
+	}
 
-    public void setTags(List<String> tags) {
-        this.tags = tags;
-    }
+	public void setName(String name) {
+		this.name = name;
+	}
 
-    public String getTagsJoined() {
-        return String.join(",", this.tags);
-    }
+	public String getNameUnformatted() {
+		Pattern pattern = Pattern.compile("<[^>]*>|&[0-9A-FK-ORa-fk-or]");
+		Matcher matcher = pattern.matcher(this.name);
+		return matcher.replaceAll("");
+	}
 
-    public boolean hasTag(String tag) {
-        return this.tags.contains(tag.toLowerCase());
-    }
+	public String getSkin() {
+		return this.skin;
+	}
 
-    public void setSlim(boolean slim) {
-        this.slim = slim;
-    }
+	public void setSkin(String skin) {
+		this.skin = skin;
+	}
 
-    public void setFirstLoad(boolean firstLoad) {
-        this.firstLoad = firstLoad;
-    }
-    
-    public boolean isFirstLoad() {
-        return this.firstLoad;
-    }
+	public boolean isSlim() {
+		return this.slim;
+	}
 
-    public void save() {
-        File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), this.player.getUniqueId().toString());
+	public JsonObject getTags() {
+		return this.tags;
+	}
 
-        if (!playerDir.exists()) {
-            playerDir.mkdirs();
-        }
+	public String getTagsAsString() {
+		return this.tags.isEmpty() ? "{}" : this.tags.toString();
+	}
 
-        File characterFile = new File(playerDir, this.characterUUID + ".yml");
+	public String tagValue(String key) {
+		return this.tags.get(key).getAsJsonPrimitive().getAsString();
+	}
 
-        YamlConfiguration config = new YamlConfiguration();
+	public Boolean hasTag(String key) {
+		return this.tags.keySet().contains(key);
+	}
 
-        Location playerLocation = this.player.getLocation();
-        config.set("location", playerLocation);
+	public void setSlim(boolean slim) {
+		this.slim = slim;
+	}
 
-        if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
-            String inventoryB64 = InventoryUtility.inventoryToBase64(this.player.getInventory());
-            config.set("inventory", inventoryB64);
-        }
+	public void setFirstLoad(boolean firstLoad) {
+		this.firstLoad = firstLoad;
+	}
 
-        try {
-            config.save(characterFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+	public boolean isFirstLoad() {
+		return this.firstLoad;
+	}
 
-    @Nullable
-    public static Character get(Player player) {
-        return characterMap.get(player);
-    }
+	public void save() {
+		File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(),
+				this.player.getUniqueId().toString());
 
-    public static Collection<Character> getAll() {
-        return characterMap.values();
-    }
+		if (!playerDir.exists()) {
+			playerDir.mkdirs();
+		}
 
-    public static void remove(Player player) {
-        characterMap.remove(player);
-    }
+		File characterFile = new File(playerDir, this.characterUUID + ".yml");
 
-    public static void saveAll() {
-        for (Player player : characterMap.keySet()) {
-            if (player.isOnline()) {
-                Character character = get(player);
-                if (character != null) character.save();
-            } else {
-                SneakyCharacterManager.getInstance().getLogger().severe("SneakyCharacterManager found an offline player on the characterMap. They have been removed, but this should never happen: " + player.getName());
-                characterMap.remove(player);
-            }
-        }
-    }
+		YamlConfiguration config = new YamlConfiguration();
 
-    public static boolean isPlayedMapped(Player player) {
-        return characterMap.containsKey(player);
-    }
+		Location playerLocation = this.player.getLocation();
+		config.set("location", playerLocation);
 
-    public static boolean canPlayerLoadCharacter(Player player, String characterUUID) {
-        if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".admin.bypass.characterlocks")) return true;
+		if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
+			String inventoryB64 = InventoryUtility.inventoryToBase64(this.player.getInventory());
+			config.set("inventory", inventoryB64);
+		}
 
-        Boolean characterPerm = null;
-        for (PermissionAttachmentInfo permission : player.getEffectivePermissions()) {
-            if (permission.getPermission().equals(SneakyCharacterManager.IDENTIFIER + ".character." + characterUUID)) {
-                characterPerm = permission.getValue();
-            }
-        }
+		try {
+			config.save(characterFile);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
-        if (
-            (characterPerm == null && !player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".character.*")) ||
-            (characterPerm != null && !characterPerm)
-        ) {
-            return false;
-        }
+	@Nullable
+	public static Character get(Player player) {
+		return characterMap.get(player);
+	}
 
-        return true;
-    }
+	public static Collection<Character> getAll() {
+		return characterMap.values();
+	}
 
+	public static void remove(Player player) {
+		characterMap.remove(player);
+	}
+
+	public static void saveAll() {
+		for (Player player : characterMap.keySet()) {
+			if (player.isOnline()) {
+				Character character = get(player);
+				if (character != null)
+					character.save();
+			} else {
+				SneakyCharacterManager.getInstance().getLogger().severe(
+						"SneakyCharacterManager found an offline player on the characterMap. They have been removed, but this should never happen: "
+								+ player.getName());
+				characterMap.remove(player);
+			}
+		}
+	}
+
+	public static boolean isPlayedMapped(Player player) {
+		return characterMap.containsKey(player);
+	}
+
+	public static boolean canPlayerLoadCharacter(Player player, String characterUUID) {
+		if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".admin.bypass.characterlocks"))
+			return true;
+
+		Boolean characterPerm = null;
+		for (PermissionAttachmentInfo permission : player.getEffectivePermissions()) {
+			if (permission.getPermission().equals(SneakyCharacterManager.IDENTIFIER + ".character." + characterUUID)) {
+				characterPerm = permission.getValue();
+			}
+		}
+
+		if ((characterPerm == null && !player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".character.*")) ||
+				(characterPerm != null && !characterPerm)) {
+			return false;
+		}
+
+		return true;
+	}
 }

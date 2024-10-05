@@ -9,52 +9,56 @@ import net.sneakycharactermanager.paper.handlers.character.Character;
 
 public class Placeholders extends PlaceholderExpansion {
 
-    public Placeholders() {}
+	public Placeholders() {
+	}
 
-    @Override
-    public @NotNull String getIdentifier() {
-        return SneakyCharacterManager.IDENTIFIER;
-    }
+	@Override
+	public @NotNull String getIdentifier() {
+		return SneakyCharacterManager.IDENTIFIER;
+	}
 
-    @Override
-    public @NotNull String getAuthor() {
-        return SneakyCharacterManager.AUTHORS;
-    }
+	@Override
+	public @NotNull String getAuthor() {
+		return SneakyCharacterManager.AUTHORS;
+	}
 
-    @Override
-    public @NotNull String getVersion() {
-        return SneakyCharacterManager.VERSION;
-    }
-    
-    @Override
-    public boolean persist() {
-        return true;
-    }
+	@Override
+	public @NotNull String getVersion() {
+		return SneakyCharacterManager.VERSION;
+	}
 
-    @Override
-    public String onPlaceholderRequest(Player player, String params) {
-        Character character = Character.get(player);
-        if (character == null) return "";
+	@Override
+	public boolean persist() {
+		return true;
+	}
 
-        String placeholder = params.toLowerCase();
+	@Override
+	public String onPlaceholderRequest(Player player, String params) {
+		Character character = Character.get(player);
+		if (character == null)
+			return "";
 
-        if (placeholder.equals("character_uuid")) {
-            return character.getCharacterUUID();
-        } else if (placeholder.equals("character_name")) {
-            return character.getName();
-        } else if (placeholder.equals("character_name_noformat")) {
-            return character.getNameUnformatted();
-        } else if (placeholder.equals("character_skin")) {
-            return character.getSkin();
-        } else if (placeholder.equals("character_slim")) {
-            return character.isSlim() + "";
-        } else if (placeholder.equals("character_tags")) {
-            return character.getTagsJoined();
-        } else if (placeholder.startsWith("character_hastag_")) {
-            return character.hasTag(placeholder.replace("character_hastag_", "")) + "";
-        }
+		String placeholder = params.toLowerCase();
 
-        return null;
-    }
-    
+		if (placeholder.equals("character_uuid")) {
+			return character.getCharacterUUID();
+		} else if (placeholder.equals("character_name")) {
+			return character.getName();
+		} else if (placeholder.equals("character_name_noformat")) {
+			return character.getNameUnformatted();
+		} else if (placeholder.equals("character_skin")) {
+			return character.getSkin();
+		} else if (placeholder.equals("character_slim")) {
+			return character.isSlim() + "";
+		} else if (placeholder.equals("character_tags")) {
+			return character.getTagsAsString();
+		} else if (placeholder.startsWith("character_hastag_")) {
+			return character.hasTag(placeholder.replace("character_hastag_", "")) + "";
+		} else if (placeholder.startsWith("character_tag_")) {
+			return character.tagValue(placeholder);
+		}
+
+		return null;
+	}
+
 }

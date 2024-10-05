@@ -265,7 +265,7 @@ public class PlayerData {
         }
     }
 
-    public void setCharacterTags(String characterUUID, List<String> tags) {
+    public void setCharacterTags(String characterUUID, String tags) {
         Character character = this.characterMap.get(characterUUID);
 
         if (character == null) {
