@@ -204,7 +204,7 @@ public class Character {
 	}
 
 	public String tagValue(String key) {
-		return this.tags.get(key).getAsJsonPrimitive().getAsString();
+		return this.tags.get(key) != null ? this.tags.get(key).getAsJsonPrimitive().getAsString() : "";
 	}
 
 	public Boolean hasTag(String key) {

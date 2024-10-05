@@ -55,7 +55,7 @@ public class Placeholders extends PlaceholderExpansion {
 		} else if (placeholder.startsWith("character_hastag_")) {
 			return character.hasTag(placeholder.replace("character_hastag_", "")) + "";
 		} else if (placeholder.startsWith("character_tag_")) {
-			return character.tagValue(placeholder);
+			return character.tagValue(placeholder.replace("character_tag_", ""));
 		}
 
 		return null;
