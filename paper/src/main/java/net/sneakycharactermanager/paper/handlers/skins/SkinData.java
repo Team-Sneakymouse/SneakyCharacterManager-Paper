@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.sneakycharactermanager.paper.util.ChatUtility;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -273,7 +274,13 @@ public class SkinData {
     }
 
     public boolean isProcessed() {
-        return (isValid() || this.attempts > 5);
+        if (this.attempts > 5) {
+            if (!cancelled) player.sendMessage(ChatUtility.convertToComponent("&4Your last skin request has failed 5 times and has been removed from the queue. This is likely a problem with an external web server and there's nothing we can do but wait."));
+            cancelled = true;
+
+            return true;
+        }
+        return isValid();
     }
 
     public void cancel() {
