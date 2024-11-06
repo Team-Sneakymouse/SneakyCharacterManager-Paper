@@ -275,7 +275,7 @@ public class SkinData {
 
     public boolean isProcessed() {
         if (this.attempts > 5) {
-            if (!cancelled) player.sendMessage(ChatUtility.convertToComponent("&4Your last skin request has failed 5 times and has been removed from the queue. This is likely a problem with an external web server and there's nothing we can do but wait."));
+            if (!cancelled && this.priority > 0 && this.skullMeta == null) player.sendMessage(ChatUtility.convertToComponent("&4Skin application failed. Problem with external web server."));
             cancelled = true;
 
             return true;
