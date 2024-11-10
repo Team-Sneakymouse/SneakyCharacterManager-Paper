@@ -16,12 +16,15 @@ import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
 
@@ -44,7 +47,9 @@ import net.sneakycharactermanager.paper.util.ChatUtility;
 public class CommandUniform extends CommandBaseAdmin {
 
     private static final String IMGUR_API_URL = SneakyCharacterManager.getInstance().getConfig().getString("imgurApiUrl", "https://api.imgur.com/3/image");
-    private static final String IMGUR_CLIENT_ID = SneakyCharacterManager.getInstance().getConfig().getString("imgurClientId", null);;
+    private static final String IMGUR_CLIENT_ID = SneakyCharacterManager.getInstance().getConfig().getString("imgurClientId", null);
+    private static final String WEBSERVER_URL_PREFIX = SneakyCharacterManager.getInstance().getConfig().getString("webServerURLPrefix", null);
+    private static final String WEBSERVER_PATH = SneakyCharacterManager.getInstance().getConfig().getString("webServerFolderPath", null);
 
     ConcurrentMap<String, File> uniforms = new ConcurrentHashMap<>();
     ConcurrentMap<String, File> uniforms_classic = new ConcurrentHashMap<>();
@@ -54,13 +59,13 @@ public class CommandUniform extends CommandBaseAdmin {
         super("uniform");
         this.description = "Apply a uniform to your current skin. The uniform will not be saved to your character.";
         this.setUsage("/" +  this.getName() + " [playerName] (uniform)");
-        this.updateUniforms();
+        Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), this::updateUniforms, 200);
     }
 
     @Override
     public boolean execute(CommandSender sender, String commandLabel, String[] args) {
-        if (IMGUR_CLIENT_ID == null || IMGUR_CLIENT_ID.isEmpty()) {
-            sender.sendMessage(ChatUtility.convertToComponent("&4You must set an imgur API client id in the config.yml file to use this command."));
+        if ((IMGUR_CLIENT_ID == null || IMGUR_CLIENT_ID.isEmpty()) && (WEBSERVER_URL_PREFIX == null || WEBSERVER_URL_PREFIX.isEmpty() || WEBSERVER_PATH == null || WEBSERVER_PATH.isEmpty())) {
+            sender.sendMessage(ChatUtility.convertToComponent("&4You must set an imgur API client id or a webserver prefix and path in the config.yml file to use this command."));
             return false;
         }
 
@@ -176,50 +181,79 @@ public class CommandUniform extends CommandBaseAdmin {
                                 }
                             }
 
-                            // Convert the merged images into a ByteArray
-                            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                            ImageIO.write(combined, "png", byteArrayOutputStream);
-                            byte[] imageBytes = byteArrayOutputStream.toByteArray();
-                            String dataImage = Base64.getEncoder().encodeToString(imageBytes);
-                            String data = URLEncoder.encode("image", "UTF-8") + "="
-                            + URLEncoder.encode(dataImage, "UTF-8");
+                            boolean succes = false;
+                            String url = null;
 
-                            // Upload image to Imgur
-                            URL imgurUrl = new URL(IMGUR_API_URL);
-                            HttpURLConnection imgurConnection = (HttpURLConnection) imgurUrl.openConnection();
-                            imgurConnection.setRequestMethod("POST");
-                            imgurConnection.setDoOutput(true);
-                            imgurConnection.setRequestProperty("Authorization", "Client-ID " + IMGUR_CLIENT_ID);
-                            imgurConnection.setRequestMethod("POST");
-                            imgurConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                            if (WEBSERVER_PATH != null && !WEBSERVER_PATH.isEmpty() && WEBSERVER_URL_PREFIX != null && !WEBSERVER_URL_PREFIX.isEmpty()) {
+                                String randomFileName = UUID.randomUUID() + ".png";
+                                File outputFile = new File(WEBSERVER_PATH, randomFileName);
 
-                            imgurConnection.connect();
-                            
-                            OutputStreamWriter wr = new OutputStreamWriter(imgurConnection.getOutputStream());
-                            wr.write(data);
-                            wr.flush();
+                                try {
+                                    ImageIO.write(combined, "PNG", outputFile);
+                                    succes = true;
+                                    url = WEBSERVER_URL_PREFIX + randomFileName;
 
-                            // Check response and build response json
-                            int imgurResponsecode = imgurConnection.getResponseCode();
-                            if (imgurResponsecode == 200) {
-                                BufferedReader imgurReader = new BufferedReader(new InputStreamReader(imgurConnection.getInputStream()));
-                                StringBuilder imgurResponseBuilder = new StringBuilder();
-                                String line;
-                                while ((line = imgurReader.readLine()) != null) {
-                                    imgurResponseBuilder.append(line);
+                                    Bukkit.getAsyncScheduler().runDelayed(SneakyCharacterManager.getInstance(), (z) -> {
+                                        try {
+                                            Files.deleteIfExists(outputFile.toPath());
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }, 60, TimeUnit.SECONDS);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                    return;
                                 }
+                            } else if (IMGUR_CLIENT_ID != null && !IMGUR_CLIENT_ID.isEmpty() && IMGUR_API_URL != null && !IMGUR_API_URL.isEmpty()) {
+                                // Convert the merged images into a ByteArray
+                                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                                ImageIO.write(combined, "png", byteArrayOutputStream);
+                                byte[] imageBytes = byteArrayOutputStream.toByteArray();
+                                String dataImage = Base64.getEncoder().encodeToString(imageBytes);
+                                String data = URLEncoder.encode("image", "UTF-8") + "="
+                                        + URLEncoder.encode(dataImage, "UTF-8");
 
-                                String imgurResponse = imgurResponseBuilder.toString();
+                                // Upload image to Imgur
+                                URL imgurUrl = new URL(IMGUR_API_URL);
+                                HttpURLConnection imgurConnection = (HttpURLConnection) imgurUrl.openConnection();
+                                imgurConnection.setRequestMethod("POST");
+                                imgurConnection.setDoOutput(true);
+                                imgurConnection.setRequestProperty("Authorization", "Client-ID " + IMGUR_CLIENT_ID);
+                                imgurConnection.setRequestMethod("POST");
+                                imgurConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 
-                                // Grab the response URL
-                                JSONParser parser = new JSONParser();
-                                JSONObject imgurJson = (JSONObject) parser.parse(imgurResponse);
-                                JSONObject jsonData = (JSONObject) imgurJson.get("data");
-                                String imgUrl = ((String) jsonData.get("link")).replace("\\", "");
-                                
+                                imgurConnection.connect();
+
+                                OutputStreamWriter wr = new OutputStreamWriter(imgurConnection.getOutputStream());
+                                wr.write(data);
+                                wr.flush();
+
+                                // Check response and build response json
+                                int imgurResponsecode = imgurConnection.getResponseCode();
+                                if (imgurResponsecode == 200) {
+                                    BufferedReader imgurReader = new BufferedReader(new InputStreamReader(imgurConnection.getInputStream()));
+                                    StringBuilder imgurResponseBuilder = new StringBuilder();
+                                    String line;
+                                    while ((line = imgurReader.readLine()) != null) {
+                                        imgurResponseBuilder.append(line);
+                                    }
+
+                                    String imgurResponse = imgurResponseBuilder.toString();
+
+                                    // Grab the response URL
+                                    JSONParser parser = new JSONParser();
+                                    JSONObject imgurJson = (JSONObject) parser.parse(imgurResponse);
+                                    JSONObject jsonData = (JSONObject) imgurJson.get("data");
+                                    url = ((String) jsonData.get("link")).replace("\\", "");
+                                    succes = true;
+                                }
+                            }
+
+                            if (succes && url != null) {
                                 // Make skindata and add to skinqueue
+                                String urlFinal = new String(url);
                                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                                    SkinData.getOrCreate(imgUrl, character.isSlim(), 4, player);
+                                    SkinData.getOrCreate(urlFinal, character.isSlim(), 4, player);
                                 });
                             }
                         }

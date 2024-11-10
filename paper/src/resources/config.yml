@@ -7,5 +7,7 @@ mineskinApiUrl: 'https://api.mineskin.org/generate/url'
 mineskinAuth: ''
 imgurApiUrl: 'https://api.imgur.com/3/image'
 imgurClientId: ''
+webServerFolderPath: ''
+webServerURLPrefix: ''
 bannedWords:
   - badword
