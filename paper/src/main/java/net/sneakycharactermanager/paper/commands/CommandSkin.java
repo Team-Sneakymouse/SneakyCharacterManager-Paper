@@ -124,7 +124,7 @@ public class CommandSkin extends CommandBase {
 
 		player.sendMessage(ChatUtility.convertToComponent("&aUpdating your skin!"));
 
-		CharacterLoader.updateSkin(player, url, slim);
+		CharacterLoader.updateSkin(player, character.getCharacterUUID(), url, slim);
 
 		return true;
 	}
@@ -192,7 +192,7 @@ public class CommandSkin extends CommandBase {
 							character.setSkin(textureURL);
 							character.setSlim(isSlim);
 							BungeeMessagingUtil.sendByteArray(player, "updateCharacter",
-									player.getUniqueId().toString(), 1, textureURL, isSlim);
+									player.getUniqueId().toString(), character.getCharacterUUID(), 1, textureURL, isSlim);
 							player.setPlayerProfile(profile);
 
 							Entity vehicle = player.getVehicle();

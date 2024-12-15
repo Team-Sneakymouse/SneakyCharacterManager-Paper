@@ -156,7 +156,7 @@ public class CharacterSelectionMenu implements Listener {
             if (profileProperty == null) {
                 inventory.setItem(index, characterHead);
 
-                SkinData data = SkinData.getOrCreate(character.getSkin(), character.getSkinUUID(), character.isSlim(), 1, this.opener, skullMeta, characterHead, inventory, index);
+                SkinData data = SkinData.getOrCreate(character.getSkin(), character.getSkinUUID(), character.isSlim(), 1, this.opener, character.getCharacterUUID(), skullMeta, characterHead, inventory, index);
                 this.queuedDatas.add(data);
             } else {
                 if(this.player == null){

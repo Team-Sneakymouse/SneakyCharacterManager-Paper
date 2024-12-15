@@ -76,7 +76,7 @@ public class CommandCharTag extends CommandBaseAdmin {
 			return false;
 		}
 
-		BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), 4,
+		BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), character.getCharacterUUID(), 4,
 				character.getTagsAsString());
 
 		return true;

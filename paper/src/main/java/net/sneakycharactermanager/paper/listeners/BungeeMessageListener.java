@@ -130,7 +130,7 @@ public class BungeeMessageListener implements PluginMessageListener {
 					ProfileProperty p = SkinCache.get(playerUUID, c.getSkin());
 
 					if (p == null) {
-						SkinData.getOrCreate(c.getSkin(), c.getSkinUUID(), c.isSlim(), 0, pl);
+						SkinData.getOrCreate(c.getSkin(), c.getSkinUUID(), c.isSlim(), 0, pl, c.getCharacterUUID());
 					}
 				}
 				break;

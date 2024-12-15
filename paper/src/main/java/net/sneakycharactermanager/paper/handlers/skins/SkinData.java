@@ -38,6 +38,7 @@ public class SkinData extends BukkitRunnable {
 
     private final String url;
     private String skinUUID;
+    private String characterUUID;
     private final boolean isSlim;
     private final int priority;
     final Player player;
@@ -71,22 +72,23 @@ public class SkinData extends BukkitRunnable {
      * @param url    URL to download the skin from
      * @param isSlim True if it is a slim skin, false if it is a classic skin
      */
-    private SkinData(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
+    private SkinData(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, String characterUUID, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
         this.url = url;
         this.skinUUID = skinUUID;
         this.isSlim = isSlim;
         this.priority = priority;
         this.player = player;
+        this.characterUUID = characterUUID;
         this.skullMeta = skullMeta;
         this.characterHead = characterHead;
         this.inventory = inventory;
         this.index = index;
-        this.updateSaveFile = priority == 3 || (priority == 2 && skinUUID.isEmpty());
+        this.updateSaveFile = priority <= 2 && skinUUID.isEmpty();
         SneakyCharacterManager.getInstance().skinQueue.add(this, priority);
     }
 
-    private SkinData(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player) {
-        this(url, skinUUID, isSlim, priority, player, null, null, null, 0);
+    private SkinData(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, String characterUUID) {
+        this(url, skinUUID, isSlim, priority, player, characterUUID, null, null, null, 0);
     }
 
     /**
@@ -275,7 +277,7 @@ public class SkinData extends BukkitRunnable {
                 player.teleport(player.getLocation().add(0, 1, 0));
 
                 // Priority 3 is used exclusively for /skin updates
-                if (updateSaveFile) {
+                if (priority == 3) {
                     Character character = Character.get(this.player);
 
                     if (character == null) return;
@@ -291,7 +293,7 @@ public class SkinData extends BukkitRunnable {
 
                     character.setSkin(skinURL);
                     character.setSlim(this.isSlim());
-                    BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), 1, skinURL, skinUUID, this.isSlim());
+                    BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), characterUUID, 1, skinURL, skinUUID, this.isSlim());
 
                     SkinCache.put(this.player.getUniqueId().toString(), skinURL, property);
                     return;
@@ -302,6 +304,12 @@ public class SkinData extends BukkitRunnable {
                 this.inventory.setItem(this.index, this.characterHead);
             }
         }
+
+        if (updateSaveFile) {
+            SneakyCharacterManager.getInstance().getLogger().info("Skin Update: [" + this.player.getName() + "," + player.getName() + "," + url + "]");
+            BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), characterUUID, 1, url, skinUUID, this.isSlim());
+        }
+
         SkinCache.put(this.player.getUniqueId().toString(), this.url, property);
     }
 
@@ -333,24 +341,24 @@ public class SkinData extends BukkitRunnable {
         return inventory;
     }
 
-    public static SkinData getOrCreate(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player) {
+    public static SkinData getOrCreate(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, String characterUUID) {
         List<SkinData> skinDataList = SneakyCharacterManager.getInstance().skinQueue.queue.values().stream().flatMap(List::stream).toList();
         for (SkinData skinData : skinDataList) {
             if (skinData.getUrl().equals(url) && skinData.getSkinUUID().equals(skinUUID) && skinData.isSlim() == isSlim && skinData.priority == priority && skinData.getPlayer().equals(player) && skinData.getSkullMeta() == null && skinData.getCharacterHead() == null && skinData.getInventory() == null && skinData.index == 0) {
                 return skinData;
             }
         }
-        return new SkinData(url, skinUUID, isSlim, priority, player);
+        return new SkinData(url, skinUUID, isSlim, priority, player, characterUUID);
     }
 
-    public static SkinData getOrCreate(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
+    public static SkinData getOrCreate(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, String  characterUUID, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
         List<SkinData> skinDataList = SneakyCharacterManager.getInstance().skinQueue.queue.values().stream().flatMap(List::stream).toList();
         for (SkinData skinData : skinDataList) {
             if (skinData.getUrl().equals(url) && skinData.getSkinUUID().equals(skinUUID) && skinData.isSlim() == isSlim && skinData.priority == priority && skinData.getPlayer().equals(player) && skinData.getSkullMeta().equals(skullMeta) && skinData.getCharacterHead().equals(characterHead) && skinData.getInventory().equals(inventory) && skinData.index == index) {
                 return skinData;
             }
         }
-        return new SkinData(url, skinUUID, isSlim, priority, player, skullMeta, characterHead, inventory, index);
+        return new SkinData(url, skinUUID, isSlim, priority, player, characterUUID, skullMeta, characterHead, inventory, index);
     }
 
 }

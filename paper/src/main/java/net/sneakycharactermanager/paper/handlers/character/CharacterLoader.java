@@ -52,7 +52,7 @@ public class CharacterLoader {
 
 			if (profileProperty == null) {
 				if (!shouldSkipLoading(character)) {
-					SkinData.getOrCreate(url, skinUUID, character.isSlim(), 2, player);
+					SkinData.getOrCreate(url, skinUUID, character.isSlim(), 2, player, character.getCharacterUUID());
 				}
 			} else {
 				player.setPlayerProfile(SkinUtil.handleCachedSkin(player, profileProperty));
@@ -83,20 +83,20 @@ public class CharacterLoader {
 		return false;
 	}
 
-	public static void updateSkin(Player player, String url, Boolean slim) {
+	public static void updateSkin(Player player, String characterUUID, String url, Boolean slim) {
 		PlayerProfile playerProfile = player.getPlayerProfile();
 
 		if (slim == null) {
 			Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
 				checkSlimThenSetSkin(url,
-						playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM), player);
+						playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM), player, characterUUID);
 			});
 		} else {
-			SkinData.getOrCreate(url, "", slim, 3, player);
+			SkinData.getOrCreate(url, "", slim, 3, player, characterUUID);
 		}
 	}
 
-	private static void checkSlimThenSetSkin(String url, boolean slim, Player player) {
+	private static void checkSlimThenSetSkin(String url, boolean slim, Player player, String characterUUID) {
 		try {
 			HttpClient httpClient = HttpClient.newHttpClient();
 			HttpRequest request = HttpRequest.newBuilder().uri(
@@ -127,7 +127,7 @@ public class CharacterLoader {
 
 		final boolean slimFinal = slim;
 		Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-			SkinData.getOrCreate(url, "", slimFinal, 3, player);
+			SkinData.getOrCreate(url, "", slimFinal, 3, player, characterUUID);
 		});
 	}
 

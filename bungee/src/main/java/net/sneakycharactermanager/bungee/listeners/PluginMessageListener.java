@@ -127,14 +127,14 @@ public class PluginMessageListener implements Listener {
 			case "updateCharacter":
 				playerUUID = messageIn.readUTF();
 				playerData = PlayerData.get(playerUUID);
-				String lastPlayed = playerData.getLastPlayedCharacter();
+				String characterUUID = messageIn.readUTF();
 				int type = messageIn.readInt();
 				switch (type) {
 					case 1: // Updating Skin
-						playerData.setCharacterSkin(lastPlayed, messageIn.readUTF(), messageIn.readUTF(), messageIn.readBoolean());
+						playerData.setCharacterSkin(characterUUID, messageIn.readUTF(), messageIn.readUTF(), messageIn.readBoolean());
 						break;
 					case 2: // Updating Name
-						playerData.setCharacterName(lastPlayed, messageIn.readUTF());
+						playerData.setCharacterName(characterUUID, messageIn.readUTF());
 						playerData.updateCharacterList(serverInfo);
 						break;
 					case 3: // Updating enabled
@@ -142,13 +142,13 @@ public class PluginMessageListener implements Listener {
 						// change the enabled state of their current character, so it does nothing.
 						break;
 					case 4: // Updating Tags
-						playerData.setCharacterTags(lastPlayed, messageIn.readUTF());
+						playerData.setCharacterTags(characterUUID, messageIn.readUTF());
 						break;
 				}
 				break;
 			case "defaultSkin":
 				playerUUID = messageIn.readUTF();
-				String characterUUID = messageIn.readUTF();
+				characterUUID = messageIn.readUTF();
 				String url = messageIn.readUTF();
 				String skinUUID = messageIn.readUTF();
 				boolean slim = messageIn.readBoolean();
