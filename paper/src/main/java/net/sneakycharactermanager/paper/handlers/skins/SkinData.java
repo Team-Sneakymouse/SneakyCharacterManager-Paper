@@ -61,7 +61,7 @@ public class SkinData extends BukkitRunnable {
     /**
      * Load custom skill data from a normal web URL.
      * Things to note:
-     * RUN THIS ASYNC.. It will freeze the server while it makes an HTTP request and
+     * RUN THIS ASYNC. It will freeze the server while it makes an HTTP request and
      * so
      * to avoid over freezing the server with too many character changes using
      * "Bukkit.getAsyncScheduler().runNow(...)" is a good idea.
@@ -80,6 +80,7 @@ public class SkinData extends BukkitRunnable {
         this.inventory = inventory;
         this.index = index;
         SneakyCharacterManager.getInstance().skinQueue.add(this, priority);
+        skinDataList.add(this);
     }
 
     private SkinData(@NotNull String url, boolean isSlim, int priority, Player player) {
@@ -126,8 +127,8 @@ public class SkinData extends BukkitRunnable {
                     JSONObject jobObject = (JSONObject) result.get("job");
 
                     if (jobObject == null || jobObject.get("id") == null) {
-                        SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API did not return a job ID.");
-                        this.cancel();
+                        //SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API did not return a job ID.");
+                        //this.cancel();
                     } else {
                         jobid = jobObject.get("id").toString();
                     }
@@ -135,6 +136,7 @@ public class SkinData extends BukkitRunnable {
             } catch (IOException | URISyntaxException | ParseException e) {
                 SneakyCharacterManager.getInstance().getLogger().severe("Something went very wrong!");
                 e.printStackTrace();
+                this.cancel();
             }
         } else {
             try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
@@ -172,15 +174,24 @@ public class SkinData extends BukkitRunnable {
                         }
                     } else {
                         SneakyCharacterManager.getInstance().getLogger().severe("Mineskin API returned an Error: Job check failed or job does not exist.");
+                        this.cancel();
                     }
                 } else {
                     SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + statusCode);
+                    this.cancel();
                 }
             } catch (Exception e) {
                 SneakyCharacterManager.getInstance().getLogger().severe("Something went very wrong!");
                 e.printStackTrace();
+                this.cancel();
             }
         }
+    }
+
+    @Override
+    public void cancel() {
+        skinDataList.remove(this);
+        super.cancel();
     }
 
     /**
