@@ -36,24 +36,25 @@ public class Character {
 
 	private static Map<Player, Character> characterMap = new HashMap<>();
 
-	private Player player;
+	private final Player player;
 	private String characterUUID;
 	private String name;
 	private String skin;
+	private String skinUUID;
 	private boolean slim;
 	private JsonObject tags = null;
 
 	private boolean firstLoad = false;
 
-	public Character(String playerUUID, String characterUUID, String characterName, String skin, boolean slim,
+	public Character(String playerUUID, String characterUUID, String characterName, String skin, String skinUUID, boolean slim,
 			String tags) {
 		this.player = Bukkit.getPlayer(UUID.fromString(playerUUID));
-		this.characterUUID = characterUUID;
 		this.name = characterName;
+		this.characterUUID = characterUUID;
 		this.skin = skin;
+		this.skinUUID = skinUUID;
 		this.slim = slim;
 		this.tags = tags.isEmpty() ? new JsonObject() : JsonParser.parseString(tags).getAsJsonObject();
-		;
 
 		File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID);
 		boolean firstLogin = false;
@@ -189,6 +190,14 @@ public class Character {
 
 	public void setSkin(String skin) {
 		this.skin = skin;
+	}
+
+	public String getSkinUUID() {
+		return this.skinUUID;
+	}
+
+	public void setSkinUUID(String skinUUID) {
+		this.skinUUID = skinUUID;
 	}
 
 	public boolean isSlim() {

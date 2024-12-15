@@ -91,7 +91,7 @@ public class CommandUniform extends CommandBaseAdmin {
         }
 
         if (args.length == 1) {
-            SkinData.getOrCreate(character.getSkin(), character.isSlim(), 4, player);
+            SkinData.getOrCreate(character.getSkin(), character.getSkinUUID(), character.isSlim(), 4, player);
             return true;
         } else if (args.length > 2) {
             sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
@@ -253,7 +253,7 @@ public class CommandUniform extends CommandBaseAdmin {
                                 // Make skindata and add to skinqueue
                                 String urlFinal = new String(url);
                                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                                    SkinData.getOrCreate(urlFinal, character.isSlim(), 4, player);
+                                    SkinData.getOrCreate(urlFinal, "", character.isSlim(), 4, player);
                                 });
                             }
                         }

@@ -148,6 +148,7 @@ public class PaperMessagingUtil {
 		out.writeUTF(character.getUUID());
 		out.writeUTF(character.getName());
 		out.writeUTF(character.getSkin());
+		out.writeUTF(character.getSkinUUID());
 		out.writeBoolean(character.isSlim());
 		out.writeUTF(character.getTags());
 	}

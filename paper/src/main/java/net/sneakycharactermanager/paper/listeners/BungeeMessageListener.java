@@ -130,7 +130,7 @@ public class BungeeMessageListener implements PluginMessageListener {
 					ProfileProperty p = SkinCache.get(playerUUID, c.getSkin());
 
 					if (p == null) {
-						SkinData.getOrCreate(c.getSkin(), c.isSlim(), 0, pl);
+						SkinData.getOrCreate(c.getSkin(), c.getSkinUUID(), c.isSlim(), 0, pl);
 					}
 				}
 				break;
@@ -231,9 +231,10 @@ public class BungeeMessageListener implements PluginMessageListener {
 		String uuid = in.readUTF();
 		String name = in.readUTF();
 		String skin = in.readUTF();
+		String skinUUID = in.readUTF();
 		boolean slim = in.readBoolean();
 		String tags = in.readUTF();
-		return new Character(playerUUID, uuid, name, skin, slim, tags);
+		return new Character(playerUUID, uuid, name, skin, skinUUID, slim, tags);
 	}
 
 }

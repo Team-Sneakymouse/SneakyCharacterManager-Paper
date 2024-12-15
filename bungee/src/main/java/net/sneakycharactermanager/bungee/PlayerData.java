@@ -57,9 +57,11 @@ public class PlayerData {
             if (playerUUID.equals("template")) {
                 section.set("name", "template");
                 section.set("skin", "http://textures.minecraft.net/texture/b90696ebc74ce7a900ec8abeec0dc1ccb3534c1b8ba6cbd9e83c5cd7f381fb48");
+                section.set("skinUUID", "");
             } else {
                 section.set("name", ProxyServer.getInstance().getPlayer(UUID.fromString(playerUUID)).getName());
                 section.set("skin", "");
+                section.set("skinUUID", "");
             }
             section.set("slim", false);
             section.set("tags", new ArrayList<String>());
@@ -185,16 +187,17 @@ public class PlayerData {
             UUID.randomUUID().toString(),
             name,
             "",
+            "",
             false
         );
     }
 
-    public String createNewCharacter(String uuid, String name, String skin, boolean slim) {
+    public String createNewCharacter(String uuid, String name, String skin, String skinUUID, boolean slim) {
         if (!loadConfig()){
             SneakyCharacterManager.getInstance().getLogger().severe("Failed to load config! (Create new Character)");
             return null;
         }
-        Character character = new Character(uuid, name, skin, slim);
+        Character character = new Character(uuid, name, skin, skinUUID, slim);
 
         this.characterMap.put(character.getUUID(), character);
 
@@ -202,6 +205,7 @@ public class PlayerData {
         section.set("enabled", character.isEnabled());
         section.set("name", character.getName());
         section.set("skin", character.getSkin());
+        section.set("skinUUID", character.getSkinUUID());
         section.set("slim", character.isSlim());
         section.set("tags", character.getTags());
 
@@ -220,6 +224,7 @@ public class PlayerData {
         section.set("enabled", character.isEnabled());
         section.set("name", character.getName());
         section.set("skin", character.getSkin());
+        section.set("skinUUID", character.getSkinUUID());
         section.set("slim", character.isSlim());
         section.set("tags", character.getTags());
 
@@ -228,13 +233,14 @@ public class PlayerData {
         saveConfig();
     }
 
-    public void setCharacterSkin(String characterUUID, String skin, boolean slim) {
+    public void setCharacterSkin(String characterUUID, String skin, String skinUUID, boolean slim) {
         Character character = this.characterMap.get(characterUUID);
 
         if (character == null) {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to reskin a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
         } else {
             character.setSkin(skin);
+            character.setSkinUUID(skinUUID);
             character.setSlim(slim);
             this.characterMap.put(characterUUID, character);
             this.updateCharacterInYaml(character);

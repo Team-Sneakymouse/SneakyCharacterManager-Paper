@@ -131,7 +131,7 @@ public class PluginMessageListener implements Listener {
 				int type = messageIn.readInt();
 				switch (type) {
 					case 1: // Updating Skin
-						playerData.setCharacterSkin(lastPlayed, messageIn.readUTF(), messageIn.readBoolean());
+						playerData.setCharacterSkin(lastPlayed, messageIn.readUTF(), messageIn.readUTF(), messageIn.readBoolean());
 						break;
 					case 2: // Updating Name
 						playerData.setCharacterName(lastPlayed, messageIn.readUTF());
@@ -150,9 +150,10 @@ public class PluginMessageListener implements Listener {
 				playerUUID = messageIn.readUTF();
 				String characterUUID = messageIn.readUTF();
 				String url = messageIn.readUTF();
+				String skinUUID = messageIn.readUTF();
 				boolean slim = messageIn.readBoolean();
 				playerData = PlayerData.get(playerUUID);
-				playerData.setCharacterSkin(characterUUID, url, slim);
+				playerData.setCharacterSkin(characterUUID, url, skinUUID, slim);
 				break;
 			case "createNewCharacter":
 				playerUUID = messageIn.readUTF();
@@ -178,11 +179,12 @@ public class PluginMessageListener implements Listener {
 				String characterID = messageIn.readUTF();
 				String characterName = messageIn.readUTF();
 				String characterSkin = messageIn.readUTF();
+				skinUUID = messageIn.readUTF();
 				boolean characterSlim = messageIn.readBoolean();
 
 				playerData = PlayerData.get("template");
 
-				playerData.createNewCharacter(characterID, characterName, characterSkin, characterSlim);
+				playerData.createNewCharacter(characterID, characterName, characterSkin, skinUUID, characterSlim);
 
 				break;
 

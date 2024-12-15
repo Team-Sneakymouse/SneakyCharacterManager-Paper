@@ -29,6 +29,7 @@ public class CharacterLoader {
 
 	public static boolean loadCharacter(Character character) {
 		String url = character.getSkin();
+		String skinUUID = character.getSkinUUID();
 		Player player = character.getPlayer();
 
 		LoadCharacterEvent event = new LoadCharacterEvent(
@@ -51,7 +52,7 @@ public class CharacterLoader {
 
 			if (profileProperty == null) {
 				if (!shouldSkipLoading(character)) {
-					SkinData.getOrCreate(url, character.isSlim(), 2, player);
+					SkinData.getOrCreate(url, skinUUID, character.isSlim(), 2, player);
 				}
 			} else {
 				player.setPlayerProfile(SkinUtil.handleCachedSkin(player, profileProperty));
@@ -91,7 +92,7 @@ public class CharacterLoader {
 						playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM), player);
 			});
 		} else {
-			SkinData.getOrCreate(url, slim, 3, player);
+			SkinData.getOrCreate(url, "", slim, 3, player);
 		}
 	}
 
@@ -126,7 +127,7 @@ public class CharacterLoader {
 
 		final boolean slimFinal = slim;
 		Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-			SkinData.getOrCreate(url, slimFinal, 3, player);
+			SkinData.getOrCreate(url, "", slimFinal, 3, player);
 		});
 	}
 
