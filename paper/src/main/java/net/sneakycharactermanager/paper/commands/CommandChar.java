@@ -35,7 +35,7 @@ public class CommandChar extends CommandBase {
                 if (deleteConfirmationMap.containsKey(player)) {
                     String[] s = deleteConfirmationMap.get(player).split(";");
                     if (System.currentTimeMillis() < Long.valueOf(s[0]) + 10000) {
-                        BungeeMessagingUtil.sendByteArray(player, "deleteCharacter", player.getUniqueId().toString(), s[1]);
+                        BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), s[1], 3, false);
                         sender.sendMessage(ChatUtility.convertToComponent("&aDeleting character..."));
                         deleteConfirmationMap.remove(player);
                         return true;
