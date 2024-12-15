@@ -32,7 +32,6 @@ import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 
 public class SkinData extends BukkitRunnable {
@@ -50,9 +49,8 @@ public class SkinData extends BukkitRunnable {
     private String texture;
     private String signature;
     private boolean isValid = false;
+    boolean processing = false;
     private String jobid = null;
-
-    private static final List<SkinData> skinDataList = new ArrayList<>();
 
     private static final String MINESKIN_QUEUE_URL = SneakyCharacterManager.getInstance().getConfig().getString("mineskinQueueUrl", "https://api.mineskin.org/v2/queue");
     private static final String MINESKIN_AUTH = SneakyCharacterManager.getInstance().getConfig().getString("mineskinAuth", null);
@@ -80,7 +78,6 @@ public class SkinData extends BukkitRunnable {
         this.inventory = inventory;
         this.index = index;
         SneakyCharacterManager.getInstance().skinQueue.add(this, priority);
-        skinDataList.add(this);
     }
 
     private SkinData(@NotNull String url, boolean isSlim, int priority, Player player) {
@@ -96,9 +93,17 @@ public class SkinData extends BukkitRunnable {
         if (MINESKIN_AUTH == null) {
             SneakyCharacterManager.getInstance().getLogger().warning("You must set a mineskin auth token in the config.yml file to apply skins.");
             this.cancel();
+            return;
+        }
+
+        if (player == null || !player.isOnline()) {
+            this.cancel();
+            return;
         }
 
         if (jobid == null) {
+            if (!processing) return;
+
             SneakyCharacterManager.getInstance().skinPreloader.requestsThisMinute++;
             // Make a request to MineSkin to change skin data!
 
@@ -127,8 +132,7 @@ public class SkinData extends BukkitRunnable {
                     JSONObject jobObject = (JSONObject) result.get("job");
 
                     if (jobObject == null || jobObject.get("id") == null) {
-                        //SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API did not return a job ID.");
-                        //this.cancel();
+                        processing = false;
                     } else {
                         jobid = jobObject.get("id").toString();
                     }
@@ -190,7 +194,7 @@ public class SkinData extends BukkitRunnable {
 
     @Override
     public void cancel() {
-        skinDataList.remove(this);
+        SneakyCharacterManager.getInstance().skinQueue.remove(this);
         super.cancel();
     }
 
@@ -274,13 +278,10 @@ public class SkinData extends BukkitRunnable {
         return inventory;
     }
 
-    public int getIndex() {
-        return index;
-    }
-
     public static SkinData getOrCreate(@NotNull String url, boolean isSlim, int priority, Player player) {
+        List<SkinData> skinDataList = SneakyCharacterManager.getInstance().skinQueue.queue.values().stream().flatMap(List::stream).toList();
         for (SkinData skinData : skinDataList) {
-            if (skinData.getUrl().equals(url) && skinData.isSlim() == isSlim && skinData.getIndex() == priority && skinData.getPlayer().equals(player) && skinData.getSkullMeta() == null && skinData.getCharacterHead() == null && skinData.getInventory() == null && skinData.index == 0) {
+            if (skinData.getUrl().equals(url) && skinData.isSlim() == isSlim && skinData.priority == priority && skinData.getPlayer().equals(player) && skinData.getSkullMeta() == null && skinData.getCharacterHead() == null && skinData.getInventory() == null && skinData.index == 0) {
                 return skinData;
             }
         }
@@ -288,8 +289,9 @@ public class SkinData extends BukkitRunnable {
     }
 
     public static SkinData getOrCreate(@NotNull String url, boolean isSlim, int priority, Player player, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
+        List<SkinData> skinDataList = SneakyCharacterManager.getInstance().skinQueue.queue.values().stream().flatMap(List::stream).toList();
         for (SkinData skinData : skinDataList) {
-            if (skinData.getUrl().equals(url) && skinData.isSlim() == isSlim && skinData.getIndex() == priority && skinData.getPlayer().equals(player) && skinData.getSkullMeta().equals(skullMeta) && skinData.getCharacterHead().equals(characterHead) && skinData.getInventory().equals(inventory) && skinData.index == index) {
+            if (skinData.getUrl().equals(url) && skinData.isSlim() == isSlim && skinData.priority == priority && skinData.getPlayer().equals(player) && skinData.getSkullMeta().equals(skullMeta) && skinData.getCharacterHead().equals(characterHead) && skinData.getInventory().equals(inventory) && skinData.index == index) {
                 return skinData;
             }
         }

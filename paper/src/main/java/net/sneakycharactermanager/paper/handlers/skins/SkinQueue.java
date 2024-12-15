@@ -16,7 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class SkinQueue extends BukkitRunnable {
 
-    private final ConcurrentMap<Integer, List<SkinData>> queue = new ConcurrentHashMap<>();
+    final ConcurrentMap<Integer, List<SkinData>> queue = new ConcurrentHashMap<>();
     public BukkitTask task = null;
 
     public SkinQueue() {
@@ -33,6 +33,7 @@ public class SkinQueue extends BukkitRunnable {
 
             queue.computeIfAbsent(priority, k -> new CopyOnWriteArrayList<>()).add(skinData);
         });
+        skinData.runTaskTimerAsynchronously(SneakyCharacterManager.getInstance(), 0, 20);
     }
 
     public void remove(SkinData skinData) {
@@ -42,7 +43,7 @@ public class SkinQueue extends BukkitRunnable {
     }
 
     private synchronized SkinData getNext() {
-        Optional<Entry<Integer, List<SkinData>>> maxEntry = this.queue.entrySet().stream().filter(entry -> !entry.getValue().isEmpty()).max(Comparator.comparingInt(Entry::getKey));
+        Optional<Entry<Integer, List<SkinData>>> maxEntry = this.queue.entrySet().stream().filter(entry -> entry.getValue().stream().anyMatch(skinData -> !skinData.processing)).max(Comparator.comparingInt(Entry::getKey));
 
         return maxEntry.map(entry -> entry.getValue().get(0)).orElse(null);
     }
@@ -52,8 +53,7 @@ public class SkinQueue extends BukkitRunnable {
         SkinData next = this.getNext();
 
         if (next != null) {
-            next.runTaskTimerAsynchronously(SneakyCharacterManager.getInstance(), 0, 20);
-            this.remove(next);
+            next.processing = true;
         }
     }
 }
