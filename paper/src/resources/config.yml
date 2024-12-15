@@ -3,7 +3,7 @@ manageLocations: true
 manageInventories: true
 respawnNameTags: false
 respawnTimerSeconds: 600
-mineskinApiUrl: 'https://api.mineskin.org/generate/url'
+mineskinQueueUrl: 'https://api.mineskin.org/v2/queue'
 mineskinAuth: ''
 imgurApiUrl: 'https://api.imgur.com/3/image'
 imgurClientId: ''

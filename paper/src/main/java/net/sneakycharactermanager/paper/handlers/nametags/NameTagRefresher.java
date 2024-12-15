@@ -16,15 +16,11 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 
 public class NameTagRefresher extends BukkitRunnable {
 
-    private BukkitTask task = null;
+    public BukkitTask task = null;
     private ConcurrentMap<Player, List<Player>> trackedByPrev = new ConcurrentHashMap<>();
 
     public NameTagRefresher() {
         this.task = runTaskTimer(SneakyCharacterManager.getInstance(), 0, 20);
-    }
-
-    public void stop() {
-        this.task.cancel();
     }
 
     @Override

@@ -155,8 +155,6 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 			Bukkit.getScheduler().cancelTasks(this);
 			Bukkit.getAsyncScheduler().cancelTasks(this);
-			this.skinQueue.stop();
-			this.nameTagRefresher.stop();
 		}
 	}
 
