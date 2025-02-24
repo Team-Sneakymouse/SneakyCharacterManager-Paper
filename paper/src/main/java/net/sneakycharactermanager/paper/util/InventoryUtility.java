@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-import org.bukkit.Material;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.io.BukkitObjectInputStream;
@@ -13,6 +12,7 @@ import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
 public class InventoryUtility {
 
+
     /**
      * Convert an inventory into a B64 String.
      * (Note: This will only convert the inventory contents, not types or names)
@@ -20,7 +20,14 @@ public class InventoryUtility {
      * @return B64 Encoded inventory string
      * */
     public static String convertInventory(Inventory inventory) {
-        return inventoryToBase64(inventory);
+
+        try {
+            //Save this string to file.
+            return inventoryToBase64(inventory);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     /**
@@ -29,47 +36,14 @@ public class InventoryUtility {
      * @return Itemstack[] containing all saved items
      * */
     public static ItemStack[] getSavedInventory(String data) {
-        if (data == null) return new ItemStack[0];
-        
+
         try {
-            ByteArrayInputStream inputStream = new ByteArrayInputStream(Base64Coder.decodeLines(data));
-            BukkitObjectInputStream dataInput = new BukkitObjectInputStream(inputStream);
-            
-            int size = dataInput.readInt();
-            ItemStack[] items = new ItemStack[size];
-            
-            // Read the serialized inventory
-            for (int i = 0; i < size; i++) {
-                try {
-                    Object obj = dataInput.readObject();
-                    if (obj == null) {
-                        items[i] = new ItemStack(Material.AIR);
-                        continue;
-                    }
-                    
-                    if (obj instanceof ItemStack) {
-                        items[i] = (ItemStack) obj;
-                    } else if (obj instanceof byte[]) {
-                        try {
-                            items[i] = ItemStack.deserializeBytes((byte[]) obj);
-                        } catch (Exception e) {
-                            // If deserialization fails, try to create a basic item
-                            items[i] = new ItemStack(Material.AIR);
-                        }
-                    } else {
-                        items[i] = new ItemStack(Material.AIR);
-                    }
-                } catch (Exception e) {
-                    items[i] = new ItemStack(Material.AIR);
-                }
-            }
-            
-            dataInput.close();
-            return items;
+            return inventoryFromBase64(data);
         } catch (Exception e) {
             e.printStackTrace();
-            return new ItemStack[0];
         }
+
+        return new ItemStack[0];
     }
 
     /**
@@ -86,20 +60,13 @@ public class InventoryUtility {
             dataOutput.writeInt(inventory.getSize());
 
             for (int i = 0; i < inventory.getSize(); i++) {
-                ItemStack item = inventory.getItem(i);
-                try {
-                    if (item != null && !item.getType().isAir()) {
-                        dataOutput.writeObject(item);
-                    } else {
-                        dataOutput.writeObject(null);
-                    }
-                } catch (Exception e) {
-                    dataOutput.writeObject(null);
-                }
+                dataOutput.writeObject(inventory.getItem(i));
             }
 
             dataOutput.close();
             return Base64Coder.encodeLines(outputStream.toByteArray());
+
+            //Converts the inventory and its contents to base64, This also saves item meta-data and inventory type
         } catch (Exception e) {
             throw new IllegalStateException("Could not convert inventory to base64.", e);
         }
@@ -120,19 +87,13 @@ public class InventoryUtility {
             dataOutput.writeInt(size);
 
             for (int i = 0; i < size; i++) {
-                try {
-                    if (items[i] != null && !items[i].getType().isAir()) {
-                        dataOutput.writeObject(items[i]);
-                    } else {
-                        dataOutput.writeObject(null);
-                    }
-                } catch (Exception e) {
-                    dataOutput.writeObject(null);
-                }
+                dataOutput.writeObject(items[i]);
             }
 
             dataOutput.close();
             return Base64Coder.encodeLines(outputStream.toByteArray());
+
+            //Converts the inventory and its contents to base64, This also saves item meta-data and inventory type
         } catch (Exception e) {
             throw new IllegalStateException("Could not convert inventory to base64.", e);
         }
