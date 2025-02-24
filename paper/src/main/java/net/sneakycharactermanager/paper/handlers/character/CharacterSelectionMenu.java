@@ -131,25 +131,30 @@ public class CharacterSelectionMenu implements Listener {
             
             int startIndex = (currentPage - 1) * CHARS_PER_PAGE;
             int endIndex = Math.min(startIndex + CHARS_PER_PAGE, allCharacters.size());
+            int inventorySize = this.getInventory().getSize();
             
-            for (int i = startIndex; i < endIndex; i++) {
+            for (int i = startIndex; i < endIndex && (i - startIndex) < inventorySize; i++) {
                 addItem(this.getInventory(), allCharacters.get(i), i - startIndex);
             }
 
-            if (currentPage > 1) {
-                ItemStack prevButton = new ItemStack(Material.ARROW);
-                ItemMeta meta = prevButton.getItemMeta();
-                meta.displayName(PREV_PAGE);
-                prevButton.setItemMeta(meta);
-                this.getInventory().setItem(PREV_BUTTON_SLOT, prevButton);
+            if (inventorySize > PREV_BUTTON_SLOT) {
+                if (currentPage > 1) {
+                    ItemStack prevButton = new ItemStack(Material.ARROW);
+                    ItemMeta meta = prevButton.getItemMeta();
+                    meta.displayName(PREV_PAGE);
+                    prevButton.setItemMeta(meta);
+                    this.getInventory().setItem(PREV_BUTTON_SLOT, prevButton);
+                }
             }
 
-            if (allCharacters.size() > currentPage * CHARS_PER_PAGE) {
-                ItemStack nextButton = new ItemStack(Material.ARROW);
-                ItemMeta meta = nextButton.getItemMeta();
-                meta.displayName(NEXT_PAGE);
-                nextButton.setItemMeta(meta);
-                this.getInventory().setItem(NEXT_BUTTON_SLOT, nextButton);
+            if (inventorySize > NEXT_BUTTON_SLOT) {
+                if (allCharacters.size() > currentPage * CHARS_PER_PAGE) {
+                    ItemStack nextButton = new ItemStack(Material.ARROW);
+                    ItemMeta meta = nextButton.getItemMeta();
+                    meta.displayName(NEXT_PAGE);
+                    nextButton.setItemMeta(meta);
+                    this.getInventory().setItem(NEXT_BUTTON_SLOT, nextButton);
+                }
             }
 
             if (this.getClass().equals(CharacterMenuHolder.class) && this.player != null) {
@@ -163,7 +168,7 @@ public class CharacterSelectionMenu implements Listener {
                     createCharacterButton.setItemMeta(meta);
 
                     int startSlot = endIndex - startIndex;
-                    for (int i = 0; i < openSlots && startSlot + i < 51; i++) {
+                    for (int i = 0; i < openSlots && startSlot + i < inventorySize && startSlot + i < 51; i++) {
                         this.getInventory().setItem(startSlot + i, createCharacterButton);
                     }
                 }
