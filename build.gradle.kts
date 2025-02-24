@@ -39,7 +39,6 @@ subprojects {
 
     dependencies {
         compileOnly("net.md-5:bungeecord-api:1.20-R0.1")
-        compileOnly("com.github.Gecolay.GSit:core:1.7.0")
     }
 
     java {
@@ -70,7 +69,7 @@ tasks {
     }
     runServer {
         dependsOn(shadowJar)
-        minecraftVersion("1.20.6")
+        minecraftVersion("1.21.4")
     }
 }
 

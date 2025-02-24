@@ -11,7 +11,6 @@ repositories {
 }
 
 dependencies {
-    //compileOnly("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
     paperweight.paperDevBundle("1.21.4-R0.1-SNAPSHOT")
     implementation("org.apache.httpcomponents:httpclient:4.5.14")
     compileOnly("me.clip:placeholderapi:2.11.5")
