@@ -39,12 +39,17 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
 
 public class CharacterSelectionMenu implements Listener {
 
-    Map<String, CharacterMenuHolder> activeMenus;
+    public Map<String, CharacterMenuHolder> activeMenus;
 
     protected NamespacedKey characterKey;
 
     public static final String CHARACTER_SLOTS_PERMISSION_NODE = SneakyCharacterManager.IDENTIFIER + ".characterslots.";
     private static final Component CREATE_CHARACTER = ChatUtility.convertToComponent("&2Create Character");
+    private static final int CHARS_PER_PAGE = 50;
+    private static final int PREV_BUTTON_SLOT = 52;
+    private static final int NEXT_BUTTON_SLOT = 53;
+    private static final Component NEXT_PAGE = ChatUtility.convertToComponent("&aNext Page >");
+    private static final Component PREV_PAGE = ChatUtility.convertToComponent("&a< Previous Page");
 
     public class CharacterMenuHolder implements InventoryHolder {
 
@@ -58,6 +63,8 @@ public class CharacterSelectionMenu implements Listener {
         protected final Player opener;
         private Inventory inventory;
         private List<SkinData> queuedDatas = new ArrayList<>();
+        protected int currentPage = 1;
+        protected List<Character> allCharacters = new ArrayList<>();
 
         boolean updated = false;
 
@@ -111,18 +118,78 @@ public class CharacterSelectionMenu implements Listener {
         private void receivedCharacterList(List<Character> characters) {
             if (updated) return;
 
-            for (int i = 0; i < characters.size(); i++) {
-                addItem(this.getInventory(), characters.get(i), i);
-            }
+            this.allCharacters = characters;
+            displayCurrentPage();
 
             if (this.player != null) SneakyCharacterManager.getInstance().skinPreloader.preLoadedPlayers.add(this.player);
 
             updated = true;
         }
 
-        private void addItem(Inventory inventory, Character character, int index) {
-            if (index > inventory.getSize()) return;
+        public void displayCurrentPage() {
+            this.getInventory().clear();
+            
+            int startIndex = (currentPage - 1) * CHARS_PER_PAGE;
+            int endIndex = Math.min(startIndex + CHARS_PER_PAGE, allCharacters.size());
+            
+            for (int i = startIndex; i < endIndex; i++) {
+                addItem(this.getInventory(), allCharacters.get(i), i - startIndex);
+            }
 
+            if (currentPage > 1) {
+                ItemStack prevButton = new ItemStack(Material.ARROW);
+                ItemMeta meta = prevButton.getItemMeta();
+                meta.displayName(PREV_PAGE);
+                prevButton.setItemMeta(meta);
+                this.getInventory().setItem(PREV_BUTTON_SLOT, prevButton);
+            }
+
+            if (allCharacters.size() > currentPage * CHARS_PER_PAGE) {
+                ItemStack nextButton = new ItemStack(Material.ARROW);
+                ItemMeta meta = nextButton.getItemMeta();
+                meta.displayName(NEXT_PAGE);
+                nextButton.setItemMeta(meta);
+                this.getInventory().setItem(NEXT_BUTTON_SLOT, nextButton);
+            }
+
+            if (this.getClass().equals(CharacterMenuHolder.class) && this.player != null) {
+                int maxCharacterSlots = calculateMaxCharacterSlots(this.player);
+                int openSlots = maxCharacterSlots - allCharacters.size();
+                
+                if (openSlots > 0 && allCharacters.size() <= currentPage * CHARS_PER_PAGE) {
+                    ItemStack createCharacterButton = new ItemStack(Material.LIME_STAINED_GLASS_PANE);
+                    ItemMeta meta = createCharacterButton.getItemMeta();
+                    meta.displayName(CREATE_CHARACTER);
+                    createCharacterButton.setItemMeta(meta);
+
+                    int startSlot = endIndex - startIndex;
+                    for (int i = 0; i < openSlots && startSlot + i < 51; i++) {
+                        this.getInventory().setItem(startSlot + i, createCharacterButton);
+                    }
+                }
+            }
+        }
+
+        private int calculateMaxCharacterSlots(Player player) {
+            int maxCharacterSlots = 0;
+            if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".*") || 
+                player.hasPermission(CHARACTER_SLOTS_PERMISSION_NODE + ".*")) {
+                maxCharacterSlots = Integer.MAX_VALUE;
+            } else {
+                for (PermissionAttachmentInfo permission : player.getEffectivePermissions()) {
+                    if (permission.getValue() && permission.getPermission().startsWith(CHARACTER_SLOTS_PERMISSION_NODE)) {
+                        String valueString = permission.getPermission().replace(CHARACTER_SLOTS_PERMISSION_NODE, "");
+                        try {
+                            int value = Integer.parseInt(valueString);
+                            if (value > maxCharacterSlots) maxCharacterSlots = value;
+                        } catch (NumberFormatException e) {}
+                    }
+                }
+            }
+            return maxCharacterSlots;
+        }
+
+        private void addItem(Inventory inventory, Character character, int index) {
             if (this.getClass().equals(CharacterMenuHolder.class) && this.player != null && !Character.canPlayerLoadCharacter(player, character.getCharacterUUID())) {
                 ItemStack skeletonHead = new ItemStack(Material.SKELETON_SKULL);
                 ItemMeta meta = skeletonHead.getItemMeta();
@@ -174,6 +241,21 @@ public class CharacterSelectionMenu implements Listener {
         }
 
         protected void clickedItem(ItemStack clickedItem) {
+            if (clickedItem == null) return;
+
+            if (clickedItem.getType() == Material.ARROW) {
+                ItemMeta meta = clickedItem.getItemMeta();
+                if (meta.displayName().equals(NEXT_PAGE)) {
+                    currentPage++;
+                    displayCurrentPage();
+                    return;
+                } else if (meta.displayName().equals(PREV_PAGE)) {
+                    currentPage--;
+                    displayCurrentPage();
+                    return;
+                }
+            }
+
             if (clickedItem.getType().equals(Material.LIME_STAINED_GLASS_PANE)) {
                 BungeeMessagingUtil.sendByteArray(this.opener, "createNewCharacter", playerUUID);
                 this.player.sendMessage(ChatUtility.convertToComponent("&aCreating a new character... Please Wait..."));
@@ -408,7 +490,7 @@ public class CharacterSelectionMenu implements Listener {
 
             Player player = Bukkit.getPlayer(UUID.fromString(playerUUID));
 
-            if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".*") || player.hasPermission(CHARACTER_SLOTS_PERMISSION_NODE + ".*")) maxCharacterSlots = 54;
+            if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".*") || player.hasPermission(CHARACTER_SLOTS_PERMISSION_NODE + ".*")) maxCharacterSlots = Integer.MAX_VALUE;
             else {
                 for (PermissionAttachmentInfo permission : player.getEffectivePermissions()) {
                     if (permission.getValue() && permission.getPermission().startsWith(CHARACTER_SLOTS_PERMISSION_NODE)) {
@@ -420,7 +502,7 @@ public class CharacterSelectionMenu implements Listener {
                         } catch (NumberFormatException e) {}
                     }
                 }
-                maxCharacterSlots = Math.min(maxCharacterSlots, 54);
+                maxCharacterSlots = Math.min(maxCharacterSlots, Integer.MAX_VALUE);
             }
 
             if (characters.size() < holder.getInventory().getSize()) {
@@ -432,7 +514,7 @@ public class CharacterSelectionMenu implements Listener {
                 createCharacterButton.setItemMeta(meta);
 
                 for (int i = 0; i < openSlots; i++) {
-                    if (characters.size() + i > holder.getInventory().getSize() - 1) break;
+                    if (characters.size() + i > Math.min(holder.getInventory().getSize() - 1, 50)) break;
                     holder.getInventory().setItem(characters.size() + i, createCharacterButton);
                 }
             }
