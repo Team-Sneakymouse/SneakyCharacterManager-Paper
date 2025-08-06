@@ -4,6 +4,7 @@ import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu.CharacterMenuHolder;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 import org.apache.http.HttpResponse;
@@ -299,9 +300,8 @@ public class SkinData extends BukkitRunnable {
                     return;
                 }
             } else if (SneakyCharacterManager.getInstance().selectionMenu.menuExists(this.player.getUniqueId().toString())) {
-                this.skullMeta.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, property));
-                this.characterHead.setItemMeta(this.skullMeta);
-                this.inventory.setItem(this.index, this.characterHead);
+                CharacterMenuHolder holder = SneakyCharacterManager.getInstance().selectionMenu.activeMenus.get(this.player.getUniqueId().toString());
+                holder.displayCurrentPage();
             }
         }
 
@@ -351,7 +351,7 @@ public class SkinData extends BukkitRunnable {
         return new SkinData(url, skinUUID, isSlim, priority, player, characterUUID);
     }
 
-    public static SkinData getOrCreate(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, String  characterUUID, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
+    public static SkinData getOrCreate(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, String characterUUID, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
         List<SkinData> skinDataList = SneakyCharacterManager.getInstance().skinQueue.queue.values().stream().flatMap(List::stream).toList();
         for (SkinData skinData : skinDataList) {
             if (skinData.getUrl().equals(url) && skinData.getSkinUUID().equals(skinUUID) && skinData.isSlim() == isSlim && skinData.priority == priority && skinData.getPlayer().equals(player) && skinData.getSkullMeta().equals(skullMeta) && skinData.getCharacterHead().equals(characterHead) && skinData.getInventory().equals(inventory) && skinData.index == index) {

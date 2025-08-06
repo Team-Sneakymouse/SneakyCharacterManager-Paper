@@ -2,7 +2,7 @@ plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.8.10"
     id("com.github.johnrengelman.shadow") version "8.1.0"
-    id("xyz.jpenilla.run-paper") version "2.2.0"
+    id("xyz.jpenilla.run-paper") version "2.3.1"
 }
 
 allprojects {
@@ -39,7 +39,6 @@ subprojects {
 
     dependencies {
         compileOnly("net.md-5:bungeecord-api:1.20-R0.1")
-        compileOnly("com.github.Gecolay.GSit:core:1.7.0")
     }
 
     java {
@@ -70,7 +69,7 @@ tasks {
     }
     runServer {
         dependsOn(shadowJar)
-        minecraftVersion("1.20.6")
+        minecraftVersion("1.21.4")
     }
 }
 
