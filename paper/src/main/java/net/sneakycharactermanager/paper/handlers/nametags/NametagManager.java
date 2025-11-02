@@ -33,7 +33,15 @@ public class NametagManager {
      * @param nickname Nickname to set onto the player
      * */
     public void nicknamePlayer(Player player, String nickname) {
-        if (player.isDead() || player.getGameMode() == GameMode.SPECTATOR || (SneakyCharacterManager.getInstance().papiActive && PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%") != null && !PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%").isEmpty())) return;
+        if (player.isDead() ||
+            player.getGameMode() == GameMode.SPECTATOR ||
+            (
+                SneakyCharacterManager.getInstance().papiActive &&
+                PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%") != null &&
+                !PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%").isEmpty() &&
+                !PlaceholderAPI.setPlaceholders(player, "%cmi_user_vanished_symbol%").equals("%cmi_user_vanished_symbol%")
+            )
+        ) return;
 
         if (!nicknames.containsKey(player.getUniqueId().toString())) {
             nicknames.put(player.getUniqueId().toString(), new Nickname(player, nickname));
