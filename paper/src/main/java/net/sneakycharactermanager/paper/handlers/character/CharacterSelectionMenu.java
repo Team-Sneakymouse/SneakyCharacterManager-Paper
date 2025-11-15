@@ -563,7 +563,10 @@ public class CharacterSelectionMenu implements Listener {
             }
             return;
         }
-        activeMenus.get(player.getUniqueId().toString()).cleanup();
+        CharacterMenuHolder menuHolder = activeMenus.get(player.getUniqueId().toString());
+        if (menuHolder != null) {
+            menuHolder.cleanup();
+        }
         activeMenus.remove(player.getUniqueId().toString()); //Remove holder to save memory
     }
 
