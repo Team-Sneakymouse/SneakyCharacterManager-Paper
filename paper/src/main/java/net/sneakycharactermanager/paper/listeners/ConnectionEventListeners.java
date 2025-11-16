@@ -57,7 +57,7 @@ public class ConnectionEventListeners implements Listener {
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
 
         CommandChar.tabCompleteMap.remove(player.getUniqueId().toString());
-        SkinCache.remove(player.getUniqueId().toString());
+        //SkinCache.remove(player.getUniqueId().toString());
         SneakyCharacterManager.getInstance().skinPreloader.preLoadedPlayers.remove(player);
 
         Character character = Character.get(player);
