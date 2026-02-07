@@ -69,7 +69,10 @@ public class NametagManager {
 
             refreshNickname(name, tracking);
         }
-
+        if (SneakyCharacterManager.getInstance().getConfig().getBoolean("see-own-nameplate", false)) {
+            refreshNickname(name, player);
+        }
+        
         return trackingPlayers;
     }
 

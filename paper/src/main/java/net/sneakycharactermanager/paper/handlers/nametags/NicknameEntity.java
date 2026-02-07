@@ -23,6 +23,7 @@ import net.minecraft.network.syncher.SynchedEntityData.DataValue;
 import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.EntityType;
 import net.sneakycharactermanager.paper.util.ChatUtility;
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
 
 public class NicknameEntity {
 
@@ -98,7 +99,9 @@ public class NicknameEntity {
     }
 
     private void send(ClientboundSetEntityDataPacket packet, Player requester) {
-        if (packet == null || requester.getUniqueId().toString().equals(player.getUniqueId().toString())) return;
+        if (packet == null) return;
+        if (!SneakyCharacterManager.getInstance().getConfig().getBoolean("see-own-nameplate", false)
+                && requester.getUniqueId().equals(player.getUniqueId())) return;
         ((CraftPlayer)requester).getHandle().connection.send(packet);
     }
 
