@@ -65,6 +65,7 @@ public class PlayerData {
             }
             section.set("slim", false);
             section.set("tags", new ArrayList<String>());
+            section.set("gender", "");
             saveConfig();
         }
 
@@ -208,6 +209,7 @@ public class PlayerData {
         section.set("skinUUID", character.getSkinUUID());
         section.set("slim", character.isSlim());
         section.set("tags", character.getTags());
+        section.set("gender", Gender.toConfigKeyNullable(character.getGender()));
 
         saveConfig();
 
@@ -227,6 +229,7 @@ public class PlayerData {
         section.set("skinUUID", character.getSkinUUID());
         section.set("slim", character.isSlim());
         section.set("tags", character.getTags());
+        section.set("gender", Gender.toConfigKeyNullable(character.getGender()));
 
         this.config.set(character.getUUID(), section);
 
@@ -278,6 +281,18 @@ public class PlayerData {
             SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to tag a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
         } else {
             character.setTags(tags);
+            this.characterMap.put(characterUUID, character);
+            this.updateCharacterInYaml(character);
+        }
+    }
+
+    public void setCharacterGender(String characterUUID, String gender) {
+        Character character = this.characterMap.get(characterUUID);
+
+        if (character == null) {
+            SneakyCharacterManager.getInstance().getLogger().severe("An attempt was made to set gender on a character that does not exist! [" + this.playerUUID + ", " + characterUUID + "]");
+        } else {
+            character.setGender(Gender.fromString(gender));
             this.characterMap.put(characterUUID, character);
             this.updateCharacterInYaml(character);
         }

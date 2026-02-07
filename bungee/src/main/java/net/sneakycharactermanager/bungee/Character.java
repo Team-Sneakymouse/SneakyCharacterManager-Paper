@@ -16,8 +16,9 @@ public class Character {
     private String skinUUID;
     private boolean slim;
     private String tags;
+    private Gender gender;
 
-    public Character(String uuid, boolean enabled, String name, String skin, String skinUUID, boolean slim, String tags) {
+    public Character(String uuid, boolean enabled, String name, String skin, String skinUUID, boolean slim, String tags, String gender) {
         this.uuid = uuid;
         this.enabled = enabled;
         this.name = name;
@@ -25,16 +26,18 @@ public class Character {
         this.skinUUID = skinUUID;
         this.slim = slim;
         this.tags = tags;
+        this.gender = Gender.fromString(gender);
     }
 
     public Character(String uuid, String name, String skin, String skinUUID, boolean slim) {
         this(
             uuid,
-        true,
+            true,
             name,
             skin,
             skinUUID,
             slim,
+            "",
             ""
         );
     }
@@ -47,7 +50,8 @@ public class Character {
             config.getString("skin"),
             config.getString("skinUUID"),
             config.getBoolean("slim"),
-            config.getString("tags")
+            config.getString("tags"),
+            config.getString("gender", "")
         );
     }
 
@@ -114,6 +118,14 @@ public class Character {
 
     public void setTags(String tags) {
         this.tags = tags;
+    }
+
+    public Gender getGender() {
+        return gender;
+    }
+
+    public void setGender(Gender gender) {
+        this.gender = gender;
     }
 
     public void setSlim(boolean slim) {

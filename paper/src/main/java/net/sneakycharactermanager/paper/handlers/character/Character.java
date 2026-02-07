@@ -44,11 +44,12 @@ public class Character {
 	private String skinUUID;
 	private boolean slim;
 	private JsonObject tags = null;
+	private Gender gender = null;
 
 	private boolean firstLoad = false;
 
 	public Character(String playerUUID, String characterUUID, String characterName, String skin, String skinUUID, boolean slim,
-			String tags) {
+			String tags, String gender) {
 		this.player = Bukkit.getPlayer(UUID.fromString(playerUUID));
 		this.name = characterName;
 		this.characterUUID = characterUUID;
@@ -56,6 +57,7 @@ public class Character {
 		this.skinUUID = skinUUID;
 		this.slim = slim;
 		this.tags = tags.isEmpty() ? new JsonObject() : JsonParser.parseString(tags).getAsJsonObject();
+		this.gender = Gender.fromString(gender);
 
 		File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID);
 		boolean firstLogin = false;
@@ -188,7 +190,7 @@ public class Character {
 	}
 
 	public String getDisplayName() {
-		return (this.namePrefix == null ? "" : this.namePrefix) + this.name;
+		return (this.namePrefix == null ? "" : this.namePrefix) + this.name + getGenderSuffix();
 	}
 
 	public String getNameUnformatted() {
@@ -231,6 +233,20 @@ public class Character {
 
 	public Boolean hasTag(String key) {
 		return this.tags.keySet().contains(key);
+	}
+
+	public Gender getGender() {
+		return this.gender;
+	}
+
+	public void setGender(Gender gender) {
+		this.gender = gender;
+	}
+
+	private String getGenderSuffix() {
+		if (this.gender == null) return "";
+		String path = "gender-suffixes." + this.gender.toConfigKey();
+		return SneakyCharacterManager.getInstance().getConfig().getString(path, "");
 	}
 
 	public void setSlim(boolean slim) {

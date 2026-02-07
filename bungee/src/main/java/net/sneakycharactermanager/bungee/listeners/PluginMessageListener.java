@@ -148,6 +148,10 @@ public class PluginMessageListener implements Listener {
                     case 4: // Updating Tags
                         playerData.setCharacterTags(characterUUID, messageIn.readUTF());
                         break;
+                    case 5: // Updating Gender
+                        playerData.setCharacterGender(characterUUID, messageIn.readUTF());
+                        playerData.updateCharacterList(serverInfo);
+                        break;
                 }
                 break;
             case "defaultSkin":

@@ -234,7 +234,8 @@ public class BungeeMessageListener implements PluginMessageListener {
 		String skinUUID = in.readUTF();
 		boolean slim = in.readBoolean();
 		String tags = in.readUTF();
-		return new Character(playerUUID, uuid, name, skin, skinUUID, slim, tags);
+		String gender = in.readUTF();
+		return new Character(playerUUID, uuid, name, skin, skinUUID, slim, tags, gender);
 	}
 
 }

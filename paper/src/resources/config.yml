@@ -10,5 +10,9 @@ imgurApiUrl: 'https://api.imgur.com/3/image'
 imgurClientId: ''
 webServerFolderPath: ''
 webServerURLPrefix: ''
+gender-suffixes:
+  masculine: ' &9♂'
+  feminine: ' &d♀'
+  nonbinary: ' &a⚥'
 bannedWords:
   - badword

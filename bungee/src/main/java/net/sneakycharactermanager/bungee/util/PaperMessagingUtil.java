@@ -11,6 +11,7 @@ import com.google.common.io.ByteStreams;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.sneakycharactermanager.bungee.Character;
+import net.sneakycharactermanager.bungee.Gender;
 import net.sneakycharactermanager.bungee.SneakyCharacterManager;
 
 public class PaperMessagingUtil {
@@ -151,6 +152,7 @@ public class PaperMessagingUtil {
 		out.writeUTF(character.getSkinUUID());
 		out.writeBoolean(character.isSlim());
 		out.writeUTF(character.getTags());
+		out.writeUTF(Gender.toConfigKeyNullable(character.getGender()));
 	}
 
 	private static void writeStringList(ByteArrayDataOutput out, List<String> strings) {
