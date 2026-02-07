@@ -74,6 +74,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		getServer().getCommandMap().register(IDENTIFIER, new CommandCharAdmin());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandCharScan());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandCharTag());
+		getServer().getCommandMap().register(IDENTIFIER, new CommandCharPrefix());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandUniform());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandSaveTemplateChar());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandUserify());
@@ -138,7 +139,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 						continue;
 
 					nametagManager.unnicknamePlayer(player);
-					nametagManager.nicknamePlayer(player, character.getName());
+					nametagManager.nicknamePlayer(player, character.getDisplayName());
 				}
 			}, respawnTimer, respawnTimer);
 		}

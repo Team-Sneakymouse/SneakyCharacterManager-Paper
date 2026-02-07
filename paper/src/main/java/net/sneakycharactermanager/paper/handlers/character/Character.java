@@ -39,6 +39,7 @@ public class Character {
 	private final Player player;
 	private String characterUUID;
 	private String name;
+	private String namePrefix = "";
 	private String skin;
 	private String skinUUID;
 	private boolean slim;
@@ -176,6 +177,18 @@ public class Character {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	public String getNamePrefix() {
+		return this.namePrefix;
+	}
+
+	public void setNamePrefix(String namePrefix) {
+		this.namePrefix = namePrefix == null ? "" : namePrefix;
+	}
+
+	public String getDisplayName() {
+		return (this.namePrefix == null ? "" : this.namePrefix) + this.name;
 	}
 
 	public String getNameUnformatted() {

@@ -25,7 +25,7 @@ public class GamemodeEvents implements Listener {
             if(character == null) return;
 
             Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), ()->{
-                SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getName());
+                SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
             }, 2);
         }
     }

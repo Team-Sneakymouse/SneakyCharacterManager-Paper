@@ -25,7 +25,7 @@ public class VanishEvents implements Listener {
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), ()->{
             Character character = Character.get(hidden);
             if(character == null) return;
-            SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(hidden, character.getName());
+            SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(hidden, character.getDisplayName());
         }, 2);
     }
 

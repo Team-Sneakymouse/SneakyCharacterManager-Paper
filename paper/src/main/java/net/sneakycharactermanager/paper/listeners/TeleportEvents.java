@@ -22,7 +22,7 @@ public class TeleportEvents implements Listener {
 
             if(character == null) return;
 
-            SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getName());
+            SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
         }, 2);
     }
 

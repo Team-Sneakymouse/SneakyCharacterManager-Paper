@@ -58,7 +58,7 @@ public class CharacterLoader {
 				player.setPlayerProfile(SkinUtil.handleCachedSkin(player, profileProperty));
 			}
 
-			SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getName());
+			SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
 
 			return true;
 		}

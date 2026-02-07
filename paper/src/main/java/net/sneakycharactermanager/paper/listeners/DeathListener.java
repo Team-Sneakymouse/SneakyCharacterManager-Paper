@@ -23,7 +23,7 @@ public class DeathListener implements Listener {
         Player player = event.getPlayer();
         Character character = Character.get(player);
         if (character == null) return;
-        SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getName());
+        SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
     }
 
 }
