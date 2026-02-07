@@ -1,6 +1,7 @@
 deleteCharacterDataOnServerStart: false
 manageLocations: true
 manageInventories: true
+manageAttributes: false
 respawnNameTags: false
 respawnTimerSeconds: 600
 see-own-nameplate: false
