@@ -61,3 +61,28 @@ Will avoid fetching as much as possible to limit server lag & delay. Should only
 
 
 **Note: Most of this is SUBJECT TO CHANGE as requirements are adjusted!**
+
+## Commands (Paper)
+- `/char` – open character selection GUI.
+- `/chargender <masculine|feminine|nonbinary|clear>` – set or clear current character gender.
+- `/nick "<name>"` – set character name (supports MiniMessage; needs `sneakycharacters.formatnames` for formatting).
+- `/skin <url>` – set character skin.
+- `/names` – list character names.
+- `/charprefix "<prefix>"|clear` – set/clear session-only name prefix.
+- Admin: `/charadmin <player>`, `/chartag <player> <add/remove> <key> [value]`, `/charscan`, `/charuniform`, `/charsavetemplatechar`, `/charuserify`, `/charmigrateinventories`.
+- Console: `chardisable`, `charenable`, `chartemp` (temporary character load).
+
+## Placeholders (PlaceholderAPI)
+- `sneakycharacters_character_uuid`
+- `sneakycharacters_character_name`, `sneakycharacters_character_name_noformat`
+- `sneakycharacters_character_skin`, `sneakycharacters_character_slim`
+- `sneakycharacters_character_tags`, `sneakycharacters_character_hastag_<key>`, `sneakycharacters_character_tag_<key>`
+- `sneakycharacters_character_name_prefix`
+- `sneakycharacters_character_gender`, `sneakycharacters_character_gender_suffix`
+- Pronouns (default to they/them when unset): `sneakycharacters_character_pronoun_s` (subject), `sneakycharacters_character_pronoun_o` (object), `sneakycharacters_character_pronoun_p` (possessive adj), `sneakycharacters_character_pronoun_p2` (possessive pronoun)
+
+## Permissions (Paper)
+- Base: `sneakycharacters.*`, `sneakycharacters.command.*`, `sneakycharacters.character.*`, `sneakycharacters.admin.*`, `sneakycharacters.admin.command.*`, `sneakycharacters.admin.bypass.*`
+- Character slots: `sneakycharacters.characterslots.<number>` (or `*` for unlimited)
+- Formatting: `sneakycharacters.formatnames` (allow MiniMessage/formatting in names)
+- Skin fetch other players: `sneakycharacters.skinfetch.others`
