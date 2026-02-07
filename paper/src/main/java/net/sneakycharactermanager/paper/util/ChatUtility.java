@@ -1,5 +1,8 @@
 package net.sneakycharactermanager.paper.util;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -7,6 +10,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 public class ChatUtility {
 
     public static Component convertToComponent(String message) {
+        message = unescapeUnicode(message);
         message = message.replaceAll("\\x{00A7}", "&");
 
         message = message.replace("&1", "<dark_blue>");
@@ -51,6 +55,31 @@ public class ChatUtility {
         message = message.replace("&R", "<reset>");
 
         return MiniMessage.miniMessage().deserialize(message).decoration(TextDecoration.ITALIC, false);
+    }
+
+    private static String unescapeUnicode(String input) {
+        if (input == null || input.isEmpty()) return input;
+
+        StringBuilder out = new StringBuilder();
+        Matcher matcher = Pattern.compile("\\\\u([0-9a-fA-F]{4})|\\\\U([0-9a-fA-F]{8})").matcher(input);
+        int lastEnd = 0;
+
+        while (matcher.find()) {
+            out.append(input, lastEnd, matcher.start());
+
+            String shortCode = matcher.group(1);
+            String longCode = matcher.group(2);
+
+            int codePoint = shortCode != null
+                    ? Integer.parseInt(shortCode, 16)
+                    : Integer.parseInt(longCode, 16);
+
+            out.append(new String(Character.toChars(codePoint)));
+            lastEnd = matcher.end();
+        }
+
+        out.append(input.substring(lastEnd));
+        return out.toString();
     }
 
 }
