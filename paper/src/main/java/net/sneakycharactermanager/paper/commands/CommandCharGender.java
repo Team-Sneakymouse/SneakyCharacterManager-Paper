@@ -47,7 +47,7 @@ public class CommandCharGender extends CommandBase {
 
 		String input = args[0].toLowerCase();
 		if (!OPTIONS.contains(input)) {
-			player.sendMessage(ChatUtility.convertToComponent("&4Invalid gender. Use masculine, feminine, nonbinary, or clear."));
+			player.sendMessage(ChatUtility.convertToComponent("&4Supported options are: masculine, feminine, nonbinary, or clear."));
 			return false;
 		}
 

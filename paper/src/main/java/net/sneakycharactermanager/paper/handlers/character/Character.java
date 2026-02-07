@@ -243,7 +243,7 @@ public class Character {
 		this.gender = gender;
 	}
 
-	private String getGenderSuffix() {
+	public String getGenderSuffix() {
 		if (this.gender == null) return "";
 		String path = "gender-suffixes." + this.gender.toConfigKey();
 		return SneakyCharacterManager.getInstance().getConfig().getString(path, "");
