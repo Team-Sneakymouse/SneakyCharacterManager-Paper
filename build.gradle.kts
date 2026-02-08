@@ -11,6 +11,7 @@ allprojects {
 
     repositories {
         mavenCentral()
+        maven("https://maven.maxhenkel.de/repository/public")
     }
 }
 
@@ -35,6 +36,7 @@ subprojects {
         mavenCentral()
         maven("https://oss.sonatype.org/content/repositories/snapshots")
         maven("https://jitpack.io")
+        maven("https://maven.maxhenkel.de/repository/public")
     }
 
     dependencies {

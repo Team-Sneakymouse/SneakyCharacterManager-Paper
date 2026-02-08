@@ -30,6 +30,8 @@ import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinPreloader;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.handlers.voice.SimpleVoiceChatIntegration;
+import de.maxhenkel.voicechat.api.BukkitVoicechatService;
 
 public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
@@ -49,6 +51,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 	public SkinQueue skinQueue;
 	public SkinPreloader skinPreloader;
 	public NameTagRefresher nameTagRefresher;
+	private SimpleVoiceChatIntegration svcIntegration;
 
 	@Override
 	public void onEnable() {
@@ -116,6 +119,16 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 			new ContextCalculatorCharacterTag().register();
 		}
 
+		// Optional Simple Voice Chat integration (register directly if service is present)
+		BukkitVoicechatService voicechatService = getServer().getServicesManager().load(BukkitVoicechatService.class);
+		if (voicechatService != null) {
+			svcIntegration = new SimpleVoiceChatIntegration();
+			voicechatService.registerPlugin(svcIntegration);
+			getLogger().info("[SVC] Registered SimpleVoiceChatIntegration with voicechat service");
+		} else {
+			getLogger().info("[SVC] Voicechat service not found; skipping integration");
+		}
+
 		for (Player player : getServer().getOnlinePlayers()) {
 			int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
 				if (!player.isOnline() || Character.isPlayedMapped(player)) {
@@ -158,6 +171,11 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 			Bukkit.getScheduler().cancelTasks(this);
 			Bukkit.getAsyncScheduler().cancelTasks(this);
+			if (svcIntegration != null) {
+				getServer().getServicesManager().unregister(svcIntegration);
+				svcIntegration = null;
+				getLogger().info("[SVC] Unregistered SimpleVoiceChatIntegration");
+			}
 		}
 	}
 

@@ -70,6 +70,10 @@ public class Nickname {
         nametag.sendOff(requester);
     }
 
+    public void setTalking(boolean talking) {
+        nametag.setTalking(talking);
+    }
+
     /**
      * Get the players current Nickname!
      * @return The Players Nickname

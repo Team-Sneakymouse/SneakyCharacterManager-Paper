@@ -16,7 +16,6 @@ import org.joml.Vector3f;
 
 import io.papermc.paper.adventure.PaperAdventure;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.network.syncher.SynchedEntityData.DataValue;
@@ -33,6 +32,11 @@ public class NicknameEntity {
     private ClientboundSetEntityDataPacket packetOff;
     private ClientboundSetEntityDataPacket packetCharacter;
     private ClientboundSetEntityDataPacket packetOn;
+    private ClientboundSetEntityDataPacket packetCharacterTalking;
+    private ClientboundSetEntityDataPacket packetOnTalking;
+    private boolean talking = false;
+    private static final int COLOR_TALKING = Color.fromARGB(160, 255, 220, 100).asARGB();
+    private static final int COLOR_DEFAULT_BACKGROUND = 956301312;
 
     public NicknameEntity(Player player) {
         this.player = player;
@@ -50,19 +54,32 @@ public class NicknameEntity {
 
         player.addPassenger(mounted);
 
-        packetOff = makePacket(Component.text(" "), 0.01F);
+        packetOff = makePacket(Component.text(" "), 0.01F, 0);
     }
 
     public void updatePackets(String name) {
         packetCharacter = makePacket(
             ChatUtility.convertToComponent(name),
-            0.4F);
+            0.4F,
+            COLOR_DEFAULT_BACKGROUND);
         packetOn = makePacket(
             ChatUtility.convertToComponent("<white>" + name + "<newline><gray>[" + player.getName() + "]"),
-            0.2F);
+            0.2F,
+            COLOR_DEFAULT_BACKGROUND);
+
+        // Talking variants: glow + warm background + speaker icon
+        String talkingName = name + " \uD83D\uDD0A";
+        packetCharacterTalking = makePacket(
+            ChatUtility.convertToComponent(talkingName),
+            0.4F,
+            COLOR_TALKING);
+        packetOnTalking = makePacket(
+            ChatUtility.convertToComponent("<white>" + talkingName + "<newline><gold>[" + player.getName() + "]"),
+            0.2F,
+            COLOR_TALKING);
     }
 
-    private ClientboundSetEntityDataPacket makePacket(Component name, float height) {
+    private ClientboundSetEntityDataPacket makePacket(Component name, float height, int backgroundColor) {
         net.minecraft.world.entity.Display.TextDisplay c = (net.minecraft.world.entity.Display.TextDisplay) ((CraftEntity) mounted).getHandle();
 
         net.minecraft.world.entity.Display.TextDisplay temp = new net.minecraft.world.entity.Display.TextDisplay(EntityType.TEXT_DISPLAY, ((CraftPlayer) player).getHandle().level());
@@ -71,7 +88,7 @@ public class NicknameEntity {
         temp.setTransformation(new com.mojang.math.Transformation(new Vector3f(0F,height,0F), new Quaternionf(), new Vector3f(1), new Quaternionf()));
 
         SynchedEntityData entityData = temp.getEntityData();
-        entityData.set(net.minecraft.world.entity.Display.TextDisplay.DATA_BACKGROUND_COLOR_ID, ((TextComponent) name).content().equals(" ") ? 0 : 956301312);
+        entityData.set(net.minecraft.world.entity.Display.TextDisplay.DATA_BACKGROUND_COLOR_ID, backgroundColor);
 
         List<DataValue<?>> nonDefault = new ArrayList<>();
 
@@ -91,11 +108,11 @@ public class NicknameEntity {
     }
 
     public void sendCharacter(Player requester) {
-        send(packetCharacter, requester);
+        send(talking ? packetCharacterTalking : packetCharacter, requester);
     }
 
     public void sendOn(Player requester) {
-        send(packetOn, requester);
+        send(talking ? packetOnTalking : packetOn, requester);
     }
 
     private void send(ClientboundSetEntityDataPacket packet, Player requester) {
@@ -103,6 +120,14 @@ public class NicknameEntity {
         if (!SneakyCharacterManager.getInstance().getConfig().getBoolean("see-own-nameplate", false)
                 && requester.getUniqueId().equals(player.getUniqueId())) return;
         ((CraftPlayer)requester).getHandle().connection.send(packet);
+    }
+
+    public void setTalking(boolean talking) {
+        this.talking = talking;
+        for (Player tracker : this.player.getTrackedBy()) {
+            sendCharacter(tracker);
+            sendOn(tracker);
+        }
     }
 
     public void destroy() {

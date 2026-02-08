@@ -24,3 +24,6 @@ build.bat
 API keys.txt
 /.vscode
 /run
+
+/paper/bin
+/bungee/bin

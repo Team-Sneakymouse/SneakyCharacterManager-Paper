@@ -8,6 +8,9 @@ repositories {
         url = uri("https://repo.extendedclip.com/content/repositories/placeholderapi/")
     }
 	mavenCentral()
+    maven {
+        url = uri("https://maven.maxhenkel.de/repository/public")
+    }
 }
 
 dependencies {
@@ -15,6 +18,7 @@ dependencies {
     implementation("org.apache.httpcomponents:httpclient:4.5.14")
     compileOnly("me.clip:placeholderapi:2.11.5")
     compileOnly("net.luckperms:api:5.4")
+    compileOnly("de.maxhenkel.voicechat:voicechat-api:2.5.27")
 }
 
 tasks {

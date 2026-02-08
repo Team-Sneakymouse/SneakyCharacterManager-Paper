@@ -167,6 +167,13 @@ public class NametagManager {
         return nicknames.get(player.getUniqueId().toString());
     }
 
+    public void setTalking(Player player, boolean talking) {
+        Nickname nickname = nicknames.get(player.getUniqueId().toString());
+        if (nickname != null) {
+            nickname.setTalking(talking);
+        }
+    }
+
     /**
      * Remove the nickname entities of all players.
      * */
