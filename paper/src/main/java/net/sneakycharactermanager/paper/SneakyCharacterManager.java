@@ -30,9 +30,6 @@ import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinPreloader;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
-import net.sneakycharactermanager.paper.handlers.voice.SimpleVoiceChatIntegration;
-import de.maxhenkel.voicechat.api.BukkitVoicechatService;
-
 public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 	public static final String IDENTIFIER = "sneakycharacters";
@@ -51,7 +48,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 	public SkinQueue skinQueue;
 	public SkinPreloader skinPreloader;
 	public NameTagRefresher nameTagRefresher;
-	private SimpleVoiceChatIntegration svcIntegration;
+	private Object svcIntegration;
 
 	@Override
 	public void onEnable() {
@@ -119,15 +116,8 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 			new ContextCalculatorCharacterTag().register();
 		}
 
-		// Optional Simple Voice Chat integration (register directly if service is present)
-		BukkitVoicechatService voicechatService = getServer().getServicesManager().load(BukkitVoicechatService.class);
-		if (voicechatService != null) {
-			svcIntegration = new SimpleVoiceChatIntegration();
-			voicechatService.registerPlugin(svcIntegration);
-			getLogger().info("[SVC] Registered SimpleVoiceChatIntegration with voicechat service");
-		} else {
-			getLogger().info("[SVC] Voicechat service not found; skipping integration");
-		}
+		// Optional Simple Voice Chat integration (soft-depend)
+		initVoiceChatIntegration();
 
 		for (Player player : getServer().getOnlinePlayers()) {
 			int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
@@ -171,11 +161,44 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 			Bukkit.getScheduler().cancelTasks(this);
 			Bukkit.getAsyncScheduler().cancelTasks(this);
-			if (svcIntegration != null) {
-				getServer().getServicesManager().unregister(svcIntegration);
-				svcIntegration = null;
-				getLogger().info("[SVC] Unregistered SimpleVoiceChatIntegration");
+			teardownVoiceChatIntegration();
+		}
+	}
+
+	private void initVoiceChatIntegration() {
+		try {
+			if (Bukkit.getPluginManager().getPlugin("voicechat") == null) {
+				getLogger().info("[SVC] Voicechat plugin not present; skipping integration");
+				return;
 			}
+			Class<?> svcClass = Class.forName("de.maxhenkel.voicechat.api.BukkitVoicechatService");
+			Object service = Bukkit.getServicesManager().load(svcClass);
+			if (service == null) {
+				getLogger().info("[SVC] Voicechat service not found; skipping integration");
+				return;
+			}
+			Class<?> pluginIface = Class.forName("de.maxhenkel.voicechat.api.VoicechatPlugin");
+			Class<?> implClass = Class.forName("net.sneakycharactermanager.paper.handlers.voice.SimpleVoiceChatIntegration");
+			Object impl = implClass.getConstructor().newInstance();
+			svcClass.getMethod("registerPlugin", pluginIface).invoke(service, impl);
+			svcIntegration = impl;
+			getLogger().info("[SVC] Registered SimpleVoiceChatIntegration with voicechat service");
+		} catch (ClassNotFoundException e) {
+			getLogger().info("[SVC] Voicechat API not on classpath; skipping integration");
+		} catch (Exception ex) {
+			getLogger().warning("[SVC] Failed to register SimpleVoiceChatIntegration: " + ex.getMessage());
+		}
+	}
+
+	private void teardownVoiceChatIntegration() {
+		if (svcIntegration == null) return;
+		try {
+			Class<?> pluginIface = Class.forName("de.maxhenkel.voicechat.api.VoicechatPlugin");
+			Bukkit.getServicesManager().unregister(pluginIface, svcIntegration);
+			getLogger().info("[SVC] Unregistered SimpleVoiceChatIntegration");
+		} catch (Throwable ignored) {
+		} finally {
+			svcIntegration = null;
 		}
 	}
 
