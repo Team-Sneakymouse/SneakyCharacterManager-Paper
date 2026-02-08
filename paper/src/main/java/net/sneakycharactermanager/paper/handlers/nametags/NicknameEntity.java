@@ -45,7 +45,7 @@ public class NicknameEntity {
         mounted = player.getWorld().spawn(loc, TextDisplay.class);
 
         mounted.setBillboard(Display.Billboard.CENTER);
-        mounted.setLineWidth(150);
+        mounted.setLineWidth(250);
         mounted.setShadowed(true);
         mounted.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
         mounted.setBrightness(new Display.Brightness(15, 15));
