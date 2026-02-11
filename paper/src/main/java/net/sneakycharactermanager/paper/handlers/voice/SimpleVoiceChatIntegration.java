@@ -1,7 +1,9 @@
 package net.sneakycharactermanager.paper.handlers.voice;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -20,7 +22,8 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 public class SimpleVoiceChatIntegration implements VoicechatPlugin {
 
     private final Map<UUID, BukkitTask> resetTasks = new HashMap<>();
-    private static final int TALKING_TIMEOUT_TICKS = 2; // 0.1 seconds of inactivity to stop talking
+    private final Set<UUID> talking = new HashSet<>();
+    private static final int TALKING_TIMEOUT_TICKS = 10; // 0.5 seconds of inactivity to stop talking
 
     @Override
     public String getPluginId() {
@@ -66,14 +69,18 @@ public class SimpleVoiceChatIntegration implements VoicechatPlugin {
         Player player = Bukkit.getPlayer(uuid);
         if (player == null) return;
 
-        SneakyCharacterManager.getInstance().nametagManager.setTalking(player, true);
+        // Only send the "start talking" update on transition from silent -> talking
+        if (talking.add(uuid)) {
+            SneakyCharacterManager.getInstance().nametagManager.setTalking(player, true);
+        }
 
         BukkitTask prior = resetTasks.remove(uuid);
         if (prior != null) prior.cancel();
 
         BukkitTask task = Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
             Player p = Bukkit.getPlayer(uuid);
-            if (p != null) {
+            // If no packet refreshed the timer, mark as not talking and clear state
+            if (p != null && talking.remove(uuid)) {
                 SneakyCharacterManager.getInstance().nametagManager.setTalking(p, false);
             }
             resetTasks.remove(uuid);

@@ -124,9 +124,10 @@ public class NicknameEntity {
 
     public void setTalking(boolean talking) {
         this.talking = talking;
+        var mgr = SneakyCharacterManager.getInstance().nametagManager;
+        Nickname ownerNickname = mgr.getNickname(this.player);
         for (Player tracker : this.player.getTrackedBy()) {
-            sendCharacter(tracker);
-            sendOn(tracker);
+            mgr.refreshNickname(ownerNickname, tracker);
         }
     }
 
