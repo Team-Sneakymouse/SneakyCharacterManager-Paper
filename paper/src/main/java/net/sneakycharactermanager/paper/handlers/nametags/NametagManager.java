@@ -59,21 +59,22 @@ public class NametagManager {
     }
 
     public List<Player> refreshNicknames(Player player, Nickname name, List<Player> trackingPlayersPrev) {
-        List<Player> trackingPlayers = new ArrayList<>();
+        List<Player> currentTrackers = new ArrayList<>();
 
         for (Player tracking : player.getTrackedBy()) {
-            if (trackingPlayersPrev != null && trackingPlayersPrev.contains(tracking)) continue;
             if (player.getLocation().distanceSquared(tracking.getLocation()) > 10000) continue;
-            
-            trackingPlayers.add(tracking);
-
+            currentTrackers.add(tracking);
+            if (trackingPlayersPrev != null && trackingPlayersPrev.contains(tracking)) continue;
             refreshNickname(name, tracking);
         }
         if (SneakyCharacterManager.getInstance().getConfig().getBoolean("see-own-nameplate", false)) {
-            refreshNickname(name, player);
+            currentTrackers.add(player);
+            if (trackingPlayersPrev == null || !trackingPlayersPrev.contains(player)) {
+                refreshNickname(name, player);
+            }
         }
-        
-        return trackingPlayers;
+
+        return currentTrackers;
     }
 
     public void refreshNickname(Nickname name, Player requester) {
