@@ -31,6 +31,7 @@ java {
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "java")
+    apply(plugin = "maven-publish")
 
     repositories {
         mavenCentral()
@@ -45,6 +46,20 @@ subprojects {
 
     java {
         toolchain.languageVersion = JavaLanguageVersion.of(21)
+        withSourcesJar()
+    }
+
+    afterEvaluate {
+        extensions.configure<PublishingExtension> {
+            publications {
+                create<MavenPublication>("maven") {
+                    from(components["java"])
+                    groupId = project.group.toString()
+                    artifactId = "sneakycharactermanager-${project.name}"
+                    version = project.version.toString()
+                }
+            }
+        }
     }
 }
 
