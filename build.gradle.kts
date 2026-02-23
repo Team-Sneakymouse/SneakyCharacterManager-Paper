@@ -1,3 +1,33 @@
+import java.net.HttpURLConnection
+import java.net.URI
+import java.util.Base64
+import java.util.Properties
+import org.gradle.external.javadoc.StandardJavadocDocletOptions
+
+val localGradleProperties = Properties().apply {
+    val localPropsFile = rootDir.resolve(".gradle/gradle.properties")
+    if (localPropsFile.exists()) {
+        localPropsFile.inputStream().use { load(it) }
+    }
+}
+
+fun localGradleProperty(name: String): String = localGradleProperties.getProperty(name)?.trim().orEmpty()
+
+fun resolveConfigValue(propertyName: String, envName: String? = null, defaultValue: String = ""): String {
+    val gradleValue = providers.gradleProperty(propertyName).orNull?.trim().orEmpty()
+    if (gradleValue.isNotEmpty()) return gradleValue
+
+    if (envName != null) {
+        val envValue = System.getenv(envName)?.trim().orEmpty()
+        if (envValue.isNotEmpty()) return envValue
+    }
+
+    val localValue = localGradleProperty(propertyName)
+    if (localValue.isNotEmpty()) return localValue
+
+    return defaultValue
+}
+
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.8.10"
@@ -16,26 +46,24 @@ val pomScmConnection = providers.gradleProperty("POM_SCM_CONNECTION")
 val pomScmDeveloperConnection = providers.gradleProperty("POM_SCM_DEV_CONNECTION")
     .orElse("scm:git:ssh://git@github.com:REPLACE_ME/SneakyCharacterManager-Paper.git")
 val pomLicenseName = providers.gradleProperty("POM_LICENSE_NAME")
-    .orElse("The MIT License")
+    .orElse("GNU General Public License v3.0")
 val pomLicenseUrl = providers.gradleProperty("POM_LICENSE_URL")
-    .orElse("https://opensource.org/licenses/MIT")
+    .orElse("https://www.gnu.org/licenses/gpl-3.0-standalone.html")
 val pomDeveloperId = providers.gradleProperty("POM_DEVELOPER_ID")
     .orElse("team-sneakymouse")
 val pomDeveloperName = providers.gradleProperty("POM_DEVELOPER_NAME")
     .orElse("Team Sneakymouse")
 
-val sonatypeUsername = providers.gradleProperty("sonatypeUsername")
-    .orElse(System.getenv("SONATYPE_USERNAME") ?: "")
-val sonatypePassword = providers.gradleProperty("sonatypePassword")
-    .orElse(System.getenv("SONATYPE_PASSWORD") ?: "")
-val signingKey = providers.gradleProperty("signingKey")
-    .orElse(System.getenv("SIGNING_KEY") ?: "")
-val signingPassword = providers.gradleProperty("signingPassword")
-    .orElse(System.getenv("SIGNING_PASSWORD") ?: "")
+val sonatypeUsername = resolveConfigValue("sonatypeUsername", "SONATYPE_USERNAME")
+val sonatypePassword = resolveConfigValue("sonatypePassword", "SONATYPE_PASSWORD")
+val centralPortalNamespace = resolveConfigValue("centralPortalNamespace", defaultValue = "io.github.team-sneakymouse")
+val signingKey = resolveConfigValue("signingKey", "SIGNING_KEY")
+val signingPassword = resolveConfigValue("signingPassword", "SIGNING_PASSWORD")
+val releaseVersion = resolveConfigValue("releaseVersion", defaultValue = "1.0-SNAPSHOT")
 
 allprojects {
     group = "io.github.team-sneakymouse"
-    version = "1.0-SNAPSHOT"
+    version = releaseVersion
 
     repositories {
         mavenCentral()
@@ -79,6 +107,12 @@ subprojects {
         withJavadocJar()
     }
 
+    tasks.withType<Javadoc>().configureEach {
+        // Keep generating javadocs for Central while avoiding hard failure on legacy/missing tags.
+        isFailOnError = false
+        (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:none", "-quiet")
+    }
+
     afterEvaluate {
         extensions.configure<PublishingExtension> {
             publications {
@@ -119,21 +153,21 @@ subprojects {
             repositories {
                 maven {
                     name = "sonatype"
-                    // Snapshot and release repositories for Maven Central (OSSRH flow).
-                    val releasesRepoUrl = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-                    val snapshotsRepoUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+                    // Central Portal compatibility endpoints for Maven-like publishing.
+                    val releasesRepoUrl = uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
+                    val snapshotsRepoUrl = uri("https://central.sonatype.com/repository/maven-snapshots/")
                     url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
                     credentials {
-                        username = sonatypeUsername.get()
-                        password = sonatypePassword.get()
+                        username = sonatypeUsername
+                        password = sonatypePassword
                     }
                 }
             }
         }
 
         extensions.configure<SigningExtension> {
-            val key = signingKey.orNull
-            val password = signingPassword.orNull
+            val key = signingKey
+            val password = signingPassword
             if (!key.isNullOrBlank() && !password.isNullOrBlank()) {
                 useInMemoryPgpKeys(key, password)
                 sign(extensions.getByType(PublishingExtension::class).publications)
@@ -166,10 +200,85 @@ tasks {
     build {
         dependsOn(subprojects.map { it.tasks.named("publishToMavenLocal") })
     }
+    register("validateCentralConfig") {
+        description = "Validates required Central publishing credentials and signing setup"
+        group = "publishing"
+        doLast {
+            val username = sonatypeUsername.trim()
+            val password = sonatypePassword.trim()
+            if (username.isBlank() || password.isBlank()) {
+                throw GradleException(
+                    "Missing Central credentials. Set sonatypeUsername/sonatypePassword " +
+                        "(or SONATYPE_USERNAME/SONATYPE_PASSWORD)."
+                )
+            }
+            if (username.contains("@")) {
+                throw GradleException(
+                    "sonatypeUsername looks like an email. Use Central Portal USER TOKEN credentials, " +
+                        "not your account email/password."
+                )
+            }
+
+            if (!version.toString().endsWith("SNAPSHOT")) {
+                val key = signingKey.trim()
+                val pass = signingPassword.trim()
+                if (key.isBlank() || pass.isBlank()) {
+                    throw GradleException(
+                        "Release publishing requires signingKey/signingPassword " +
+                            "(or SIGNING_KEY/SIGNING_PASSWORD)."
+                    )
+                }
+            }
+        }
+    }
+
+    subprojects.forEach { subproject ->
+        subproject.tasks.matching { it.name == "publishMavenPublicationToSonatypeRepository" }.configureEach {
+            dependsOn(rootProject.tasks.named("validateCentralConfig"))
+        }
+    }
+
     register("releaseToCentral") {
         description = "Publishes all subprojects to Sonatype for Maven Central"
         group = "publishing"
         dependsOn(subprojects.map { it.tasks.named("publishMavenPublicationToSonatypeRepository") })
+        doLast {
+            if (sonatypeUsername.isBlank() || sonatypePassword.isBlank()) {
+                throw GradleException("Missing SONATYPE_USERNAME/SONATYPE_PASSWORD (or sonatypeUsername/sonatypePassword).")
+            }
+
+            // Snapshot uploads go directly to Central snapshots and do not create
+            // an OSSRH-staging-api repository to hand off.
+            if (version.toString().endsWith("SNAPSHOT")) {
+                logger.lifecycle("Skipping Central Portal handoff for SNAPSHOT version {}", version)
+                return@doLast
+            }
+
+            val namespace = centralPortalNamespace
+            val authValue = Base64.getEncoder()
+                .encodeToString("${sonatypeUsername}:${sonatypePassword}".toByteArray(Charsets.UTF_8))
+            val endpoint = URI.create(
+                "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/$namespace"
+            ).toURL()
+            val connection = (endpoint.openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                setRequestProperty("Authorization", "Bearer $authValue")
+                setRequestProperty("Accept", "application/json")
+                doOutput = true
+                outputStream.use { }
+            }
+
+            val responseCode = connection.responseCode
+            if (responseCode !in 200..299) {
+                val responseBody = runCatching {
+                    connection.errorStream?.bufferedReader()?.use { it.readText() }
+                }.getOrNull().orEmpty()
+                throw GradleException(
+                    "Central Portal handoff failed (HTTP $responseCode). " +
+                        "Check namespace/token and retry. Response: $responseBody"
+                )
+            }
+        }
     }
     runServer {
         dependsOn(shadowJar)
