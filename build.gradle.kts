@@ -84,6 +84,9 @@ tasks {
     compileJava {
         options.release = 21
     }
+    build {
+        dependsOn(subprojects.map { it.tasks.named("publishToMavenLocal") })
+    }
     runServer {
         dependsOn(shadowJar)
         minecraftVersion("1.21.4")
