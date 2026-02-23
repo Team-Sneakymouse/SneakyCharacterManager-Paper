@@ -1,88 +1,282 @@
-# SneakyCharacterManager-Paper
- Paper plugin for switching characters in DvZ and LoM
+# SneakyCharacterManager
 
-## BungeeCord End:
-1. Stores player character information in unique .yml files PLAYERUUID.yml
-   2. General format for character information:
-   ```yaml
-    last-used-character: "<charuuid>"
-    characters:
-      <charuuid>: #Randomly Generated UUID
-        name: "Jimmy 3 Fingers"
-        skin: "HTTP Link to Skin || File Path To Skin"
-      <charuuid2>:
-        name: "Rasputin Fanghorn"
-        skin: "HTTP Link to Skin || File Path To Skin"
-      #File Path for Skins are a 50/50 depending on impl & will need to be managed on the Backend side not Bungee
-   ```
-   
-## Backend Servers:
-1. Character Data Storage:
-   1. Store character information in a .yml format containing:
-      1. Last "Logout" Information (Location)
-      2. Character Inventory
-   2. Function to wipe character data as needed
+Character management system for Paper + Bungee networks.
 
+This plugin lets players maintain multiple roleplay characters while syncing character identity over Bungee and character gameplay state on Paper.
 
-2. When players switch characters they will spawn where they last were as that character & with what ever items that character has
+## Project layout
 
+- `paper/`: gameplay-side plugin (commands, nicknames, skins, placeholders, local character state files).
+- `bungee/`: proxy-side plugin (authoritative character list and metadata per player).
+- root project: build, publish, signing, and release tasks.
 
-3. Character Selection menu containing player heads with the character skins & name
-   1. Possibly also details like Last Played date and, in the case of LoM, last district?
+## Runtime requirements
 
+- Java 21
+- Paper server(s) (paperweight/dev setup targets 1.21.4)
+- BungeeCord proxy
+- Optional soft dependencies on Paper side:
+  - PlaceholderAPI
+  - LuckPerms
+  - Simple Voice Chat (`voicechat`)
 
-4. Character Creation Menu
-   1. Can set character name, and skin. Data is sent to the Bungee Server for storage
-   2. "Quick Create" only works 1 time. Creates a character with players base username & skin data
+## Network setup
 
+1. Install the Bungee plugin jar on your proxy.
+2. Install the Paper plugin jar on each backend server.
+3. Start Bungee first so it creates `keys.ser` in the Bungee plugin data folder.
+4. Copy that same `keys.ser` into each Paper plugin data folder.
+   - Paper only loads keys; it does not generate them.
+   - If keys do not match between proxy and backend, plugin messaging auth will fail.
 
-5. Allow the deletion of characters BUT players must keep minimum 1 character
+## Data model (high-level)
 
+- Bungee stores identity metadata in:
+  - `plugins/SneakyCharacterManager/characterdata/<playerUUID>.yml`
+- Paper stores per-character gameplay state in:
+  - `plugins/SneakyCharacterManager/characterdata/<playerUUID>/<characterUUID>.yml`
+- Messaging channel between proxy and backend:
+  - `sneakymouse:sneakycharacters`
 
-6. Limited Character Slots:
-   1. Will require a fair bit of communication between Bungee & Backend
-   2. Players can only have a limited character count to avoid over use & to learn how the RPer plays
-   3. Will have an 'unlimited' permission node to bypass character limit
-   4. LoM has a skill tree on Character Slots, might need to interface with it and store slots as a number?
-   5. Royals most likely get Unlimited by default :)
+## Configuration (Paper)
 
-We will need to be able to quickly send request between Bungee & Backend servers to fetch character details, and character slots.
-Will avoid fetching as much as possible to limit server lag & delay. Should only need to request for the following events:
-```
-1. On Player Join A Backend Server
-   - Fetch last used character & load it to the player
-2. On Character Selection Menu Opened
-   - Fetch all characters available to the player
-3. On Character Creation Completed
-   - Send new character data to Bungee
-4. On Disconnect
-   - Store last used character on Bungee 
-```
+`paper/src/resources/config.yml` currently supports:
 
-
-**Note: Most of this is SUBJECT TO CHANGE as requirements are adjusted!**
+- `deleteCharacterDataOnServerStart`
+- `manageLocations`
+- `manageInventories`
+- `manageAttributes`
+- `respawnNameTags`
+- `respawnTimerSeconds`
+- `see-own-nameplate`
+- `bannedWords`
+- `mineskinQueueUrl`
+- `mineskinAuth`
+- `imgurApiUrl`
+- `imgurClientId`
+- `webServerFolderPath`
+- `webServerURLPrefix`
+- `gender-suffixes.*`
 
 ## Commands (Paper)
-- `/char` – open character selection GUI.
-- `/chargender <masculine|feminine|nonbinary|clear>` – set or clear current character gender.
-- `/nick "<name>"` – set character name (supports MiniMessage; needs `sneakycharacters.formatnames` for formatting).
-- `/skin <url>` – set character skin.
-- `/names` – list character names.
-- `/charprefix "<prefix>"|clear` – set/clear session-only name prefix.
-- Admin: `/charadmin <player>`, `/chartag <player> <add/remove> <key> [value]`, `/charscan`, `/charuniform`, `/charsavetemplatechar`, `/charuserify`, `/charmigrateinventories`.
-- Console: `chardisable`, `charenable`, `chartemp` (temporary character load).
 
-## Placeholders (PlaceholderAPI)
-- `sneakycharacters_character_uuid`
-- `sneakycharacters_character_name`, `sneakycharacters_character_name_noformat`
-- `sneakycharacters_character_skin`, `sneakycharacters_character_slim`
-- `sneakycharacters_character_tags`, `sneakycharacters_character_hastag_<key>`, `sneakycharacters_character_tag_<key>`
-- `sneakycharacters_character_name_prefix`
-- `sneakycharacters_character_gender`, `sneakycharacters_character_gender_suffix`
-- Pronouns (default to they/them when unset): `sneakycharacters_character_pronoun_s` (subject), `sneakycharacters_character_pronoun_o` (object), `sneakycharacters_character_pronoun_p` (possessive adj), `sneakycharacters_character_pronoun_p2` (possessive pronoun)
+### Player commands
 
-## Permissions (Paper)
-- Base: `sneakycharacters.*`, `sneakycharacters.command.*`, `sneakycharacters.character.*`, `sneakycharacters.admin.*`, `sneakycharacters.admin.command.*`, `sneakycharacters.admin.bypass.*`
-- Character slots: `sneakycharacters.characterslots.<number>` (or `*` for unlimited)
-- Formatting: `sneakycharacters.formatnames` (allow MiniMessage/formatting in names)
-- Skin fetch other players: `sneakycharacters.skinfetch.others`
+- `/char` (opens menu)
+- `/char <name...>` (select by name)
+- `/char confirm` (confirm character deletion flow)
+- `/nick <name...>`
+- `/skin ...` (set/fetch/revert flows)
+- `/names <on|off|character>`
+- `/chargender <masculine|feminine|nonbinary|clear>`
+
+### Admin commands
+
+- `/charadmin`
+- `/chartag`
+- `/charprefix`
+- `/charscan`
+- `/uniform`
+- `/savetemplatechar`
+- `/userify`
+- `/migrateinventories`
+
+### Console commands
+
+- `chardisable`
+- `charenable`
+- `chartemp`
+
+## Permissions
+
+- Base groups:
+  - `sneakycharacters.*`
+  - `sneakycharacters.command.*`
+  - `sneakycharacters.character.*`
+  - `sneakycharacters.admin.*`
+  - `sneakycharacters.admin.command.*`
+  - `sneakycharacters.admin.bypass.*`
+- Character slots:
+  - `sneakycharacters.characterslots.<number>`
+  - `sneakycharacters.characterslots.*`
+- Other notable nodes:
+  - `sneakycharacters.formatnames`
+  - `sneakycharacters.skinfetch.others`
+  - `sneakycharacters.character.<characterUUID>`
+
+## PlaceholderAPI placeholders
+
+Prefix: `%sneakycharacters_<placeholder>%`
+
+- `character_uuid`
+- `character_name`
+- `character_name_noformat`
+- `character_skin`
+- `character_slim`
+- `character_tags`
+- `character_hastag_<key>`
+- `character_tag_<key>`
+- `character_name_prefix`
+- `character_gender`
+- `character_gender_suffix`
+- `character_pronoun_s`
+- `character_pronoun_o`
+- `character_pronoun_p`
+- `character_pronoun_p2`
+
+## Build tasks
+
+- Build all: `./gradlew build`
+- Local publish: `./gradlew publishToMavenLocal`
+- Central preflight: `./gradlew validateCentralConfig`
+- Central publish task: `./gradlew releaseToCentral`
+
+---
+
+## Publishing to Maven Central
+
+This repository is configured to publish:
+
+- `io.github.team-sneakymouse:sneakycharactermanager-paper:<version>`
+- `io.github.team-sneakymouse:sneakycharactermanager-bungee:<version>`
+
+### 1) Credentials and signing setup
+
+Add credentials in either:
+
+- user-level `~/.gradle/gradle.properties` (recommended), or
+- project-local `./.gradle/gradle.properties` (gitignored local file)
+
+Example:
+
+```properties
+sonatypeUsername=<CENTRAL_PORTAL_TOKEN_USERNAME>
+sonatypePassword=<CENTRAL_PORTAL_TOKEN_PASSWORD>
+
+# Required for non-SNAPSHOT releases
+signingKey=-----BEGIN PGP PRIVATE KEY BLOCK-----\n...\n-----END PGP PRIVATE KEY BLOCK-----
+signingPassword=<GPG_PASSPHRASE>
+```
+
+Notes:
+
+- Use **Central Portal user token** credentials, not your account email/password.
+- For release versions, your signing public key must be published to supported keyservers.
+
+### 2) Snapshot publish
+
+Default project version is `1.0-SNAPSHOT`.
+
+```bash
+./gradlew releaseToCentral
+```
+
+### 3) Release publish (example: tag `v1.4.0`)
+
+```bash
+./gradlew releaseToCentral -PreleaseVersion=1.4.0 --rerun-tasks
+```
+
+`--rerun-tasks` is recommended for release retries to ensure fresh signature artifacts.
+
+### 4) Common release troubleshooting
+
+- `401 Unauthorized`: wrong token username/password.
+- `403 Forbidden` on snapshots: snapshot publishing not enabled for namespace.
+- `Could not find a public key by the key fingerprint`: upload signing public key to keyservers, wait for propagation, then rerun release.
+
+---
+
+## Consuming published artifacts
+
+### Gradle Kotlin DSL (`build.gradle.kts`)
+
+Release:
+
+```kotlin
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly("io.github.team-sneakymouse:sneakycharactermanager-paper:1.4.0")
+    // or bungee module:
+    // compileOnly("io.github.team-sneakymouse:sneakycharactermanager-bungee:1.4.0")
+}
+```
+
+Snapshot:
+
+```kotlin
+repositories {
+    mavenCentral()
+    maven("https://central.sonatype.com/repository/maven-snapshots/")
+}
+
+dependencies {
+    compileOnly("io.github.team-sneakymouse:sneakycharactermanager-paper:1.0-SNAPSHOT")
+}
+```
+
+### Gradle Groovy DSL (`build.gradle`)
+
+Release:
+
+```groovy
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly "io.github.team-sneakymouse:sneakycharactermanager-paper:1.4.0"
+    // compileOnly "io.github.team-sneakymouse:sneakycharactermanager-bungee:1.4.0"
+}
+```
+
+Snapshot:
+
+```groovy
+repositories {
+    mavenCentral()
+    maven { url "https://central.sonatype.com/repository/maven-snapshots/" }
+}
+
+dependencies {
+    compileOnly "io.github.team-sneakymouse:sneakycharactermanager-paper:1.0-SNAPSHOT"
+}
+```
+
+### Maven (`pom.xml`)
+
+Release:
+
+```xml
+<dependencies>
+  <dependency>
+    <groupId>io.github.team-sneakymouse</groupId>
+    <artifactId>sneakycharactermanager-paper</artifactId>
+    <version>1.4.0</version>
+    <scope>provided</scope>
+  </dependency>
+</dependencies>
+```
+
+Snapshot:
+
+```xml
+<repositories>
+  <repository>
+    <id>sonatype-central-snapshots</id>
+    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+  </repository>
+</repositories>
+
+<dependencies>
+  <dependency>
+    <groupId>io.github.team-sneakymouse</groupId>
+    <artifactId>sneakycharactermanager-paper</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <scope>provided</scope>
+  </dependency>
+</dependencies>
+```
