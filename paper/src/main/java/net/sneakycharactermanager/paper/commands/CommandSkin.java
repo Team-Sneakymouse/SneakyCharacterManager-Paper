@@ -35,6 +35,7 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterLoader;
+import net.sneakycharactermanager.paper.handlers.character.CharacterSkinChangeEvent;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
@@ -102,6 +103,10 @@ public class CommandSkin extends CommandBase {
 		;
 
 		if (args[0].equalsIgnoreCase("default") || args[0].equalsIgnoreCase("revert")) {
+			CharacterSkinChangeEvent event = new CharacterSkinChangeEvent(player, character.getCharacterUUID(), "default", null);
+			Bukkit.getPluginManager().callEvent(event);
+			if (event.isCancelled()) return false;
+
 			player.sendMessage(ChatUtility.convertToComponent("&eFetching skin.. Please wait..!"));
 			resetPlayerSkin(player);
 			return true;
@@ -121,6 +126,10 @@ public class CommandSkin extends CommandBase {
 			else
 				slim = false;
 		}
+
+		CharacterSkinChangeEvent event = new CharacterSkinChangeEvent(player, character.getCharacterUUID(), url, slim);
+		Bukkit.getPluginManager().callEvent(event);
+		if (event.isCancelled()) return false;
 
 		player.sendMessage(ChatUtility.convertToComponent("&aUpdating your skin!"));
 

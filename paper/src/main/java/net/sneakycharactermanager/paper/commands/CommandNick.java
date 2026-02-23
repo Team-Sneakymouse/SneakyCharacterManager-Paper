@@ -3,6 +3,8 @@ package net.sneakycharactermanager.paper.commands;
 import java.util.*;
 
 import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.character.CharacterNickChangeEvent;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -80,6 +82,11 @@ public class CommandNick extends CommandBase {
             player.sendMessage(ChatUtility.convertToComponent("&cSorry! Failed to retrieve character!"));
             return false;
         }
+
+        CharacterNickChangeEvent event = new CharacterNickChangeEvent(player, character.getCharacterUUID(), character.getName(), nickname);
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled()) return false;
+
         character.setName(nickname);
         SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
         BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), character.getCharacterUUID(), 2, nickname);
