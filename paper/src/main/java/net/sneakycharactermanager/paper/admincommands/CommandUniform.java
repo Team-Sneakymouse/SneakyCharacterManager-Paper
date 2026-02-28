@@ -199,7 +199,7 @@ public class CommandUniform extends CommandBaseAdmin {
                                         } catch (IOException e) {
                                             e.printStackTrace();
                                         }
-                                    }, 60, TimeUnit.SECONDS);
+                                    }, 600, TimeUnit.SECONDS);
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     return;
