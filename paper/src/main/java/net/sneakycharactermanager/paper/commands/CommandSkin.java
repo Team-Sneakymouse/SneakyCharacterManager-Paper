@@ -33,6 +33,7 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
+import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterLoader;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSkinChangeEvent;
@@ -202,6 +203,7 @@ public class CommandSkin extends CommandBase {
 							character.setSlim(isSlim);
 							BungeeMessagingUtil.sendByteArray(player, "updateCharacter",
 									player.getUniqueId().toString(), character.getCharacterUUID(), 1, textureURL, isSlim);
+
 							player.setPlayerProfile(profile);
 
 							Entity vehicle = player.getVehicle();

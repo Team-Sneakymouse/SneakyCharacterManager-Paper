@@ -22,6 +22,7 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
+import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
@@ -52,7 +53,7 @@ public class CharacterLoader {
 
 			if (profileProperty == null) {
 				if (!shouldSkipLoading(character)) {
-					SkinData.getOrCreate(url, skinUUID, character.isSlim(), 2, player, character.getCharacterUUID());
+					SkinData.getOrCreate(url, skinUUID, character.isSlim(), SkinQueue.PRIO_LOAD, player, character.getCharacterUUID(), character.getName());
 				}
 			} else {
 				player.setPlayerProfile(SkinUtil.handleCachedSkin(player, profileProperty));
@@ -92,7 +93,9 @@ public class CharacterLoader {
 						playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM), player, characterUUID);
 			});
 		} else {
-			SkinData.getOrCreate(url, "", slim, 3, player, characterUUID);
+		Character character = Character.get(player);
+		String name = (character != null && character.getCharacterUUID().equals(characterUUID)) ? character.getName() : null;
+		SkinData.getOrCreate(url, "", slim, SkinQueue.PRIO_SKIN, player, characterUUID, name);
 		}
 	}
 
@@ -127,7 +130,9 @@ public class CharacterLoader {
 
 		final boolean slimFinal = slim;
 		Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-			SkinData.getOrCreate(url, "", slimFinal, 3, player, characterUUID);
+			Character character = Character.get(player);
+			String name = (character != null && character.getCharacterUUID().equals(characterUUID)) ? character.getName() : null;
+			SkinData.getOrCreate(url, "", slimFinal, SkinQueue.PRIO_SKIN, player, characterUUID, name);
 		});
 	}
 

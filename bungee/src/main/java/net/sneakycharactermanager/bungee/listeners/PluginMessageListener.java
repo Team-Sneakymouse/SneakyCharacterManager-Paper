@@ -182,6 +182,12 @@ public class PluginMessageListener implements Listener {
 
                 break;
 
+            case "preloadSkinsBulk":
+                List<String> uuids = readStringList(messageIn);
+                for (String pUUID : uuids) {
+                    PlayerData.get(pUUID).sendEnabledCharacters(serverInfo, "preloadSkins", pUUID);
+                }
+                break;
             case "getAllCharacters":
                 requesterUUID = messageIn.readUTF();
                 String filter = messageIn.readUTF();
@@ -198,17 +204,15 @@ public class PluginMessageListener implements Listener {
         }
     }
 
-	/*
-	public static List<String> readStringList(ByteArrayDataInput in) {
-		int size = in.readInt();
+    public static List<String> readStringList(ByteArrayDataInput in) {
+        int size = in.readInt();
 
-		List<String> strings = new ArrayList<>();
-		while (strings.size() < size) {
-			strings.add(in.readUTF());
-		}
+        List<String> strings = new ArrayList<>();
+        while (strings.size() < size) {
+            strings.add(in.readUTF());
+        }
 
-		return strings;
-	}
-	*/
+        return strings;
+    }
 
 }

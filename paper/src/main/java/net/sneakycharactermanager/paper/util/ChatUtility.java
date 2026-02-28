@@ -82,4 +82,11 @@ public class ChatUtility {
         return out.toString();
     }
 
+    public static String stripFormatting(String input) {
+        if (input == null) return null;
+        Pattern pattern = Pattern.compile("<[^>]*>|&[0-9A-FK-ORa-fk-or]");
+        Matcher matcher = pattern.matcher(input);
+        return matcher.replaceAll("");
+    }
+
 }

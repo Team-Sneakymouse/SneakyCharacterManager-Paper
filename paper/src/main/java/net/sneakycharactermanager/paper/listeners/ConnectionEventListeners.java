@@ -15,6 +15,7 @@ import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisabl
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
+import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 
 public class ConnectionEventListeners implements Listener {
@@ -28,7 +29,13 @@ public class ConnectionEventListeners implements Listener {
         SneakyCharacterManager.getInstance().nametagManager.loadNames(player);
 
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
-            SneakyCharacterManager.getInstance().skinPreloader.preload(player);
+            if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".admin.preload.offline")) {
+                SneakyCharacterManager.getInstance().skinQueue.requestOfflineSkins(player);
+            }
+            if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".skin.preload")) {
+                SneakyCharacterManager.getInstance().skinQueue.preload(player);
+            }
+            SneakyCharacterManager.getInstance().skinQueue.updatePriority(player, SkinQueue.PRIO_ONLINE);
 
             if (!ConsoleCommandCharDisable.isPlayerCharDisabled(player.getUniqueId().toString())) {
                 int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(SneakyCharacterManager.getInstance(), () -> {
@@ -58,7 +65,7 @@ public class ConnectionEventListeners implements Listener {
 
         CommandChar.tabCompleteMap.remove(player.getUniqueId().toString());
         //SkinCache.remove(player.getUniqueId().toString());
-        SneakyCharacterManager.getInstance().skinPreloader.preLoadedPlayers.remove(player);
+        SneakyCharacterManager.getInstance().skinQueue.preLoadedPlayers.remove(player);
 
         Character character = Character.get(player);
 
@@ -67,6 +74,7 @@ public class ConnectionEventListeners implements Listener {
         } else {
             character.save();
         }
+        SneakyCharacterManager.getInstance().skinQueue.updatePriority(player, SkinQueue.PRIO_PRELOAD);
         Character.remove(player);
 
     }

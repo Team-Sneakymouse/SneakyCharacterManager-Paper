@@ -31,6 +31,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.commands.CommandChar;
+import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
@@ -121,7 +122,10 @@ public class CharacterSelectionMenu implements Listener {
             this.allCharacters = characters;
             displayCurrentPage();
 
-            if (this.player != null) SneakyCharacterManager.getInstance().skinPreloader.preLoadedPlayers.add(this.player);
+            if (this.player != null) {
+                SneakyCharacterManager.getInstance().skinQueue.preLoadedPlayers.add(this.player);
+                SneakyCharacterManager.getInstance().skinQueue.updatePriority(this.player, SkinQueue.PRIO_MENU);
+            }
 
             updated = true;
         }
@@ -228,7 +232,7 @@ public class CharacterSelectionMenu implements Listener {
             if (profileProperty == null) {
                 inventory.setItem(index, characterHead);
 
-                SkinData data = SkinData.getOrCreate(character.getSkin(), character.getSkinUUID(), character.isSlim(), 1, this.opener, character.getCharacterUUID(), skullMeta, characterHead, inventory, index);
+                SkinData data = SkinData.getOrCreate(character.getSkin(), character.getSkinUUID(), character.isSlim(), SkinQueue.PRIO_MENU, this.opener, character.getCharacterUUID(), character.getName(), skullMeta, characterHead, inventory, index);
                 this.queuedDatas.add(data);
             } else {
                 if(this.player == null){
@@ -318,9 +322,8 @@ public class CharacterSelectionMenu implements Listener {
         }
 
         public void cleanup() {
-            for (SkinData skinData : queuedDatas) {
-                skinData.cancel();
-            }
+            // Do not cancel skins on menu close. They are valuable as pre-cached data 
+            // and might be shared with background preloaders.
             queuedDatas.clear();
         }
     }

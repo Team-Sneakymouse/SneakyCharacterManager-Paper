@@ -32,8 +32,10 @@ import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
+import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
+import net.sneakycharactermanager.paper.util.ChatUtility;
 import net.sneakycharactermanager.paper.util.InventoryUtility;
 
 import com.google.gson.JsonObject;
@@ -133,6 +135,7 @@ public class Character {
 		}
 
 		if (CharacterLoader.loadCharacter(this)) {
+			SneakyCharacterManager.getInstance().skinQueue.updatePriority(this.player, this.characterUUID, SkinQueue.PRIO_LOAD);
 			YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
 
 			if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageLocations", true)) {
@@ -205,9 +208,7 @@ public class Character {
 	}
 
 	public String getNameUnformatted() {
-		Pattern pattern = Pattern.compile("<[^>]*>|&[0-9A-FK-ORa-fk-or]");
-		Matcher matcher = pattern.matcher(this.name);
-		return matcher.replaceAll("");
+		return ChatUtility.stripFormatting(this.name);
 	}
 
 	public String getSkin() {

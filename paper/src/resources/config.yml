@@ -6,7 +6,15 @@ respawnNameTags: false
 respawnTimerSeconds: 600
 see-own-nameplate: false
 mineskinQueueUrl: 'https://api.mineskin.org/v2/queue'
+mineskinSkinsUrl: 'https://api.mineskin.org/v2/skins'
 mineskinAuth: ''
+mineskinUserAgent: 'SneakyCharacterManager/1.0'
+mineskin:
+  logging:
+    enabled: true
+  debug: true
+  min_capacity_reservation: 5
+  preload_active_days: 8
 imgurApiUrl: 'https://api.imgur.com/3/image'
 imgurClientId: ''
 webServerFolderPath: ''

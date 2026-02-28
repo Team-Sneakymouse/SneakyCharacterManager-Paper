@@ -22,6 +22,7 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
@@ -130,7 +131,22 @@ public class BungeeMessageListener implements PluginMessageListener {
 					ProfileProperty p = SkinCache.get(playerUUID, c.getSkin());
 
 					if (p == null) {
-						SkinData.getOrCreate(c.getSkin(), c.getSkinUUID(), c.isSlim(), 0, pl, c.getCharacterUUID());
+						SkinData.getOrCreate(c.getSkin(), c.getSkinUUID(), c.isSlim(), SkinQueue.PRIO_ONLINE, pl, c.getCharacterUUID(), c.getName());
+					}
+				}
+				break;
+			case "getRecentlyActivePlayers":
+				playerUUID = messageIn.readUTF();
+				pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+				if (pl == null) break;
+				int size = messageIn.readInt();
+				for (int i = 0; i < size; i++) {
+					String offlinePlayerUUID = messageIn.readUTF();
+					List<Character> offlineChars = readCharacterList(offlinePlayerUUID, messageIn);
+					for (Character c : offlineChars) {
+						if (SkinCache.get(offlinePlayerUUID, c.getSkin()) == null) {
+							SkinData.getOrCreate(c.getSkin(), c.getSkinUUID(), c.isSlim(), SkinQueue.PRIO_PRELOAD, pl, c.getCharacterUUID(), c.getName());
+						}
 					}
 				}
 				break;

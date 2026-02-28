@@ -40,6 +40,7 @@ import org.json.simple.parser.ParseException;
 import com.destroystokyo.paper.profile.PlayerProfile;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.util.ChatUtility;
@@ -91,7 +92,7 @@ public class CommandUniform extends CommandBaseAdmin {
         }
 
         if (args.length == 1) {
-            SkinData.getOrCreate(character.getSkin(), character.getSkinUUID(), character.isSlim(), 4, player, character.getCharacterUUID());
+            SkinData.getOrCreate(character.getSkin(), character.getSkinUUID(), character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getCharacterUUID(), character.getName());
             return true;
         } else if (args.length > 2) {
             sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
@@ -253,7 +254,7 @@ public class CommandUniform extends CommandBaseAdmin {
                                 // Make skindata and add to skinqueue
                                 String urlFinal = new String(url);
                                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                                    SkinData.getOrCreate(urlFinal, "", character.isSlim(), 4, player, character.getCharacterUUID());
+                                    SkinData.getOrCreate(urlFinal, "", character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getCharacterUUID(), character.getName());
                                 });
                             }
                         }
