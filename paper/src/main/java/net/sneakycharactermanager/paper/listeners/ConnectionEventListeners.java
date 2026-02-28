@@ -29,13 +29,10 @@ public class ConnectionEventListeners implements Listener {
         SneakyCharacterManager.getInstance().nametagManager.loadNames(player);
 
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
-            if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".admin.preload.offline")) {
-                SneakyCharacterManager.getInstance().skinQueue.requestOfflineSkins(player);
-            }
-            if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".skin.preload")) {
-                SneakyCharacterManager.getInstance().skinQueue.preload(player);
-            }
+            SneakyCharacterManager.getInstance().skinQueue.requestOfflineSkins(player);
+            SneakyCharacterManager.getInstance().skinQueue.preload(player);
             SneakyCharacterManager.getInstance().skinQueue.updatePriority(player, SkinQueue.PRIO_ONLINE);
+            SneakyCharacterManager.getInstance().skinQueue.updatePreloadPerm(player);
 
             if (!ConsoleCommandCharDisable.isPlayerCharDisabled(player.getUniqueId().toString())) {
                 int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(SneakyCharacterManager.getInstance(), () -> {
@@ -66,6 +63,7 @@ public class ConnectionEventListeners implements Listener {
         CommandChar.tabCompleteMap.remove(player.getUniqueId().toString());
         //SkinCache.remove(player.getUniqueId().toString());
         SneakyCharacterManager.getInstance().skinQueue.preLoadedPlayers.remove(player);
+        SneakyCharacterManager.getInstance().skinQueue.updatePreloadPerm(player);
 
         Character character = Character.get(player);
 

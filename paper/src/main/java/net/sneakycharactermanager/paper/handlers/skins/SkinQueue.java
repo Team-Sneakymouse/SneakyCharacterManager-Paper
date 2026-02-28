@@ -14,6 +14,8 @@ import org.bukkit.OfflinePlayer;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -52,6 +54,13 @@ public class SkinQueue extends BukkitRunnable {
     public final List<Player> preLoadedPlayers = new ArrayList<>();
     private boolean offlineSkinsRequested = false;
 
+    /**
+     * Persisted set of UUIDs that have the admin.preloadskins permission.
+     * Updated on player join/quit (when perms are verifiable).
+     */
+    private final Set<UUID> preloadPermPlayers = new HashSet<>();
+    private static final String PRELOAD_PERM = SneakyCharacterManager.IDENTIFIER + ".admin.preloadskins";
+
     public SkinQueue() {
         for (int i = 0; i <= PRIO_UNIFORM; i++) {
             queue.put(i, new CopyOnWriteArrayList<>());
@@ -60,6 +69,8 @@ public class SkinQueue extends BukkitRunnable {
         // Initialize capacity from config
         this.limit = SneakyCharacterManager.getInstance().getConfig().getInt("mineskin.rate_limit_base", 20);
         this.remaining = this.limit;
+        
+        loadPreloadPermList();
         
         this.task = this.runTaskTimerAsynchronously(SneakyCharacterManager.getInstance(), 0, 5);
     }
@@ -357,6 +368,53 @@ public class SkinQueue extends BukkitRunnable {
         }
     }
 
+    /**
+     * Loads the persisted preload-perm UUID list from disk.
+     * Called once on startup so offline players can be filtered immediately.
+     */
+    private void loadPreloadPermList() {
+        File file = new File(SneakyCharacterManager.getInstance().getDataFolder(), "preload_perm_cache.txt");
+        if (!file.exists()) return;
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (!line.isEmpty()) {
+                    try { preloadPermPlayers.add(UUID.fromString(line)); } catch (IllegalArgumentException ignored) {}
+                }
+            }
+        } catch (IOException e) {
+            SneakyCharacterManager.getInstance().getLogger().warning("[SkinQueue] Failed to load preload_perm_cache.txt: " + e.getMessage());
+        }
+    }
+
+    /** Saves the preload-perm UUID list to disk. */
+    private void savePreloadPermList() {
+        File file = new File(SneakyCharacterManager.getInstance().getDataFolder(), "preload_perm_cache.txt");
+        try (FileWriter writer = new FileWriter(file, false)) {
+            for (UUID uuid : preloadPermPlayers) {
+                writer.write(uuid.toString() + "\n");
+            }
+        } catch (IOException e) {
+            SneakyCharacterManager.getInstance().getLogger().warning("[SkinQueue] Failed to save preload_perm_cache.txt: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Updates this player's entry in the preload-perm cache.
+     * Call on join (after perms load) and on quit (perms still available).
+     */
+    public void updatePreloadPerm(Player player) {
+        boolean hasPerm = player.hasPermission(PRELOAD_PERM);
+        boolean changed;
+        if (hasPerm) {
+            changed = preloadPermPlayers.add(player.getUniqueId());
+        } else {
+            changed = preloadPermPlayers.remove(player.getUniqueId());
+        }
+        if (changed) savePreloadPermList();
+    }
+
     public Map<Integer, List<SkinData>> getQueue() {
         return queue;
     }
@@ -400,6 +458,7 @@ public class SkinQueue extends BukkitRunnable {
 
             for (OfflinePlayer offlinePlayer : Bukkit.getOfflinePlayers()) {
                 if (offlinePlayer.getLastPlayed() < cutoff) continue;
+                if (!preloadPermPlayers.contains(offlinePlayer.getUniqueId())) continue;
                 
                 File playerDir = new File(dataFolder, offlinePlayer.getUniqueId().toString());
                 if (playerDir.exists() && playerDir.isDirectory()) {
