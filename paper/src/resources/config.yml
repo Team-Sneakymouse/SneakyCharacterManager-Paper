@@ -12,7 +12,8 @@ mineskinUserAgent: 'SneakyCharacterManager/1.0'
 mineskin:
   logging:
     enabled: true
-  debug: true
+  debug: false
+  rate_limit_base: 20
   min_capacity_reservation: 5
   preload_active_days: 8
 imgurApiUrl: 'https://api.imgur.com/3/image'

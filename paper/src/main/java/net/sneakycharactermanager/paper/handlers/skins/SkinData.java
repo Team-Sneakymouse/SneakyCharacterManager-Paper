@@ -65,7 +65,7 @@ public class SkinData extends BukkitRunnable {
     private String characterName = null;
 
     private String getQueueUrl() {
-        return SneakyCharacterManager.getInstance().getConfig().getString("mineskinQueueUrl", "https://api.mineskin.org/v2/queue/url");
+        return SneakyCharacterManager.getInstance().getConfig().getString("mineskinQueueUrl", "https://api.mineskin.org/v2/queue");
     }
 
     private String getSkinsUrl() {
@@ -216,8 +216,7 @@ public class SkinData extends BukkitRunnable {
                             SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Raw Body Preview: " + preview);
                         }
                         
-                        handleRateLimit(result);
-                        handleRateLimitHeaders(response);
+
 
                         if (response.getStatusLine().getStatusCode() == 200 && result != null) {
                             JSONObject jobObject = (JSONObject) result.get("job");
@@ -226,6 +225,10 @@ public class SkinData extends BukkitRunnable {
                                 processing = false;
                             } else {
                                 jobid = jobObject.get("id").toString();
+                                SneakyCharacterManager.getInstance().skinQueue.recordGeneration();
+                                if (debug) {
+                                    SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Job Queued for " + player.getName() + ": " + jobid);
+                                }
                             }
                         } else if (response.getStatusLine().getStatusCode() == 429) {
                              SneakyCharacterManager.getInstance().getLogger().warning("MineSkin API rate limit hit (429) during queue request.");
@@ -243,7 +246,7 @@ public class SkinData extends BukkitRunnable {
                 try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
                     if (debug) {
                         String keyPreview = (auth == null || auth.isEmpty()) ? "NONE" : auth.substring(0, Math.min(auth.length(), 4)) + "...";
-                        SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Requesting skin fetch with API Key: " + keyPreview);
+                        SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Requesting skin fetch for " + player.getName() + " with API Key: " + keyPreview + " | UUID: " + skinUUID);
                     }
 
                     // Create request
@@ -276,8 +279,7 @@ public class SkinData extends BukkitRunnable {
                         SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Raw Body Preview: " + preview);
                     }
                     
-                    handleRateLimit(jsonResponse);
-                    handleRateLimitHeaders(response);
+
 
                     if (statusCode == 200 && jsonResponse != null) {
                         Boolean success = (Boolean) jsonResponse.get("success");
@@ -312,7 +314,7 @@ public class SkinData extends BukkitRunnable {
             try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
                 if (debug) {
                     String keyPreview = (auth == null || auth.isEmpty()) ? "NONE" : auth.substring(0, Math.min(auth.length(), 4)) + "...";
-                    SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Requesting job poll with API Key: " + keyPreview);
+                    SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Requesting job poll for " + player.getName() + " with API Key: " + keyPreview + " | JobID: " + jobid);
                 }
 
                 // Create request
@@ -345,8 +347,7 @@ public class SkinData extends BukkitRunnable {
                     SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Raw Body Preview: " + preview);
                 }
                 
-                handleRateLimit(jsonResponse);
-                handleRateLimitHeaders(response);
+
 
                 if (statusCode == 200 && jsonResponse != null) {
                     Boolean success = (Boolean) jsonResponse.get("success");
@@ -422,8 +423,8 @@ public class SkinData extends BukkitRunnable {
                 if (vehicle != null) vehicle.removePassenger(player);
                 player.teleport(player.getLocation().add(0, 1, 0));
 
-                // Priority 3 is used exclusively for /skin and character swapping
-                if (priority == 3) {
+                // Priority 4 is used exclusively for /skin
+                if (priority == 4) {
                     Character character = Character.get(this.player);
 
                     if (character == null) {
@@ -610,80 +611,6 @@ public class SkinData extends BukkitRunnable {
         return new SkinData(url, skinUUID, isSlim, priority, player, characterUUID, characterName, skullMeta, characterHead, inventory, index);
     }
 
-    private void handleRateLimit(JSONObject response) {
-        boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
-        if (response == null || !response.containsKey("rateLimit")) {
-            if (debug) {
-                String keys = (response == null) ? "null" : response.keySet().toString();
-                SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Skipping JSON Rate Limit: " + (response == null ? "Null response" : "Missing rateLimit key. Available keys: " + keys));
-            }
-            return;
-        }
-        JSONObject rateLimit = (JSONObject) response.get("rateLimit");
-        if (rateLimit.containsKey("limit")) {
-            JSONObject limitObj = (JSONObject) rateLimit.get("limit");
-            int limit = ((Number) limitObj.get("limit")).intValue();
-            int remaining = ((Number) limitObj.get("remaining")).intValue();
-            
-            long resetTime = 0;
-            JSONObject next = (JSONObject) rateLimit.get("next");
-            if (next.containsKey("absolute")) {
-                resetTime = ((Number) next.get("absolute")).longValue();
-                // Same logic as headers: handle delta-seconds vs unix seconds vs millis
-                if (resetTime < 3600) { // Small number? assume delta seconds
-                    resetTime = System.currentTimeMillis() + (resetTime * 1000L);
-                } else if (resetTime < 10000000000L) { // Unix seconds
-                    resetTime *= 1000L;
-                }
-            } else if (next.containsKey("relative")) {
-                long relative = ((Number) next.get("relative")).longValue();
-                if (relative > 0) {
-                    resetTime = System.currentTimeMillis() + relative;
-                }
-            }
-            
-            JSONObject delay = (JSONObject) rateLimit.get("delay");
-            int delayMillis = ((Number) delay.get("millis")).intValue();
-
-            SneakyCharacterManager.getInstance().skinQueue.updateRateLimit(limit, remaining, resetTime, delayMillis);
-        }
-    }
-
-    private void handleRateLimitHeaders(HttpResponse response) {
-        boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
-        Header limitHeader = response.getFirstHeader("x-ratelimit-limit");
-        Header remainingHeader = response.getFirstHeader("x-ratelimit-remaining");
-        Header resetHeader = response.getFirstHeader("x-ratelimit-reset");
-
-        if (limitHeader == null || remainingHeader == null || resetHeader == null) {
-            if (debug) {
-                StringBuilder sb = new StringBuilder("[SkinQueue Debug] Skipping Header Rate Limit: Missing headers. Seen: [");
-                for (Header h : response.getAllHeaders()) {
-                    sb.append(h.getName()).append(", ");
-                }
-                sb.append("]");
-                SneakyCharacterManager.getInstance().getLogger().info(sb.toString());
-            }
-            return;
-        }
-
-        try {
-            int limit = Integer.parseInt(limitHeader.getValue());
-            int remaining = Integer.parseInt(remainingHeader.getValue());
-            long resetTime = Long.parseLong(resetHeader.getValue());
-            
-            // Reset time in Mineskin headers is usually a unix timestamp in seconds,
-            // BUT it can also be a delta-seconds (remaining time).
-            // If it's a small number (e.g. < 3600), it's definitely delta-seconds.
-            if (resetTime < 3600) {
-                resetTime = System.currentTimeMillis() + (resetTime * 1000L);
-            } else if (resetTime < 10000000000L) { // Probably unix seconds
-                resetTime *= 1000L;
-            }
-
-            SneakyCharacterManager.getInstance().skinQueue.updateRateLimit(limit, remaining, resetTime, 2000);
-        } catch (NumberFormatException ignored) {}
-    }
 
     private String getHeadersString(HttpResponse response) {
         StringBuilder sb = new StringBuilder();
