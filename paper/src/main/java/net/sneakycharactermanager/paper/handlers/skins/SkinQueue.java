@@ -174,7 +174,7 @@ public class SkinQueue extends BukkitRunnable {
         }
 
         // Periodically poll /v2/delay to confirm rate limit status (only when we've done generations)
-        if (generationsSinceReset > 0 && now - lastDelayPoll > 10000) {
+        if (now - lastDelayPoll > 10000) {
             lastDelayPoll = now;
             Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (t) -> pollDelayEndpoint());
         }
@@ -280,7 +280,6 @@ public class SkinQueue extends BukkitRunnable {
      * Only called periodically and only when we've done generations since the last reset.
      */
     private void pollDelayEndpoint() {
-        boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
         String auth = SneakyCharacterManager.getInstance().getConfig().getString("mineskinAuth", "");
         String userAgent = SneakyCharacterManager.getInstance().getConfig().getString("mineskinUserAgent", "SneakyCharacterManager/1.0");
         
@@ -301,9 +300,7 @@ public class SkinQueue extends BukkitRunnable {
             int statusCode = response.getStatusLine().getStatusCode();
             
             if (statusCode != 200) {
-                if (debug) {
-                    SneakyCharacterManager.getInstance().getLogger().warning("[SkinQueue Debug] /v2/delay returned status " + statusCode);
-                }
+                SneakyCharacterManager.getInstance().getLogger().warning("[SkinQueue Debug] /v2/delay returned status " + statusCode);
                 return;
             }
             
@@ -312,9 +309,7 @@ public class SkinQueue extends BukkitRunnable {
             JSONObject json = (JSONObject) parser.parse(new InputStreamReader(in, StandardCharsets.UTF_8));
             
             if (json == null || !json.containsKey("rateLimit")) {
-                if (debug) {
-                    SneakyCharacterManager.getInstance().getLogger().warning("[SkinQueue Debug] /v2/delay returned no rateLimit key");
-                }
+                SneakyCharacterManager.getInstance().getLogger().warning("[SkinQueue Debug] /v2/delay returned no rateLimit key");
                 return;
             }
             
@@ -358,9 +353,7 @@ public class SkinQueue extends BukkitRunnable {
             
             updateRateLimit(limitValue, remainingValue, resetTime, delayMillisValue);
         } catch (Exception e) {
-            if (debug) {
-                SneakyCharacterManager.getInstance().getLogger().warning("[SkinQueue Debug] Failed to poll /v2/delay: " + e.getMessage());
-            }
+            SneakyCharacterManager.getInstance().getLogger().warning("[SkinQueue Debug] Failed to poll /v2/delay: " + e.getMessage());
         }
     }
 
