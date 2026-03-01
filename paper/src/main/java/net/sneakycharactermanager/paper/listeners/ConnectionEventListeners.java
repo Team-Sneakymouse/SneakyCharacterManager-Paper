@@ -30,7 +30,7 @@ public class ConnectionEventListeners implements Listener {
 
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
             SneakyCharacterManager.getInstance().skinQueue.requestOfflineSkins(player);
-            SneakyCharacterManager.getInstance().skinQueue.preload(player);
+            BungeeMessagingUtil.sendByteArray(player, "preloadSkins", player.getUniqueId().toString());
             SneakyCharacterManager.getInstance().skinQueue.updatePriority(player, SkinQueue.PRIO_ONLINE);
 
             if (!ConsoleCommandCharDisable.isPlayerCharDisabled(player.getUniqueId().toString())) {
@@ -61,7 +61,6 @@ public class ConnectionEventListeners implements Listener {
 
         CommandChar.tabCompleteMap.remove(player.getUniqueId().toString());
         //SkinCache.remove(player.getUniqueId().toString());
-        SneakyCharacterManager.getInstance().skinQueue.preLoadedPlayers.remove(player);
 
         Character character = Character.get(player);
 

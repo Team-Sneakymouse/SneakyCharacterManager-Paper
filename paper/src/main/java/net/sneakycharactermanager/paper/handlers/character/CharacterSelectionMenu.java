@@ -122,10 +122,6 @@ public class CharacterSelectionMenu implements Listener {
             this.allCharacters = characters;
             displayCurrentPage();
 
-            if (this.player != null) {
-                SneakyCharacterManager.getInstance().skinQueue.preLoadedPlayers.add(this.player);
-            }
-
             updated = true;
         }
 

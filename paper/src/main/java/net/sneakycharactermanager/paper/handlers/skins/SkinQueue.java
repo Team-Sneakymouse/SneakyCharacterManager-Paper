@@ -46,7 +46,6 @@ public class SkinQueue extends BukkitRunnable {
     private long lastRequestTime = 0;
     private long lastActionTime = 0; // Tracks when remaining last changed or nextReset was set
     private long lastDebugLog = 0;
-    public final List<Player> preLoadedPlayers = new ArrayList<>();
     private boolean offlineSkinsRequested = false;
 
     public SkinQueue() {
@@ -353,13 +352,6 @@ public class SkinQueue extends BukkitRunnable {
                 });
             }
         });
-    }
-
-    public void preload(Player player) {
-        if (this.preLoadedPlayers.contains(player)) return;
-        preLoadedPlayers.add(player);
-
-        BungeeMessagingUtil.sendByteArray(player, "preloadSkins", player.getUniqueId().toString());
     }
 
 }
