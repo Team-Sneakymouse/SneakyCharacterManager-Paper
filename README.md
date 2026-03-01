@@ -50,8 +50,16 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 - `respawnTimerSeconds`
 - `see-own-nameplate`
 - `bannedWords`
-- `mineskinQueueUrl`
-- `mineskinAuth`
+- `mineskinQueueUrl` (Mineskin v2 queue endpoint)
+- `mineskinSkinsUrl` (Mineskin v2 skins endpoint)
+- `mineskinAuth` (Mineskin API Key)
+- `mineskinUserAgent`
+- `mineskin`:
+  - `logging.enabled`: Toggle Mineskin API logging
+  - `debug`: Detailed queue processing logs
+  - `rate_limit_base`: Target hourly limit
+  - `min_capacity_reservation`: Reserved slots for high-priority jobs
+  - `preload_active_days`: Offline player activity cutoff for preloading
 - `imgurApiUrl`
 - `imgurClientId`
 - `webServerFolderPath`
@@ -80,6 +88,7 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 - `/savetemplatechar`
 - `/userify`
 - `/migrateinventories`
+- `/skinqueue <status|flush|detail <priority>>`
 
 ### Console commands
 
@@ -102,7 +111,8 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 - Other notable nodes:
   - `sneakycharacters.formatnames`
   - `sneakycharacters.skinfetch.others`
-  - `sneakycharacters.character.<characterUUID>`
+- `sneakycharacters.character.<characterUUID>`
+- `sneakycharacters.preload`: Automatic inclusion in persistent preload cache
 
 ## PlaceholderAPI placeholders
 
@@ -123,6 +133,14 @@ Prefix: `%sneakycharacters_<placeholder>%`
 - `character_pronoun_o`
 - `character_pronoun_p`
 - `character_pronoun_p2`
+- `skinqueue_remaining`: Available hourly capacity
+- `skinqueue_limit`: Total hourly capacity
+- `skinqueue_reset`: Raw epoch timestamp of next reset
+- `skinqueue_reset_formatted`: Readable reset timer (e.g. "45s" or "Ready")
+- `skinqueue_delay`: Current inter-request delay
+- `skinqueue_processing`: Active Mineskin jobs
+- `skinqueue_total_queued`: Total pending jobs
+- `skinqueue_queued_p<0-4>`: Pending jobs per priority tier
 
 ## Build tasks
 
