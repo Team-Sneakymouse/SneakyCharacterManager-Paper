@@ -127,26 +127,15 @@ public class BungeeMessageListener implements PluginMessageListener {
 				requesterUUID = messageIn.readUTF();
 				characters = readCharacterList(requesterUUID, messageIn);
 
+				// Online player loading their own skins → PRIO_ONLINE.
+				// Offline player being bulk-preloaded → PRIO_PRELOAD.
+				int skinPrio = requesterUUID.equals(playerUUID) ? SkinQueue.PRIO_ONLINE : SkinQueue.PRIO_PRELOAD;
+
 				for (Character c : characters) {
 					ProfileProperty p = SkinCache.get(playerUUID, c.getSkin());
 
 					if (p == null) {
-						SkinData.getOrCreate(c.getSkin(), c.getSkinUUID(), c.isSlim(), SkinQueue.PRIO_ONLINE, pl, c.getCharacterUUID(), c.getName());
-					}
-				}
-				break;
-			case "getRecentlyActivePlayers":
-				playerUUID = messageIn.readUTF();
-				pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-				if (pl == null) break;
-				int size = messageIn.readInt();
-				for (int i = 0; i < size; i++) {
-					String offlinePlayerUUID = messageIn.readUTF();
-					List<Character> offlineChars = readCharacterList(offlinePlayerUUID, messageIn);
-					for (Character c : offlineChars) {
-						if (SkinCache.get(offlinePlayerUUID, c.getSkin()) == null) {
-							SkinData.getOrCreate(c.getSkin(), c.getSkinUUID(), c.isSlim(), SkinQueue.PRIO_PRELOAD, pl, c.getCharacterUUID(), c.getName());
-						}
+						SkinData.getOrCreate(c.getSkin(), c.getSkinUUID(), c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName());
 					}
 				}
 				break;
