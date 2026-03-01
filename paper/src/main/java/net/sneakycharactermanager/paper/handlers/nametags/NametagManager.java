@@ -11,7 +11,7 @@ import me.clip.placeholderapi.PlaceholderAPI;
 
 
 /**
- * Manager class for any function involving Nicknames & Nametags
+ * Manager class for any function involving Nicknames and Nametags
  * */
 public class NametagManager {
 

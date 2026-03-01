@@ -14,8 +14,6 @@ import org.bukkit.OfflinePlayer;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import java.io.File;
 import java.io.FileWriter;
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -34,10 +32,9 @@ public class SkinQueue extends BukkitRunnable {
 
     public static final int PRIO_PRELOAD = 0;
     public static final int PRIO_ONLINE = 1;
-    public static final int PRIO_MENU = 2;
-    public static final int PRIO_LOAD = 3;
-    public static final int PRIO_SKIN = 4;
-    public static final int PRIO_UNIFORM = 5;
+    public static final int PRIO_LOAD = 2;
+    public static final int PRIO_SKIN = 3;
+    public static final int PRIO_UNIFORM = 4;
 
     private final ConcurrentMap<Integer, List<SkinData>> queue = new ConcurrentHashMap<>();
     private BukkitTask task = null;
@@ -54,13 +51,6 @@ public class SkinQueue extends BukkitRunnable {
     public final List<Player> preLoadedPlayers = new ArrayList<>();
     private boolean offlineSkinsRequested = false;
 
-    /**
-     * Persisted set of UUIDs that have the admin.preloadskins permission.
-     * Updated on player join/quit (when perms are verifiable).
-     */
-    private final Set<UUID> preloadPermPlayers = new HashSet<>();
-    private static final String PRELOAD_PERM = SneakyCharacterManager.IDENTIFIER + ".admin.preloadskins";
-
     public SkinQueue() {
         for (int i = 0; i <= PRIO_UNIFORM; i++) {
             queue.put(i, new CopyOnWriteArrayList<>());
@@ -69,8 +59,6 @@ public class SkinQueue extends BukkitRunnable {
         // Initialize capacity from config
         this.limit = SneakyCharacterManager.getInstance().getConfig().getInt("mineskin.rate_limit_base", 20);
         this.remaining = this.limit;
-        
-        loadPreloadPermList();
         
         this.task = this.runTaskTimerAsynchronously(SneakyCharacterManager.getInstance(), 0, 5);
     }
@@ -262,27 +250,35 @@ public class SkinQueue extends BukkitRunnable {
 
     private SkinData getNext() {
         int minReservation = SneakyCharacterManager.getInstance().getConfig().getInt("mineskin.min_capacity_reservation", 5);
-        
-        // Priority hierarchy: 5 down to 0
-        boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
-        
-        // Priority hierarchy: 5 down to 0
-        for (int p = PRIO_UNIFORM; p >= PRIO_PRELOAD; p--) {
+
+        // Check P5 down to P2 normally (P2 is now unused but harmless to scan)
+        for (int p = PRIO_UNIFORM; p > PRIO_ONLINE; p--) {
             List<SkinData> list = queue.get(p);
             if (list.isEmpty()) continue;
-
-            // If capacity is low, only service interaction needs (3+)
-            // Reservations only apply to non-interaction preloads (0, 1, and 2)
-            if (remaining <= minReservation && p < PRIO_LOAD) {
-                continue;
-            }
-
             for (SkinData data : list) {
-                if (!data.processing) {
-                    return data;
-                }
+                if (!data.processing) return data;
             }
         }
+
+        // P1: first prefer entries whose menu is currently open (player has the UI open),
+        // then fall back to normal P1 order. Only when we have capacity above the reservation.
+        if (remaining > minReservation) {
+            List<SkinData> p1 = queue.get(PRIO_ONLINE);
+            // Menu-open pass
+            for (SkinData data : p1) {
+                if (!data.processing && data.isMenuOpen()) return data;
+            }
+            // Normal P1 pass
+            for (SkinData data : p1) {
+                if (!data.processing) return data;
+            }
+
+            // P0: only when above reservation
+            for (SkinData data : queue.get(PRIO_PRELOAD)) {
+                if (!data.processing) return data;
+            }
+        }
+
         return null;
     }
 
@@ -368,53 +364,6 @@ public class SkinQueue extends BukkitRunnable {
         }
     }
 
-    /**
-     * Loads the persisted preload-perm UUID list from disk.
-     * Called once on startup so offline players can be filtered immediately.
-     */
-    private void loadPreloadPermList() {
-        File file = new File(SneakyCharacterManager.getInstance().getDataFolder(), "preload_perm_cache.txt");
-        if (!file.exists()) return;
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                if (!line.isEmpty()) {
-                    try { preloadPermPlayers.add(UUID.fromString(line)); } catch (IllegalArgumentException ignored) {}
-                }
-            }
-        } catch (IOException e) {
-            SneakyCharacterManager.getInstance().getLogger().warning("[SkinQueue] Failed to load preload_perm_cache.txt: " + e.getMessage());
-        }
-    }
-
-    /** Saves the preload-perm UUID list to disk. */
-    private void savePreloadPermList() {
-        File file = new File(SneakyCharacterManager.getInstance().getDataFolder(), "preload_perm_cache.txt");
-        try (FileWriter writer = new FileWriter(file, false)) {
-            for (UUID uuid : preloadPermPlayers) {
-                writer.write(uuid.toString() + "\n");
-            }
-        } catch (IOException e) {
-            SneakyCharacterManager.getInstance().getLogger().warning("[SkinQueue] Failed to save preload_perm_cache.txt: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Updates this player's entry in the preload-perm cache.
-     * Call on join (after perms load) and on quit (perms still available).
-     */
-    public void updatePreloadPerm(Player player) {
-        boolean hasPerm = player.hasPermission(PRELOAD_PERM);
-        boolean changed;
-        if (hasPerm) {
-            changed = preloadPermPlayers.add(player.getUniqueId());
-        } else {
-            changed = preloadPermPlayers.remove(player.getUniqueId());
-        }
-        if (changed) savePreloadPermList();
-    }
-
     public Map<Integer, List<SkinData>> getQueue() {
         return queue;
     }
@@ -458,7 +407,6 @@ public class SkinQueue extends BukkitRunnable {
 
             for (OfflinePlayer offlinePlayer : Bukkit.getOfflinePlayers()) {
                 if (offlinePlayer.getLastPlayed() < cutoff) continue;
-                if (!preloadPermPlayers.contains(offlinePlayer.getUniqueId())) continue;
                 
                 File playerDir = new File(dataFolder, offlinePlayer.getUniqueId().toString());
                 if (playerDir.exists() && playerDir.isDirectory()) {

@@ -411,52 +411,47 @@ public class SkinData extends BukkitRunnable {
             return;
         }
 
-        // Priority 0-1 is used exclusively for pre-caching skins. So priority 0-1 skindatas
-        // should not be applied to the player or menu yet.
-        if (this.priority > 1) {
-            // Apply to player if:
-            // - It's NOT a menu item (skullMeta == null)
-            // - OR it's a character load/manual update (priority >= 3) even if it was originally a menu item
-            if (this.skullMeta == null || this.priority >= 3) {
-                this.player.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, property));
-                Entity vehicle = player.getVehicle();
-                if (vehicle != null) vehicle.removePassenger(player);
-                player.teleport(player.getLocation().add(0, 1, 0));
+        // Apply to player if:
+        // - It's a character load/manual update (priority >= PRIO_LOAD) even if it was originally a menu item
+        if (this.priority >= SkinQueue.PRIO_LOAD) {
+            this.player.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, property));
+            Entity vehicle = player.getVehicle();
+            if (vehicle != null) vehicle.removePassenger(player);
+            player.teleport(player.getLocation().add(0, 1, 0));
 
-                // Priority 4 is used exclusively for /skin
-                if (priority == 4) {
-                    Character character = Character.get(this.player);
+            // PRIO_SKIN is used exclusively for /skin
+            if (priority == SkinQueue.PRIO_SKIN) {
+                Character character = Character.get(this.player);
 
-                    if (character == null) {
-                        SneakyCharacterManager.getInstance().skinQueue.remove(this);
-                        return;
-                    }
-
-                    PlayerProfile profile = this.player.getPlayerProfile();
-                    PlayerTextures textures = profile.getTextures();
-
-                    if (textures.getSkin() == null) {
-                        SneakyCharacterManager.getInstance().skinQueue.remove(this);
-                        return;
-                    }
-
-                    String skinURL = textures.getSkin().toString();
-
-                    SneakyCharacterManager.getInstance().getLogger().info("Skin Update: [" + this.player.getName() + "," + character.getNameUnformatted() + "," + skinURL + "]");
-
-                    character.setSkin(skinURL);
-                    character.setSlim(this.isSlim());
-                    BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), characterUUID, 1, skinURL, skinUUID, this.isSlim());
-
-                    SkinCache.put(this.player.getUniqueId().toString(), skinURL, property);
+                if (character == null) {
+                    SneakyCharacterManager.getInstance().skinQueue.remove(this);
+                    return;
                 }
-            }
 
-            // Always update the selection menu if it matches this player, regardless of skullMeta
-            if (SneakyCharacterManager.getInstance().selectionMenu.menuExists(this.player.getUniqueId().toString())) {
-                CharacterMenuHolder holder = SneakyCharacterManager.getInstance().selectionMenu.activeMenus.get(this.player.getUniqueId().toString());
-                holder.displayCurrentPage();
+                PlayerProfile profile = this.player.getPlayerProfile();
+                PlayerTextures textures = profile.getTextures();
+
+                if (textures.getSkin() == null) {
+                    SneakyCharacterManager.getInstance().skinQueue.remove(this);
+                    return;
+                }
+
+                String skinURL = textures.getSkin().toString();
+
+                SneakyCharacterManager.getInstance().getLogger().info("Skin Update: [" + this.player.getName() + "," + character.getNameUnformatted() + "," + skinURL + "]");
+
+                character.setSkin(skinURL);
+                character.setSlim(this.isSlim());
+                BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), characterUUID, 1, skinURL, skinUUID, this.isSlim());
             }
+        }
+
+        SkinCache.put(this.player.getUniqueId().toString(), this.url, property);
+
+        // Apply the skin to the /char menu if there is one
+        if (isMenuOpen()) {
+            CharacterMenuHolder holder = SneakyCharacterManager.getInstance().selectionMenu.activeMenus.get(this.player.getUniqueId().toString());
+            holder.displayCurrentPage();
         }
 
         if (updateSaveFile) {
@@ -464,7 +459,6 @@ public class SkinData extends BukkitRunnable {
             BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), characterUUID, 1, url, skinUUID, this.isSlim());
         }
 
-        SkinCache.put(this.player.getUniqueId().toString(), this.url, property);
         SneakyCharacterManager.getInstance().skinQueue.remove(this);
     }
 
@@ -540,6 +534,12 @@ public class SkinData extends BukkitRunnable {
         this.characterHead = characterHead;
         this.inventory = inventory;
         this.index = index;
+    }
+
+    /** True if this entry has an associated menu AND the player currently has it open. */
+    public boolean isMenuOpen() {
+        if (inventory == null || player == null || !player.isOnline()) return false;
+        return inventory.equals(player.getOpenInventory().getTopInventory());
     }
 
     public static SkinData getOrCreate(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, String characterUUID, String characterName) {

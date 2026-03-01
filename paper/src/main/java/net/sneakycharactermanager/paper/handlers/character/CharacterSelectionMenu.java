@@ -124,7 +124,6 @@ public class CharacterSelectionMenu implements Listener {
 
             if (this.player != null) {
                 SneakyCharacterManager.getInstance().skinQueue.preLoadedPlayers.add(this.player);
-                SneakyCharacterManager.getInstance().skinQueue.updatePriority(this.player, SkinQueue.PRIO_MENU);
             }
 
             updated = true;
@@ -232,7 +231,7 @@ public class CharacterSelectionMenu implements Listener {
             if (profileProperty == null) {
                 inventory.setItem(index, characterHead);
 
-                SkinData data = SkinData.getOrCreate(character.getSkin(), character.getSkinUUID(), character.isSlim(), SkinQueue.PRIO_MENU, this.opener, character.getCharacterUUID(), character.getName(), skullMeta, characterHead, inventory, index);
+                SkinData data = SkinData.getOrCreate(character.getSkin(), character.getSkinUUID(), character.isSlim(), SkinQueue.PRIO_ONLINE, this.opener, character.getCharacterUUID(), character.getName(), skullMeta, characterHead, inventory, index);
                 this.queuedDatas.add(data);
             } else {
                 if(this.player == null){

@@ -64,7 +64,6 @@ public class Nickname {
     /**
      * Set the nametag hidden state for the requester
      * @param requester Player who wants to hide names
-     * @param state To hide or show the name
      * */
     public void hideName(Player requester) {
         nametag.sendOff(requester);
