@@ -47,6 +47,8 @@ public class SkinQueue extends BukkitRunnable {
     private long lastActionTime = 0; // Tracks when remaining last changed or nextReset was set
     private long lastDebugLog = 0;
     private boolean offlineSkinsRequested = false;
+    private final Set<String> preloadPermCache = ConcurrentHashMap.newKeySet();
+    private File preloadCacheFile;
 
     public SkinQueue() {
         for (int i = 0; i <= PRIO_UNIFORM; i++) {
@@ -58,6 +60,45 @@ public class SkinQueue extends BukkitRunnable {
         this.remaining = this.limit;
         
         this.task = this.runTaskTimerAsynchronously(SneakyCharacterManager.getInstance(), 0, 5);
+        
+        loadPreloadCache();
+    }
+
+    private void loadPreloadCache() {
+        preloadCacheFile = new File(SneakyCharacterManager.getInstance().getDataFolder(), "preload_perm_cache.txt");
+        if (!preloadCacheFile.exists()) return;
+        try (Scanner scanner = new Scanner(preloadCacheFile)) {
+            while (scanner.hasNextLine()) {
+                String uuid = scanner.nextLine().trim();
+                if (!uuid.isEmpty()) preloadPermCache.add(uuid);
+            }
+        } catch (Exception e) {
+            SneakyCharacterManager.getInstance().getLogger().warning("Failed to load preload_perm_cache.txt: " + e.getMessage());
+        }
+    }
+
+    public void addToPreloadCache(String uuid) {
+        if (preloadPermCache.add(uuid)) {
+            savePreloadCache();
+        }
+    }
+
+    public void removeFromPreloadCache(String uuid) {
+        if (preloadPermCache.remove(uuid)) {
+            savePreloadCache();
+        }
+    }
+
+    private void savePreloadCache() {
+        Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (task) -> {
+            try (FileWriter fw = new FileWriter(preloadCacheFile)) {
+                for (String uuid : preloadPermCache) {
+                    fw.write(uuid + "\n");
+                }
+            } catch (IOException e) {
+                SneakyCharacterManager.getInstance().getLogger().warning("Failed to save to preload_perm_cache.txt: " + e.getMessage());
+            }
+        });
     }
 
     public void add(SkinData skinData, int priority) {
@@ -169,7 +210,7 @@ public class SkinQueue extends BukkitRunnable {
         }
 
 
-        if (remaining <= 0) return;
+
 
         // Get all skins currently being processed
         List<SkinData> inProgress = queue.values().stream()
@@ -199,7 +240,7 @@ public class SkinQueue extends BukkitRunnable {
 
         // 1. Priority: Poll existing jobs as fast as capacity allows (ignoring delayMillis)
         for (SkinData data : inProgress) {
-            if (remaining <= 0) break;
+
             if (data.hasJobId() && now - data.getLastPollTime() > 10000) {
                 if (debug) {
                     SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Polling job " + data.getJobId() + " for " + data.getPlayer().getName());
@@ -210,7 +251,7 @@ public class SkinQueue extends BukkitRunnable {
             }
         }
 
-        if (remaining <= 0) return;
+
         if (now - lastRequestTime < delayMillis) {
             return;
         }
@@ -331,14 +372,17 @@ public class SkinQueue extends BukkitRunnable {
             List<String> uuidsToPreload = new ArrayList<>();
             File dataFolder = SneakyCharacterManager.getCharacterDataFolder();
 
-            for (OfflinePlayer offlinePlayer : Bukkit.getOfflinePlayers()) {
+            for (String uuidBase : preloadPermCache) {
+                UUID uuid = UUID.fromString(uuidBase);
+                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(uuid);
+                
                 if (offlinePlayer.getLastPlayed() < cutoff) continue;
                 
-                File playerDir = new File(dataFolder, offlinePlayer.getUniqueId().toString());
+                File playerDir = new File(dataFolder, uuidBase);
                 if (playerDir.exists() && playerDir.isDirectory()) {
                     String[] files = playerDir.list((dir, name) -> name.endsWith(".yml"));
                     if (files != null && files.length > 0) {
-                        uuidsToPreload.add(offlinePlayer.getUniqueId().toString());
+                        uuidsToPreload.add(uuidBase);
                     }
                 }
             }
