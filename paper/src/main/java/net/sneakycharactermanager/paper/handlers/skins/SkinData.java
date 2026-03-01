@@ -218,7 +218,8 @@ public class SkinData extends BukkitRunnable {
                         
 
 
-                        if (response.getStatusLine().getStatusCode() == 200 && result != null) {
+                        int statusCode = response.getStatusLine().getStatusCode();
+                        if ((statusCode == 200 || statusCode == 202) && result != null) {
                             JSONObject jobObject = (JSONObject) result.get("job");
 
                             if (jobObject == null || jobObject.get("id") == null) {
@@ -230,12 +231,11 @@ public class SkinData extends BukkitRunnable {
                                     SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Job Queued for " + player.getName() + ": " + jobid);
                                 }
                             }
-                        } else if (response.getStatusLine().getStatusCode() == 429) {
+                        } else if (statusCode == 429) {
                              SneakyCharacterManager.getInstance().getLogger().warning("MineSkin API rate limit hit (429) during queue request.");
-                        } else if (response.getStatusLine().getStatusCode() != 200) {
-                             int code = response.getStatusLine().getStatusCode();
-                             SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + code + " during queue request.");
-                             player.sendMessage(ChatUtility.convertToComponent("&cFailed to generate skin (MineSkin error " + code + "). The URL may be invalid or unsupported."));
+                        } else {
+                             SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + statusCode + " during queue request.");
+                             player.sendMessage(ChatUtility.convertToComponent("&cFailed to generate skin (MineSkin error " + statusCode + "). The URL may be invalid or unsupported."));
                              SneakyCharacterManager.getInstance().skinQueue.remove(this);
                         }
                     }

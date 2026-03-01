@@ -140,6 +140,11 @@ public class SkinQueue extends BukkitRunnable {
         generationsSinceReset++;
     }
 
+    public int getLimit()      { return limit; }
+    public int getRemaining()  { return remaining; }
+    public long getNextReset() { return nextReset; }
+    public int getDelayMillis(){ return delayMillis; }
+
     @Override
     public void run() {
         if (this.task == null) return;
@@ -213,7 +218,7 @@ public class SkinQueue extends BukkitRunnable {
                 if (debug) {
                     SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Polling job " + data.getJobId() + " for " + data.getPlayer().getName());
                 }
-                remaining--;
+                // Polling an in-progress job (GET /v2/queue/:jobId) does not cost capacity
                 // Run in a separate thread to avoid blocking the queue timer
                 Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (t) -> data.run());
             }
@@ -237,7 +242,9 @@ public class SkinQueue extends BukkitRunnable {
                 next.processing = true;
                 lastRequestTime = now;
                 lastActionTime = now;
-                remaining--;
+                // Only POST /v2/queue (new generation, skinUUID empty) costs rate limit capacity.
+                // Fetch requests (GET /v2/skins/:uuid) are free.
+                if (next.getSkinUUID().isEmpty()) remaining--;
                 // Run in a separate thread to avoid blocking the queue timer
                 Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (t) -> next.run());
             } else if (debug) {
@@ -354,11 +361,15 @@ public class SkinQueue extends BukkitRunnable {
                 }
             }
             
+            // Only use the reset time if it's actually in the future — a past timestamp
+            // just means the current window has already rolled over and there's no countdown to track.
+            long futureResetTime = (resetTime > 0 && resetTime > System.currentTimeMillis()) ? resetTime : 0;
+
             SneakyCharacterManager.getInstance().getLogger().info(
                 "[SkinQueue Debug] /v2/delay poll: " + remainingValue + "/" + limitValue +
-                " delay=" + delayMillisValue + "ms, reset=" + (resetTime > 0 ? (resetTime - System.currentTimeMillis()) / 1000 + "s" : "unknown"));
-            
-            updateRateLimit(limitValue, remainingValue, resetTime, delayMillisValue);
+                " delay=" + delayMillisValue + "ms, reset=" + (futureResetTime > 0 ? (futureResetTime - System.currentTimeMillis()) / 1000 + "s" : "ready"));
+
+            updateRateLimit(limitValue, remainingValue, futureResetTime, delayMillisValue);
         } catch (Exception e) {
             SneakyCharacterManager.getInstance().getLogger().warning("[SkinQueue Debug] Failed to poll /v2/delay: " + e.getMessage());
         }
