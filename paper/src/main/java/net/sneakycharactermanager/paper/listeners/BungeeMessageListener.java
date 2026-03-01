@@ -133,15 +133,20 @@ public class BungeeMessageListener implements PluginMessageListener {
 
 				for (Character c : characters) {
 					// Base skin preloading
-					ProfileProperty p = SkinCache.get(playerUUID, c.getSkin());
-					if (p == null) {
-						SkinData.getOrCreate(c.getSkin(), c.getSkinUUID(), c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName());
+					String skinUrl = c.getSkin();
+					if (skinUrl != null && !skinUrl.isEmpty()) {
+						ProfileProperty p = SkinCache.get(playerUUID, skinUrl);
+						if (p == null) {
+							SkinData.getOrCreate(skinUrl, c.getSkinUUID(), c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName());
+						}
 					}
 
 					// Uniform variant preloading
 					for (Map.Entry<String, String[]> entry : c.getUniformVariants().entrySet()) {
 						String vUUID = entry.getValue()[0];
 						String vUrl = entry.getValue()[1];
+						if (vUrl == null || vUrl.isEmpty()) continue;
+
 						ProfileProperty vp = SkinCache.get(playerUUID, vUrl);
 						if (vp == null) {
 							SkinData.getOrCreate(vUrl, vUUID, c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName())

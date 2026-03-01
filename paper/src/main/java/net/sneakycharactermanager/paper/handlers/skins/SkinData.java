@@ -603,11 +603,13 @@ public class SkinData extends BukkitRunnable {
     }
 
     public static SkinData getOrCreate(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, String characterUUID, String characterName) {
+        if (url == null || url.isEmpty()) return null;
         List<SkinData> skinDataList = SneakyCharacterManager.getInstance().skinQueue.getQueue().values().stream().flatMap(List::stream).toList();
         
         boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
         if (debug) {
-            SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] getOrCreate (7-arg) search for " + player.getName() + " | Char: " + characterUUID + " | URL: " + url.substring(Math.max(0, url.length() - 20)));
+            String urlEnd = url.length() > 20 ? url.substring(url.length() - 20) : url;
+            SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] getOrCreate (7-arg) search for " + player.getName() + " | Char: " + characterUUID + " | URL: " + urlEnd);
         }
 
         for (SkinData skinData : skinDataList) {
@@ -636,11 +638,13 @@ public class SkinData extends BukkitRunnable {
     }
 
     public static SkinData getOrCreate(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, String characterUUID, String characterName, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
+        if (url == null || url.isEmpty()) return null;
         List<SkinData> skinDataList = SneakyCharacterManager.getInstance().skinQueue.getQueue().values().stream().flatMap(List::stream).toList();
         
         boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
         if (debug) {
-            SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] getOrCreate search for " + player.getName() + " | Char: " + characterUUID + " | URL: " + url.substring(Math.max(0, url.length() - 20)));
+            String urlEnd = url.length() > 20 ? url.substring(url.length() - 20) : url;
+            SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] getOrCreate search for " + player.getName() + " | Char: " + characterUUID + " | URL: " + urlEnd);
         }
 
         for (SkinData skinData : skinDataList) {
