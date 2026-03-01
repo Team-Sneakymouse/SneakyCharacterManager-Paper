@@ -233,7 +233,10 @@ public class SkinData extends BukkitRunnable {
                         } else if (response.getStatusLine().getStatusCode() == 429) {
                              SneakyCharacterManager.getInstance().getLogger().warning("MineSkin API rate limit hit (429) during queue request.");
                         } else if (response.getStatusLine().getStatusCode() != 200) {
-                             SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + response.getStatusLine().getStatusCode() + " during queue request.");
+                             int code = response.getStatusLine().getStatusCode();
+                             SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + code + " during queue request.");
+                             player.sendMessage(ChatUtility.convertToComponent("&cFailed to generate skin (MineSkin error " + code + "). The URL may be invalid or unsupported."));
+                             SneakyCharacterManager.getInstance().skinQueue.remove(this);
                         }
                     }
                 } catch (IOException e) {
