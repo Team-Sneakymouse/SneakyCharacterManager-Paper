@@ -154,6 +154,39 @@ public class SkinData extends BukkitRunnable {
         return processing;
     }
 
+    /**
+     * Parse the rateLimit section from a queue/job-poll API response and sync
+     * our local capacity state with the values MineSkin reports.
+     */
+    private void parseAndUpdateRateLimit(JSONObject response) {
+        if (response == null) return;
+        JSONObject rateLimit = (JSONObject) response.get("rateLimit");
+        if (rateLimit == null) return;
+
+        int limitValue = -1, remainingValue = -1, delayMillisValue = -1;
+        long resetTime = 0;
+
+        JSONObject limitObj = (JSONObject) rateLimit.get("limit");
+        if (limitObj != null) {
+            if (limitObj.containsKey("limit"))     limitValue     = ((Number) limitObj.get("limit")).intValue();
+            if (limitObj.containsKey("remaining")) remainingValue = ((Number) limitObj.get("remaining")).intValue();
+            if (limitObj.containsKey("reset")) {
+                resetTime = ((Number) limitObj.get("reset")).longValue();
+                // Convert Unix seconds → millis if needed
+                if (resetTime > 0 && resetTime < 10_000_000_000L) resetTime *= 1000L;
+            }
+        }
+
+        JSONObject delay = (JSONObject) rateLimit.get("delay");
+        if (delay != null && delay.containsKey("millis")) {
+            delayMillisValue = ((Number) delay.get("millis")).intValue();
+        }
+
+        // Only track a future reset time — if it's past, the window already rolled over.
+        long futureReset = (resetTime > System.currentTimeMillis()) ? resetTime : 0;
+        SneakyCharacterManager.getInstance().skinQueue.updateRateLimit(limitValue, remainingValue, futureReset, delayMillisValue);
+    }
+
     @Override
     public void run() {
         boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
@@ -222,11 +255,11 @@ public class SkinData extends BukkitRunnable {
                         if ((statusCode == 200 || statusCode == 202) && result != null) {
                             JSONObject jobObject = (JSONObject) result.get("job");
 
+                            parseAndUpdateRateLimit(result);
                             if (jobObject == null || jobObject.get("id") == null) {
                                 processing = false;
                             } else {
                                 jobid = jobObject.get("id").toString();
-                                SneakyCharacterManager.getInstance().skinQueue.recordGeneration();
                                 if (debug) {
                                     SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Job Queued for " + player.getName() + ": " + jobid);
                                 }
@@ -353,6 +386,7 @@ public class SkinData extends BukkitRunnable {
 
 
                 if (statusCode == 200 && jsonResponse != null) {
+                    parseAndUpdateRateLimit(jsonResponse);
                     Boolean success = (Boolean) jsonResponse.get("success");
                     if (success != null && success) {
                         JSONObject job = (JSONObject) jsonResponse.get("job");

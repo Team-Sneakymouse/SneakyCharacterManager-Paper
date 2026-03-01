@@ -46,8 +46,6 @@ public class SkinQueue extends BukkitRunnable {
     private long lastRequestTime = 0;
     private long lastActionTime = 0; // Tracks when remaining last changed or nextReset was set
     private long lastDebugLog = 0;
-    private long lastDelayPoll = 0;  // When we last polled /v2/delay
-    private int generationsSinceReset = 0; // How many skins we've generated since the last known reset
     public final List<Player> preLoadedPlayers = new ArrayList<>();
     private boolean offlineSkinsRequested = false;
 
@@ -135,10 +133,6 @@ public class SkinQueue extends BukkitRunnable {
         this.lastActionTime = System.currentTimeMillis();
     }
 
-    /** Call this when a new skin generation job is successfully queued. */
-    public void recordGeneration() {
-        generationsSinceReset++;
-    }
 
     public int getLimit()      { return limit; }
     public int getRemaining()  { return remaining; }
@@ -160,7 +154,6 @@ public class SkinQueue extends BukkitRunnable {
                 }
                 remaining = limit;
                 nextReset = 0;
-                generationsSinceReset = 0;
                 lastActionTime = now;
             }
         } else if (remaining < limit) {
@@ -172,16 +165,10 @@ public class SkinQueue extends BukkitRunnable {
                    SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Idle for 60s with nextReset=0. Resetting capacity.");
                }
                remaining = limit;
-               generationsSinceReset = 0;
                lastActionTime = now;
            }
         }
 
-        // Periodically poll /v2/delay to confirm rate limit status (only when we've done generations)
-        if (now - lastDelayPoll > 10000) {
-            lastDelayPoll = now;
-            Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (t) -> pollDelayEndpoint());
-        }
 
         if (remaining <= 0) return;
 
@@ -287,92 +274,6 @@ public class SkinQueue extends BukkitRunnable {
         }
 
         return null;
-    }
-
-    /**
-     * Polls GET /v2/delay to get the current accurate rate limit state.
-     * Only called periodically and only when we've done generations since the last reset.
-     */
-    private void pollDelayEndpoint() {
-        String auth = SneakyCharacterManager.getInstance().getConfig().getString("mineskinAuth", "");
-        String userAgent = SneakyCharacterManager.getInstance().getConfig().getString("mineskinUserAgent", "SneakyCharacterManager/1.0");
-        
-        try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
-            StringBuilder urlBuilder = new StringBuilder("https://api.mineskin.org/v2/delay");
-            if (auth != null && !auth.isEmpty()) {
-                urlBuilder.append("?key=").append(auth);
-            }
-            
-            HttpGet request = new HttpGet(urlBuilder.toString());
-            request.addHeader("Accept", "application/json");
-            request.addHeader("User-Agent", userAgent);
-            if (auth != null && !auth.isEmpty()) {
-                request.addHeader("Authorization", "Bearer " + auth);
-            }
-            
-            HttpResponse response = httpClient.execute(request);
-            int statusCode = response.getStatusLine().getStatusCode();
-            
-            if (statusCode != 200) {
-                SneakyCharacterManager.getInstance().getLogger().warning("[SkinQueue Debug] /v2/delay returned status " + statusCode);
-                return;
-            }
-            
-            InputStream in = response.getEntity().getContent();
-            JSONParser parser = new JSONParser();
-            JSONObject json = (JSONObject) parser.parse(new InputStreamReader(in, StandardCharsets.UTF_8));
-            
-            if (json == null || !json.containsKey("rateLimit")) {
-                SneakyCharacterManager.getInstance().getLogger().warning("[SkinQueue Debug] /v2/delay returned no rateLimit key");
-                return;
-            }
-            
-            JSONObject rateLimit = (JSONObject) json.get("rateLimit");
-            
-            int limitValue = -1;
-            int remainingValue = -1;
-            long resetTime = 0;
-            int delayMillisValue = -1;
-
-            // Parse rateLimit.limit object
-            if (rateLimit.containsKey("limit")) {
-                JSONObject limitObj = (JSONObject) rateLimit.get("limit");
-                if (limitObj.containsKey("limit")) limitValue = ((Number) limitObj.get("limit")).intValue();
-                if (limitObj.containsKey("remaining")) remainingValue = ((Number) limitObj.get("remaining")).intValue();
-                if (limitObj.containsKey("reset")) {
-                    resetTime = ((Number) limitObj.get("reset")).longValue();
-                    // Convert unix seconds to millis if needed
-                    if (resetTime > 0 && resetTime < 10000000000L) resetTime *= 1000L;
-                }
-            }
-            
-            // Parse rateLimit.delay object
-            if (rateLimit.containsKey("delay")) {
-                JSONObject delay = (JSONObject) rateLimit.get("delay");
-                if (delay.containsKey("millis")) delayMillisValue = ((Number) delay.get("millis")).intValue();
-            }
-            
-            // Parse rateLimit.next as fallback for reset time
-            if (resetTime == 0 && rateLimit.containsKey("next")) {
-                JSONObject next = (JSONObject) rateLimit.get("next");
-                if (next.containsKey("absolute")) {
-                    long abs = ((Number) next.get("absolute")).longValue();
-                    if (abs > System.currentTimeMillis()) resetTime = abs;
-                }
-            }
-            
-            // Only use the reset time if it's actually in the future — a past timestamp
-            // just means the current window has already rolled over and there's no countdown to track.
-            long futureResetTime = (resetTime > 0 && resetTime > System.currentTimeMillis()) ? resetTime : 0;
-
-            SneakyCharacterManager.getInstance().getLogger().info(
-                "[SkinQueue Debug] /v2/delay poll: " + remainingValue + "/" + limitValue +
-                " delay=" + delayMillisValue + "ms, reset=" + (futureResetTime > 0 ? (futureResetTime - System.currentTimeMillis()) / 1000 + "s" : "ready"));
-
-            updateRateLimit(limitValue, remainingValue, futureResetTime, delayMillisValue);
-        } catch (Exception e) {
-            SneakyCharacterManager.getInstance().getLogger().warning("[SkinQueue Debug] Failed to poll /v2/delay: " + e.getMessage());
-        }
     }
 
     public Map<Integer, List<SkinData>> getQueue() {
