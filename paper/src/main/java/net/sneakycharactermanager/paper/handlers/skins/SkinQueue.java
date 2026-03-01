@@ -254,10 +254,25 @@ public class SkinQueue extends BukkitRunnable {
             }
         }
 
+        // Low priority skins that have a UUID go first, and bypass the reservation (because they do not cost capacity)
+        List<SkinData> p1 = queue.get(PRIO_ONLINE);
+        // Menu-open pass
+        for (SkinData data : p1) {
+            if (!data.processing && data.isMenuOpen() && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
+        }
+        // Normal P1 pass
+        for (SkinData data : p1) {
+            if (!data.processing && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
+        }
+
+        // P0: only when above reservation
+        for (SkinData data : queue.get(PRIO_PRELOAD)) {
+            if (!data.processing && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
+        }
+
         // P1: first prefer entries whose menu is currently open (player has the UI open),
         // then fall back to normal P1 order. Only when we have capacity above the reservation.
         if (remaining > minReservation) {
-            List<SkinData> p1 = queue.get(PRIO_ONLINE);
             // Menu-open pass
             for (SkinData data : p1) {
                 if (!data.processing && data.isMenuOpen()) return data;
