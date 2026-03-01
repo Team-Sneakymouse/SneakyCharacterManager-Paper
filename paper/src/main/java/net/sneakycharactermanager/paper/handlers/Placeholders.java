@@ -7,6 +7,7 @@ import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.Gender;
+import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 
 public class Placeholders extends PlaceholderExpansion {
 
@@ -35,11 +36,39 @@ public class Placeholders extends PlaceholderExpansion {
 
 	@Override
 	public String onPlaceholderRequest(Player player, String params) {
-		Character character = Character.get(player);
-		if (character == null)
-			return "";
-
 		String placeholder = params.toLowerCase();
+		SkinQueue sq = SneakyCharacterManager.getInstance().skinQueue;
+
+		// Global Skin Queue Placeholders
+		if (placeholder.equals("skinqueue_remaining")) {
+			return String.valueOf(sq.getRemaining());
+		} else if (placeholder.equals("skinqueue_limit")) {
+			return String.valueOf(sq.getLimit());
+		} else if (placeholder.equals("skinqueue_reset")) {
+			return String.valueOf(sq.getNextReset());
+		} else if (placeholder.equals("skinqueue_reset_formatted")) {
+			long now = System.currentTimeMillis();
+			long nextReset = sq.getNextReset();
+			return (nextReset > 0 && nextReset > now) ? ((nextReset - now) / 1000) + "s" : "Ready";
+		} else if (placeholder.equals("skinqueue_delay")) {
+			return String.valueOf(sq.getDelayMillis());
+		} else if (placeholder.equals("skinqueue_processing")) {
+			return String.valueOf(sq.getProcessingCount());
+		} else if (placeholder.equals("skinqueue_total_queued")) {
+			return String.valueOf(sq.getTotalQueuedCount());
+		} else if (placeholder.startsWith("skinqueue_queued_p")) {
+			try {
+				int p = Integer.parseInt(placeholder.substring("skinqueue_queued_p".length()));
+				return String.valueOf(sq.getQueuedCount(p));
+			} catch (NumberFormatException e) {
+				return "0";
+			}
+		}
+
+		// Character Specific Placeholders (Require a Player)
+		if (player == null) return null;
+		Character character = Character.get(player);
+		if (character == null) return "";
 
 		if (placeholder.equals("character_uuid")) {
 			return character.getCharacterUUID();

@@ -179,6 +179,26 @@ public class SkinQueue extends BukkitRunnable {
     public long getNextReset() { return nextReset; }
     public int getDelayMillis(){ return delayMillis; }
 
+    public long getProcessingCount() {
+        return queue.values().stream()
+            .flatMap(List::stream)
+            .filter(d -> d.isProcessing())
+            .count();
+    }
+
+    public long getTotalQueuedCount() {
+        return queue.values().stream()
+            .flatMap(List::stream)
+            .filter(d -> !d.isProcessing())
+            .count();
+    }
+
+    public long getQueuedCount(int priority) {
+        List<SkinData> list = queue.get(priority);
+        if (list == null) return 0;
+        return list.stream().filter(d -> !d.isProcessing()).count();
+    }
+
     @Override
     public void run() {
         if (this.task == null) return;
