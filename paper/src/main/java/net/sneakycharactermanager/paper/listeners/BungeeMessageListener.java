@@ -132,10 +132,21 @@ public class BungeeMessageListener implements PluginMessageListener {
 				int skinPrio = requesterUUID.equals(playerUUID) ? SkinQueue.PRIO_ONLINE : SkinQueue.PRIO_PRELOAD;
 
 				for (Character c : characters) {
+					// Base skin preloading
 					ProfileProperty p = SkinCache.get(playerUUID, c.getSkin());
-
 					if (p == null) {
 						SkinData.getOrCreate(c.getSkin(), c.getSkinUUID(), c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName());
+					}
+
+					// Uniform variant preloading
+					for (Map.Entry<String, String[]> entry : c.getUniformVariants().entrySet()) {
+						String vUUID = entry.getValue()[0];
+						String vUrl = entry.getValue()[1];
+						ProfileProperty vp = SkinCache.get(playerUUID, vUrl);
+						if (vp == null) {
+							SkinData.getOrCreate(vUrl, vUUID, c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName())
+								.setUniformCacheInfo(c.getSkin(), entry.getKey());
+						}
 					}
 				}
 				break;
@@ -240,7 +251,19 @@ public class BungeeMessageListener implements PluginMessageListener {
 		boolean slim = in.readBoolean();
 		String tags = in.readUTF();
 		String gender = in.readUTF();
-		return new Character(playerUUID, uuid, name, skin, skinUUID, slim, tags, gender);
+		
+		Character character = new Character(playerUUID, uuid, name, skin, skinUUID, slim, tags, gender);
+		
+		// Read uniform variants
+		int variantCount = in.readInt();
+		for (int i = 0; i < variantCount; i++) {
+			String hash = in.readUTF();
+			String sUUID = in.readUTF();
+			String tUrl = in.readUTF();
+			character.addUniformVariant(hash, sUUID, tUrl);
+		}
+		
+		return character;
 	}
 
 }

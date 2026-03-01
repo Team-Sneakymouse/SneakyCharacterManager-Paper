@@ -13,6 +13,7 @@ import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.sneakycharactermanager.bungee.Character;
 import net.sneakycharactermanager.bungee.Gender;
 import net.sneakycharactermanager.bungee.SneakyCharacterManager;
+import net.sneakycharactermanager.bungee.handlers.UniformSkinCache;
 
 public class PaperMessagingUtil {
 
@@ -153,6 +154,15 @@ public class PaperMessagingUtil {
 		out.writeBoolean(character.isSlim());
 		out.writeUTF(character.getTags());
 		out.writeUTF(Gender.toConfigKeyNullable(character.getGender()));
+
+		// Write uniform variants
+		List<UniformSkinCache.Variant> variants = UniformSkinCache.getInstance().getVariants(character.getSkin());
+		out.writeInt(variants.size());
+		for (UniformSkinCache.Variant v : variants) {
+			out.writeUTF(v.uniformHash);
+			out.writeUTF(v.skinUUID);
+			out.writeUTF(v.textureUrl);
+		}
 	}
 
 	private static void writeStringList(ByteArrayDataOutput out, List<String> strings) {

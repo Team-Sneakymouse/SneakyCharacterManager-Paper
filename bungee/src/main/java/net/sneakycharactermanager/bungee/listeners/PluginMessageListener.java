@@ -13,6 +13,7 @@ import net.md_5.bungee.event.EventHandler;
 import net.sneakycharactermanager.bungee.Character;
 import net.sneakycharactermanager.bungee.PlayerData;
 import net.sneakycharactermanager.bungee.SneakyCharacterManager;
+import net.sneakycharactermanager.bungee.handlers.UniformSkinCache;
 import net.sneakycharactermanager.bungee.util.PaperMessagingUtil;
 
 import java.io.IOException;
@@ -187,6 +188,13 @@ public class PluginMessageListener implements Listener {
                 for (String pUUID : uuids) {
                     PlayerData.get(pUUID).sendEnabledCharacters(serverInfo, "preloadSkins", pUUID);
                 }
+                break;
+            case "saveUniformVariant":
+                String baseUrl = messageIn.readUTF();
+                String uHash = messageIn.readUTF();
+                String sUUID = messageIn.readUTF();
+                String tUrl = messageIn.readUTF();
+                UniformSkinCache.getInstance().addVariant(baseUrl, uHash, sUUID, tUrl);
                 break;
             case "getAllCharacters":
                 requesterUUID = messageIn.readUTF();

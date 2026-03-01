@@ -54,6 +54,7 @@ public class Character {
 	private boolean slim;
 	private JsonObject tags = null;
 	private Gender gender = null;
+	private final Map<String, String[]> uniformVariants = new HashMap<>();
 
 	private boolean firstLoad = false;
 
@@ -253,6 +254,22 @@ public class Character {
 
 	public void setGender(Gender gender) {
 		this.gender = gender;
+	}
+
+	public void addUniformVariant(String hash, String uuid, String url) {
+		this.uniformVariants.put(hash, new String[]{uuid, url});
+	}
+
+	public String[] getUniformVariant(String hash) {
+		return this.uniformVariants.get(hash);
+	}
+
+	public void clearUniformVariants() {
+		this.uniformVariants.clear();
+	}
+
+	public Map<String, String[]> getUniformVariants() {
+		return this.uniformVariants;
 	}
 
 	public String getGenderSuffix() {

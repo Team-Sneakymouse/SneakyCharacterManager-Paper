@@ -44,6 +44,7 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.util.ChatUtility;
+import net.sneakycharactermanager.paper.util.SkinUtil;
 
 public class CommandUniform extends CommandBaseAdmin {
 
@@ -127,16 +128,38 @@ public class CommandUniform extends CommandBaseAdmin {
 
         // Store as final so it can be used async
         File uniformFinal = uniformFile;
-        
+        String baseSkinUrl = skinURL.toString();
+
         Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
+            // 1. Calculate uniform hash
+            String uniformHash = SkinUtil.getFileHash(uniformFinal);
+            if (uniformHash == null) {
+                Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+                    sender.sendMessage(ChatUtility.convertToComponent("&aFailed to calculate uniform hash."));
+                });
+                return;
+            }
+
+            // 2. Check for cache hit
+            String[] cached = character.getUniformVariant(uniformHash);
+            if (cached != null) {
+                String cachedUUID = cached[0];
+                String cachedUrl = cached[1];
+                Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+                    SkinData.getOrCreate(cachedUrl, cachedUUID, character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getCharacterUUID(), character.getName());
+                    sender.sendMessage(ChatUtility.convertToComponent("&aUsing cached uniform skin..."));
+                });
+                return;
+            }
+
             try {
                 // Grab character skin from remote web server
                 HttpClient httpClient = HttpClient.newHttpClient();
-                HttpRequest request = HttpRequest.newBuilder().uri(
+                HttpRequest httpRequest = HttpRequest.newBuilder().uri(
                     skinURL.toURI())
                     .timeout(Duration.ofSeconds(2))
                     .build();
-                HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+                HttpResponse<InputStream> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream());
 
                 // Check the HTTP response status
                 int statusCode = response.statusCode();
@@ -252,11 +275,12 @@ public class CommandUniform extends CommandBaseAdmin {
 
                             if (succes && url != null) {
                                 // Make skindata and add to skinqueue
-                                String urlFinal = new String(url);
-                                Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                                    SkinData.getOrCreate(urlFinal, "", character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getCharacterUUID(), character.getName());
-                                });
-                            }
+                                 String urlFinal = new String(url);
+                                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+                                     SkinData sd = SkinData.getOrCreate(urlFinal, "", character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getCharacterUUID(), character.getName());
+                                     sd.setUniformCacheInfo(baseSkinUrl, uniformHash);
+                                 });
+                             }
                         }
                     } catch (ParseException e) {
                         e.printStackTrace();

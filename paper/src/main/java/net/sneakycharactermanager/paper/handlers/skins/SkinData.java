@@ -64,6 +64,9 @@ public class SkinData extends BukkitRunnable {
     private long lastPollTime = 0;
     private String characterName = null;
 
+    private String baseSkinUrl;
+    private String uniformHash;
+
     private String getQueueUrl() {
         return SneakyCharacterManager.getInstance().getConfig().getString("mineskinQueueUrl", "https://api.mineskin.org/v2/queue");
     }
@@ -133,7 +136,7 @@ public class SkinData extends BukkitRunnable {
         this.characterHead = characterHead;
         this.inventory = inventory;
         this.index = index;
-        this.updateSaveFile = priority >= SkinQueue.PRIO_LOAD && skinUUID.isEmpty();
+        this.updateSaveFile = priority >= SkinQueue.PRIO_LOAD && priority != SkinQueue.PRIO_UNIFORM && skinUUID.isEmpty();
         SneakyCharacterManager.getInstance().skinQueue.add(this, priority);
     }
 
@@ -451,10 +454,14 @@ public class SkinData extends BukkitRunnable {
         // Apply to player if:
         // - It's a character load/manual update (priority >= PRIO_LOAD) even if it was originally a menu item
         if (this.priority >= SkinQueue.PRIO_LOAD) {
-            this.player.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, property));
-            Entity vehicle = player.getVehicle();
-            if (vehicle != null) vehicle.removePassenger(player);
-            player.teleport(player.getLocation().add(0, 1, 0));
+            // EXCEPTION: Don't apply a uniform variant automatically during character load (PRIO_LOAD).
+            // It should only be applied if priority is PRIO_UNIFORM (4).
+            if (this.uniformHash == null || this.priority == SkinQueue.PRIO_UNIFORM) {
+                this.player.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, property));
+                Entity vehicle = player.getVehicle();
+                if (vehicle != null) vehicle.removePassenger(player);
+                player.teleport(player.getLocation().add(0, 1, 0));
+            }
 
             // PRIO_SKIN is used exclusively for /skin
             if (priority == SkinQueue.PRIO_SKIN) {
@@ -494,6 +501,17 @@ public class SkinData extends BukkitRunnable {
         if (updateSaveFile) {
             SneakyCharacterManager.getInstance().getLogger().info("Skin Update: [" + this.player.getName() + "," + player.getName() + "," + url + "]");
             BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), characterUUID, 1, url, skinUUID, this.isSlim());
+        }
+
+        // Notify Bungee of new uniform variant
+        if (baseSkinUrl != null && uniformHash != null) {
+            ProfileProperty prop = SkinCache.get(this.player.getUniqueId().toString(), this.url);
+            if (prop != null) {
+                String textureUrl = SkinUtil.getTextureUrl(prop);
+                if (textureUrl != null) {
+                    BungeeMessagingUtil.sendByteArray(this.player, "saveUniformVariant", baseSkinUrl, uniformHash, skinUUID, textureUrl);
+                }
+            }
         }
 
         SneakyCharacterManager.getInstance().skinQueue.remove(this);
@@ -571,6 +589,11 @@ public class SkinData extends BukkitRunnable {
         this.characterHead = characterHead;
         this.inventory = inventory;
         this.index = index;
+    }
+
+    public void setUniformCacheInfo(String baseSkinUrl, String uniformHash) {
+        this.baseSkinUrl = baseSkinUrl;
+        this.uniformHash = uniformHash;
     }
 
     /** True if this entry has an associated menu AND the player currently has it open. */

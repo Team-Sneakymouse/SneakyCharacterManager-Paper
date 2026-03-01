@@ -4,6 +4,7 @@ import java.io.*;
 import java.security.*;
 
 import net.md_5.bungee.api.plugin.Plugin;
+import net.sneakycharactermanager.bungee.handlers.UniformSkinCache;
 import net.sneakycharactermanager.bungee.listeners.ConnectionEventListeners;
 import net.sneakycharactermanager.bungee.listeners.PluginMessageListener;
 
@@ -21,6 +22,7 @@ public class SneakyCharacterManager extends Plugin {
 		instance = this;
 
 		loadOrGenerateKeys();
+		new UniformSkinCache();
 
 		getProxy().registerChannel("sneakymouse:" + IDENTIFIER);
 		getProxy().getPluginManager().registerListener(this, new PluginMessageListener());
