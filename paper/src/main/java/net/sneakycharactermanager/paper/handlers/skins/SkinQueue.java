@@ -46,9 +46,6 @@ public class SkinQueue extends BukkitRunnable {
     private long lastRequestTime = 0;
     private long lastActionTime = 0; // Tracks when remaining last changed or nextReset was set
     private long lastDebugLog = 0;
-    private boolean offlineSkinsRequested = false;
-    private final Set<String> preloadPermCache = ConcurrentHashMap.newKeySet();
-    private File preloadCacheFile;
 
     public SkinQueue() {
         for (int i = 0; i <= PRIO_UNIFORM; i++) {
@@ -60,45 +57,6 @@ public class SkinQueue extends BukkitRunnable {
         this.remaining = this.limit;
         
         this.task = this.runTaskTimerAsynchronously(SneakyCharacterManager.getInstance(), 0, 5);
-        
-        loadPreloadCache();
-    }
-
-    private void loadPreloadCache() {
-        preloadCacheFile = new File(SneakyCharacterManager.getInstance().getDataFolder(), "preload_perm_cache.txt");
-        if (!preloadCacheFile.exists()) return;
-        try (Scanner scanner = new Scanner(preloadCacheFile)) {
-            while (scanner.hasNextLine()) {
-                String uuid = scanner.nextLine().trim();
-                if (!uuid.isEmpty()) preloadPermCache.add(uuid);
-            }
-        } catch (Exception e) {
-            SneakyCharacterManager.getInstance().getLogger().warning("Failed to load preload_perm_cache.txt: " + e.getMessage());
-        }
-    }
-
-    public void addToPreloadCache(String uuid) {
-        if (preloadPermCache.add(uuid)) {
-            savePreloadCache();
-        }
-    }
-
-    public void removeFromPreloadCache(String uuid) {
-        if (preloadPermCache.remove(uuid)) {
-            savePreloadCache();
-        }
-    }
-
-    private void savePreloadCache() {
-        Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (task) -> {
-            try (FileWriter fw = new FileWriter(preloadCacheFile)) {
-                for (String uuid : preloadPermCache) {
-                    fw.write(uuid + "\n");
-                }
-            } catch (IOException e) {
-                SneakyCharacterManager.getInstance().getLogger().warning("Failed to save to preload_perm_cache.txt: " + e.getMessage());
-            }
-        });
     }
 
     public void add(SkinData skinData, int priority) {
@@ -380,42 +338,6 @@ public class SkinQueue extends BukkitRunnable {
         } catch (IOException e) {
             SneakyCharacterManager.getInstance().getLogger().warning("Failed to save mineskin_queue.json: " + e.getMessage());
         }
-    }
-
-    public void requestOfflineSkins(Player requester) {
-        if (offlineSkinsRequested) return;
-        offlineSkinsRequested = true;
-
-        Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (task) -> {
-            int days = SneakyCharacterManager.getInstance().getConfig().getInt("mineskin.preload_active_days", 8);
-            long cutoff = System.currentTimeMillis() - (days * 24L * 60L * 60L * 1000L);
-            List<String> uuidsToPreload = new ArrayList<>();
-            File dataFolder = SneakyCharacterManager.getCharacterDataFolder();
-
-            for (String uuidBase : preloadPermCache) {
-                UUID uuid = UUID.fromString(uuidBase);
-                OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(uuid);
-                
-                if (offlinePlayer.getLastPlayed() < cutoff) continue;
-                
-                File playerDir = new File(dataFolder, uuidBase);
-                if (playerDir.exists() && playerDir.isDirectory()) {
-                    String[] files = playerDir.list((dir, name) -> name.endsWith(".yml"));
-                    if (files != null && files.length > 0) {
-                        uuidsToPreload.add(uuidBase);
-                    }
-                }
-            }
-
-            if (!uuidsToPreload.isEmpty()) {
-                Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                    Player actualRequester = requester.isOnline() ? requester : Bukkit.getOnlinePlayers().stream().findAny().orElse(null);
-                    if (actualRequester != null) {
-                        BungeeMessagingUtil.sendByteArray(actualRequester, "preloadSkinsBulk", uuidsToPreload);
-                    }
-                });
-            }
-        });
     }
 
 }

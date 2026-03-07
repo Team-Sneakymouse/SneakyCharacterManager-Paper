@@ -27,15 +27,8 @@ public class ConnectionEventListeners implements Listener {
         Player player = event.getPlayer();
         //We need to load other players names when a person joins
         SneakyCharacterManager.getInstance().nametagManager.loadNames(player);
-            
-        if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".preload")) {
-            SneakyCharacterManager.getInstance().skinQueue.addToPreloadCache(player.getUniqueId().toString());
-        } else {
-            SneakyCharacterManager.getInstance().skinQueue.removeFromPreloadCache(player.getUniqueId().toString());
-        }
 
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
-            SneakyCharacterManager.getInstance().skinQueue.requestOfflineSkins(player);
             BungeeMessagingUtil.sendByteArray(player, "preloadSkins", player.getUniqueId().toString());
 
             SneakyCharacterManager.getInstance().skinQueue.updatePriority(player, SkinQueue.PRIO_ONLINE);
@@ -63,12 +56,6 @@ public class ConnectionEventListeners implements Listener {
     public void onPlayerLeave(PlayerQuitEvent event) {
         Player player = event.getPlayer();
             
-        if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".preload")) {
-            SneakyCharacterManager.getInstance().skinQueue.addToPreloadCache(player.getUniqueId().toString());
-        } else {
-            SneakyCharacterManager.getInstance().skinQueue.removeFromPreloadCache(player.getUniqueId().toString());
-        }
-
         //Un-Nick player who is disconnecting from the server
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
 

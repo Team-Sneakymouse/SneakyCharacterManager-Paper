@@ -127,10 +127,6 @@ public class BungeeMessageListener implements PluginMessageListener {
 				requesterUUID = messageIn.readUTF();
 				characters = readCharacterList(requesterUUID, messageIn);
 
-				// Online player loading their own skins → PRIO_ONLINE.
-				// Offline player being bulk-preloaded → PRIO_PRELOAD.
-				int skinPrio = requesterUUID.equals(playerUUID) ? SkinQueue.PRIO_ONLINE : SkinQueue.PRIO_PRELOAD;
-
 				for (Character c : characters) {
 					// Base skin preloading
 					String skinUrl = c.getSkin();
@@ -144,7 +140,7 @@ public class BungeeMessageListener implements PluginMessageListener {
 						}
 
 						if (p == null) {
-							SkinData.getOrCreate(skinUrl, c.getSkinUUID(), c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName());
+							SkinData.getOrCreate(skinUrl, c.getSkinUUID(), c.isSlim(), SkinQueue.PRIO_ONLINE, pl, c.getCharacterUUID(), c.getName());
 						}
 					}
 
@@ -164,7 +160,7 @@ public class BungeeMessageListener implements PluginMessageListener {
 						}
 
 						if (vp == null) {
-							SkinData.getOrCreate(vUrl, vUUID, c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName())
+							SkinData.getOrCreate(vUrl, vUUID, c.isSlim(), SkinQueue.PRIO_ONLINE, pl, c.getCharacterUUID(), c.getName())
 								.setUniformCacheInfo(c.getSkin(), entry.getKey());
 						}
 					}

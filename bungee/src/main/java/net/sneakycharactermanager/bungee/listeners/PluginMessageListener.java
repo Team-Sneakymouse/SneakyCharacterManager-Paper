@@ -182,13 +182,6 @@ public class PluginMessageListener implements Listener {
                 playerData.createNewCharacter(characterID, characterName, characterSkin, skinUUID, characterSlim);
 
                 break;
-
-            case "preloadSkinsBulk":
-                List<String> uuids = readStringList(messageIn);
-                for (String pUUID : uuids) {
-                    PlayerData.get(pUUID).sendEnabledCharacters(serverInfo, "preloadSkins", pUUID);
-                }
-                break;
             case "saveUniformVariant":
                 String baseUrl = messageIn.readUTF();
                 String uHash = messageIn.readUTF();
