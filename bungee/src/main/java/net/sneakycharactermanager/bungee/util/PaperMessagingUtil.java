@@ -151,6 +151,8 @@ public class PaperMessagingUtil {
 		out.writeUTF(character.getName());
 		out.writeUTF(character.getSkin());
 		out.writeUTF(character.getSkinUUID());
+		out.writeUTF(character.getTexture() != null ? character.getTexture() : "");
+		out.writeUTF(character.getSignature() != null ? character.getSignature() : "");
 		out.writeBoolean(character.isSlim());
 		out.writeUTF(character.getTags());
 		out.writeUTF(Gender.toConfigKeyNullable(character.getGender()));
@@ -162,6 +164,8 @@ public class PaperMessagingUtil {
 			out.writeUTF(v.uniformHash);
 			out.writeUTF(v.skinUUID);
 			out.writeUTF(v.textureUrl);
+			out.writeUTF(v.texture);
+			out.writeUTF(v.signature);
 		}
 	}
 

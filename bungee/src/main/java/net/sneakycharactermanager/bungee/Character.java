@@ -15,15 +15,19 @@ public class Character {
     private String skin;
     private String skinUUID;
     private boolean slim;
+    private String texture;
+    private String signature;
     private String tags;
     private Gender gender;
 
-    public Character(String uuid, boolean enabled, String name, String skin, String skinUUID, boolean slim, String tags, String gender) {
+    public Character(String uuid, boolean enabled, String name, String skin, String skinUUID, String texture, String signature, boolean slim, String tags, String gender) {
         this.uuid = uuid;
         this.enabled = enabled;
         this.name = name;
         this.skin = skin;
         this.skinUUID = skinUUID;
+        this.texture = texture;
+        this.signature = signature;
         this.slim = slim;
         this.tags = tags;
         this.gender = Gender.fromString(gender);
@@ -36,6 +40,8 @@ public class Character {
             name,
             skin,
             skinUUID,
+            "",
+            "",
             slim,
             "",
             ""
@@ -49,6 +55,8 @@ public class Character {
             config.getString("name"),
             config.getString("skin"),
             config.getString("skinUUID"),
+            config.getString("texture", ""),
+            config.getString("signature", ""),
             config.getBoolean("slim"),
             config.getString("tags"),
             config.getString("gender", "")
@@ -106,6 +114,22 @@ public class Character {
 
     public void setSkinUUID(String skinUUID) {
         this.skinUUID = skinUUID;
+    }
+
+    public String getTexture() {
+        return texture;
+    }
+
+    public void setTexture(String texture) {
+        this.texture = texture;
+    }
+
+    public String getSignature() {
+        return signature;
+    }
+
+    public void setSignature(String signature) {
+        this.signature = signature;
     }
 
     public boolean isSlim() {

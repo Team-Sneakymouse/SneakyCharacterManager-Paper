@@ -136,6 +136,13 @@ public class BungeeMessageListener implements PluginMessageListener {
 					String skinUrl = c.getSkin();
 					if (skinUrl != null && !skinUrl.isEmpty()) {
 						ProfileProperty p = SkinCache.get(playerUUID, skinUrl);
+						
+						// If not in memory but we have raw data from Bungee
+						if (p == null && c.getTexture() != null && !c.getTexture().isEmpty()) {
+							p = new ProfileProperty("textures", c.getTexture(), c.getSignature());
+							SkinCache.put(playerUUID, skinUrl, p);
+						}
+
 						if (p == null) {
 							SkinData.getOrCreate(skinUrl, c.getSkinUUID(), c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName());
 						}
@@ -143,11 +150,19 @@ public class BungeeMessageListener implements PluginMessageListener {
 
 					// Uniform variant preloading
 					for (Map.Entry<String, String[]> entry : c.getUniformVariants().entrySet()) {
-						String vUUID = entry.getValue()[0];
-						String vUrl = entry.getValue()[1];
+						String[] vData = entry.getValue();
+						String vUUID = vData[0];
+						String vUrl = vData[1];
 						if (vUrl == null || vUrl.isEmpty()) continue;
 
 						ProfileProperty vp = SkinCache.get(playerUUID, vUrl);
+						
+						// If not in memory but we have raw data from Bungee (Uniform variant data: 0:uuid, 1:url, 2:texture, 3:signature)
+						if (vp == null && vData.length > 2 && vData[2] != null && !vData[2].isEmpty()) {
+							vp = new ProfileProperty("textures", vData[2], vData[3]);
+							SkinCache.put(playerUUID, vUrl, vp);
+						}
+
 						if (vp == null) {
 							SkinData.getOrCreate(vUrl, vUUID, c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName())
 								.setUniformCacheInfo(c.getSkin(), entry.getKey());
@@ -253,11 +268,13 @@ public class BungeeMessageListener implements PluginMessageListener {
 		String name = in.readUTF();
 		String skin = in.readUTF();
 		String skinUUID = in.readUTF();
+		String texture = in.readUTF();
+		String signature = in.readUTF();
 		boolean slim = in.readBoolean();
 		String tags = in.readUTF();
 		String gender = in.readUTF();
 		
-		Character character = new Character(playerUUID, uuid, name, skin, skinUUID, slim, tags, gender);
+		Character character = new Character(playerUUID, uuid, name, skin, skinUUID, texture, signature, slim, tags, gender);
 		
 		// Read uniform variants
 		int variantCount = in.readInt();
@@ -265,7 +282,9 @@ public class BungeeMessageListener implements PluginMessageListener {
 			String hash = in.readUTF();
 			String sUUID = in.readUTF();
 			String tUrl = in.readUTF();
-			character.addUniformVariant(hash, sUUID, tUrl);
+			String tex = in.readUTF();
+			String sig = in.readUTF();
+			character.addUniformVariant(hash, sUUID, tUrl, tex, sig);
 		}
 		
 		return character;

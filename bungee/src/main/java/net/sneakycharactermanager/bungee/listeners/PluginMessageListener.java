@@ -130,7 +130,7 @@ public class PluginMessageListener implements Listener {
                 int type = messageIn.readInt();
                 switch (type) {
                     case 1: // Updating Skin
-                        playerData.setCharacterSkin(characterUUID, messageIn.readUTF(), messageIn.readUTF(), messageIn.readBoolean());
+                        playerData.setCharacterSkin(characterUUID, messageIn.readUTF(), messageIn.readUTF(), messageIn.readUTF(), messageIn.readUTF(), messageIn.readBoolean());
                         break;
                     case 2: // Updating Name
                         playerData.setCharacterName(characterUUID, messageIn.readUTF());
@@ -162,7 +162,7 @@ public class PluginMessageListener implements Listener {
                 String skinUUID = messageIn.readUTF();
                 boolean slim = messageIn.readBoolean();
                 playerData = PlayerData.get(playerUUID);
-                playerData.setCharacterSkin(characterUUID, url, skinUUID, slim);
+                playerData.setCharacterSkin(characterUUID, url, skinUUID, "", "", slim);
                 break;
             case "createNewCharacter":
                 playerUUID = messageIn.readUTF();
@@ -194,7 +194,9 @@ public class PluginMessageListener implements Listener {
                 String uHash = messageIn.readUTF();
                 String sUUID = messageIn.readUTF();
                 String tUrl = messageIn.readUTF();
-                UniformSkinCache.getInstance().addVariant(baseUrl, uHash, sUUID, tUrl);
+                String tex = messageIn.readUTF();
+                String sig = messageIn.readUTF();
+                UniformSkinCache.getInstance().addVariant(baseUrl, uHash, sUUID, tUrl, tex, sig);
                 break;
             case "getAllCharacters":
                 requesterUUID = messageIn.readUTF();

@@ -222,7 +222,12 @@ public class CharacterSelectionMenu implements Listener {
             skullMeta.setOwningPlayer(this.opener);
             characterHead.setItemMeta(skullMeta);
 
-            ProfileProperty profileProperty = SkinCache.get(playerUUID, character.getSkin());
+            ProfileProperty profileProperty = SkinCache.get(this.opener.getUniqueId().toString(), character.getSkin());
+
+            if (profileProperty == null && character.getTexture() != null && !character.getTexture().isEmpty() && character.getSignature() != null && !character.getSignature().isEmpty()) {
+                profileProperty = new ProfileProperty("textures", character.getTexture(), character.getSignature());
+                SkinCache.put(this.opener.getUniqueId().toString(), character.getSkin(), profileProperty);
+            }
 
             if (profileProperty == null) {
                 inventory.setItem(index, characterHead);

@@ -51,6 +51,8 @@ public class Character {
 	private String namePrefix = "";
 	private String skin;
 	private String skinUUID;
+	private String texture;
+	private String signature;
 	private boolean slim;
 	private JsonObject tags = null;
 	private Gender gender = null;
@@ -58,13 +60,15 @@ public class Character {
 
 	private boolean firstLoad = false;
 
-	public Character(String playerUUID, String characterUUID, String characterName, String skin, String skinUUID, boolean slim,
+	public Character(String playerUUID, String characterUUID, String characterName, String skin, String skinUUID, String texture, String signature, boolean slim,
 			String tags, String gender) {
 		this.player = Bukkit.getPlayer(UUID.fromString(playerUUID));
 		this.name = characterName;
 		this.characterUUID = characterUUID;
 		this.skin = skin;
 		this.skinUUID = skinUUID;
+		this.texture = texture;
+		this.signature = signature;
 		this.slim = slim;
 		this.tags = tags.isEmpty() ? new JsonObject() : JsonParser.parseString(tags).getAsJsonObject();
 		this.gender = Gender.fromString(gender);
@@ -228,6 +232,22 @@ public class Character {
 		this.skinUUID = skinUUID;
 	}
 
+	public String getTexture() {
+		return texture;
+	}
+
+	public void setTexture(String texture) {
+		this.texture = texture;
+	}
+
+	public String getSignature() {
+		return signature;
+	}
+
+	public void setSignature(String signature) {
+		this.signature = signature;
+	}
+
 	public boolean isSlim() {
 		return this.slim;
 	}
@@ -256,8 +276,8 @@ public class Character {
 		this.gender = gender;
 	}
 
-	public void addUniformVariant(String hash, String uuid, String url) {
-		this.uniformVariants.put(hash, new String[]{uuid, url});
+	public void addUniformVariant(String hash, String uuid, String url, String texture, String signature) {
+		this.uniformVariants.put(hash, new String[]{uuid, url, texture, signature});
 	}
 
 	public String[] getUniformVariant(String hash) {

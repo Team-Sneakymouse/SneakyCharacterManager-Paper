@@ -49,7 +49,6 @@ public class SkinData extends BukkitRunnable {
     private final boolean isSlim;
     private int priority;
     final Player player;
-    private final boolean updateSaveFile;
 
     private SkullMeta skullMeta;
     private ItemStack characterHead;
@@ -136,7 +135,6 @@ public class SkinData extends BukkitRunnable {
         this.characterHead = characterHead;
         this.inventory = inventory;
         this.index = index;
-        this.updateSaveFile = priority >= SkinQueue.PRIO_LOAD && priority != SkinQueue.PRIO_UNIFORM && skinUUID.isEmpty();
         SneakyCharacterManager.getInstance().skinQueue.add(this, priority);
     }
 
@@ -251,8 +249,6 @@ public class SkinData extends BukkitRunnable {
                             String preview = body.length() > 200 ? body.substring(0, 200) + "..." : body;
                             SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Raw Body Preview: " + preview);
                         }
-                        
-
 
                         int statusCode = response.getStatusLine().getStatusCode();
                         if ((statusCode == 200 || statusCode == 202) && result != null) {
@@ -317,8 +313,6 @@ public class SkinData extends BukkitRunnable {
                         String preview = body.length() > 200 ? body.substring(0, 200) + "..." : body;
                         SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Raw Body Preview: " + preview);
                     }
-                    
-
 
                     if (statusCode == 200 && jsonResponse != null) {
                         Boolean success = (Boolean) jsonResponse.get("success");
@@ -454,9 +448,11 @@ public class SkinData extends BukkitRunnable {
         // Apply to player if:
         // - It's a character load/manual update (priority >= PRIO_LOAD) even if it was originally a menu item
         if (this.priority >= SkinQueue.PRIO_LOAD) {
+            boolean isUniform = this.uniformHash != null;
+
             // EXCEPTION: Don't apply a uniform variant automatically during character load (PRIO_LOAD).
             // It should only be applied if priority is PRIO_UNIFORM (4).
-            if (this.uniformHash == null || this.priority == SkinQueue.PRIO_UNIFORM) {
+            if (!isUniform || this.priority == SkinQueue.PRIO_UNIFORM) {
                 this.player.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, property));
                 Entity vehicle = player.getVehicle();
                 if (vehicle != null) vehicle.removePassenger(player);
@@ -486,7 +482,9 @@ public class SkinData extends BukkitRunnable {
 
                 character.setSkin(skinURL);
                 character.setSlim(this.isSlim());
-                BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), characterUUID, 1, skinURL, skinUUID, this.isSlim());
+                character.setTexture(texture);
+                character.setSignature(signature);
+                BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), characterUUID, 1, skinURL, skinUUID, texture, signature, this.isSlim());
             }
         }
 
@@ -498,9 +496,9 @@ public class SkinData extends BukkitRunnable {
             holder.displayCurrentPage();
         }
 
-        if (updateSaveFile) {
-            SneakyCharacterManager.getInstance().getLogger().info("Skin Update: [" + this.player.getName() + "," + player.getName() + "," + url + "]");
-            BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), characterUUID, 1, url, skinUUID, this.isSlim());
+        if (this.characterUUID != null && !this.characterUUID.isEmpty() && this.uniformHash == null) {
+            SneakyCharacterManager.getInstance().getLogger().info("Skin Update (Cache Persistence): [" + this.player.getName() + "," + characterName + "," + url + "]");
+            BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), characterUUID, 1, url, skinUUID, texture, signature, this.isSlim());
         }
 
         // Notify Bungee of new uniform variant
@@ -509,7 +507,7 @@ public class SkinData extends BukkitRunnable {
             if (prop != null) {
                 String textureUrl = SkinUtil.getTextureUrl(prop);
                 if (textureUrl != null) {
-                    BungeeMessagingUtil.sendByteArray(this.player, "saveUniformVariant", baseSkinUrl, uniformHash, skinUUID, textureUrl);
+                    BungeeMessagingUtil.sendByteArray(this.player, "saveUniformVariant", baseSkinUrl, uniformHash, skinUUID, textureUrl, texture, signature);
                 }
             }
         }

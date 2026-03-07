@@ -207,6 +207,8 @@ public class PlayerData {
         section.set("name", character.getName());
         section.set("skin", character.getSkin());
         section.set("skinUUID", character.getSkinUUID());
+        section.set("texture", character.getTexture());
+        section.set("signature", character.getSignature());
         section.set("slim", character.isSlim());
         section.set("tags", character.getTags());
         section.set("gender", Gender.toConfigKeyNullable(character.getGender()));
@@ -227,6 +229,8 @@ public class PlayerData {
         section.set("name", character.getName());
         section.set("skin", character.getSkin());
         section.set("skinUUID", character.getSkinUUID());
+        section.set("texture", character.getTexture());
+        section.set("signature", character.getSignature());
         section.set("slim", character.isSlim());
         section.set("tags", character.getTags());
         section.set("gender", Gender.toConfigKeyNullable(character.getGender()));
@@ -236,7 +240,7 @@ public class PlayerData {
         saveConfig();
     }
 
-    public void setCharacterSkin(String characterUUID, String skin, String skinUUID, boolean slim) {
+    public void setCharacterSkin(String characterUUID, String skin, String skinUUID, String texture, String signature, boolean slim) {
         Character character = this.characterMap.get(characterUUID);
 
         if (character == null) {
@@ -244,6 +248,8 @@ public class PlayerData {
         } else {
             character.setSkin(skin);
             character.setSkinUUID(skinUUID);
+            character.setTexture(texture);
+            character.setSignature(signature);
             character.setSlim(slim);
             this.characterMap.put(characterUUID, character);
             this.updateCharacterInYaml(character);

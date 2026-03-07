@@ -21,11 +21,15 @@ public class UniformSkinCache {
         public final String uniformHash;
         public final String skinUUID;
         public final String textureUrl;
+        public final String texture;
+        public final String signature;
 
-        public Variant(String uniformHash, String skinUUID, String textureUrl) {
+        public Variant(String uniformHash, String skinUUID, String textureUrl, String texture, String signature) {
             this.uniformHash = uniformHash;
             this.skinUUID = skinUUID;
             this.textureUrl = textureUrl;
+            this.texture = texture != null ? texture : "";
+            this.signature = signature != null ? signature : "";
         }
 
         public Map<String, String> toMap() {
@@ -33,6 +37,8 @@ public class UniformSkinCache {
             map.put("hash", uniformHash);
             map.put("uuid", skinUUID);
             map.put("url", textureUrl);
+            map.put("texture", texture);
+            map.put("signature", signature);
             return map;
         }
     }
@@ -73,7 +79,9 @@ public class UniformSkinCache {
                                 variants.add(new Variant(
                                         (String) item.get("hash"),
                                         (String) item.get("uuid"),
-                                        (String) item.get("url")
+                                        (String) item.get("url"),
+                                        (String) item.get("texture"),
+                                        (String) item.get("signature")
                                 ));
                             }
                         }
@@ -117,11 +125,11 @@ public class UniformSkinCache {
         return cache.getOrDefault(baseUrl, Collections.emptyList());
     }
 
-    public void addVariant(String baseUrl, String uniformHash, String skinUUID, String textureUrl) {
+    public void addVariant(String baseUrl, String uniformHash, String skinUUID, String textureUrl, String texture, String signature) {
         List<Variant> variants = cache.computeIfAbsent(baseUrl, k -> new ArrayList<>());
         // Simple check to avoid duplicates
         variants.removeIf(v -> v.uniformHash.equals(uniformHash));
-        variants.add(new Variant(uniformHash, skinUUID, textureUrl));
+        variants.add(new Variant(uniformHash, skinUUID, textureUrl, texture, signature));
         save();
     }
 }

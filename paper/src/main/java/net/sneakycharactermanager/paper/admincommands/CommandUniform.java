@@ -38,11 +38,13 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
+import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
+import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
@@ -145,9 +147,24 @@ public class CommandUniform extends CommandBaseAdmin {
             if (cached != null) {
                 String cachedUUID = cached[0];
                 String cachedUrl = cached[1];
+                String cachedTexture = cached.length > 2 ? cached[2] : "";
+                String cachedSignature = cached.length > 3 ? cached[3] : "";
+
                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                    SkinData.getOrCreate(cachedUrl, cachedUUID, character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getCharacterUUID(), character.getName());
-                    sender.sendMessage(ChatUtility.convertToComponent("&aUsing cached uniform skin..."));
+                    if (!cachedTexture.isEmpty() && !cachedSignature.isEmpty()) {
+                        ProfileProperty property = new ProfileProperty("textures", cachedTexture, cachedSignature);
+                        player.setPlayerProfile(SkinUtil.handleCachedSkin(player, property));
+                        SkinCache.put(player.getUniqueId().toString(), cachedUrl, property);
+
+                        // Refresh player visually
+                        org.bukkit.entity.Entity vehicle = player.getVehicle();
+                        if (vehicle != null) vehicle.removePassenger(player);
+                        player.teleport(player.getLocation().add(0, 1, 0));
+
+                        sender.sendMessage(ChatUtility.convertToComponent("&aApplying cached uniform skin instantly..."));
+                    } else {
+                        SkinData.getOrCreate(cachedUrl, cachedUUID, character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getCharacterUUID(), character.getName());
+                    }
                 });
                 return;
             }
@@ -167,9 +184,10 @@ public class CommandUniform extends CommandBaseAdmin {
                 if (statusCode == 200) {
                     try (InputStream inputStream = response.body()) {
                         if (inputStream != null) {
-                            // Grab the two images and overlay them
                             BufferedImage image = ImageIO.read(inputStream);
                             BufferedImage overlayImage = ImageIO.read(uniformFinal);
+
+                            if (image == null || overlayImage == null) return;
 
                             int width = Math.min(image.getWidth(), overlayImage.getWidth());
                             int height = Math.min(image.getHeight(), overlayImage.getHeight());
@@ -336,20 +354,24 @@ public class CommandUniform extends CommandBaseAdmin {
     }
     
     private void updateUniforms() {
-        Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
-            this.uniforms_classic.clear();
-            this.uniforms_slim.clear();
-            this.uniforms.clear();
-            for (File file : SneakyCharacterManager.getUniformFolder().listFiles()) {
-                if (file.getName().toLowerCase().endsWith("_classic.png")) {
-                    this.uniforms_classic.put(file.getName().replace("_classic.png", ""), file);
-                } else if (file.getName().toLowerCase().endsWith("_slim.png")) {
-                    this.uniforms_slim.put(file.getName().replace("_slim.png", ""), file);
-                } else if (file.getName().toLowerCase().endsWith(".png")) {
-                    this.uniforms.put(file.getName().replace(".png", ""), file);
-                }
+        File folder = SneakyCharacterManager.getUniformFolder();
+        File[] files = folder.listFiles();
+        if (files == null) return;
+
+        this.uniforms_classic.clear();
+        this.uniforms_slim.clear();
+        this.uniforms.clear();
+
+        for (File file : files) {
+            if (file.getName().toLowerCase().endsWith("_classic.png")) {
+                this.uniforms_classic.put(file.getName().replace("_classic.png", ""), file);
+            } else if (file.getName().toLowerCase().endsWith("_slim.png")) {
+                this.uniforms_slim.put(file.getName().replace("_slim.png", ""), file);
+            } else if (file.getName().toLowerCase().endsWith(".png")) {
+                this.uniforms.put(file.getName().replace(".png", ""), file);
             }
-        });
+        }
+        SneakyCharacterManager.getInstance().getLogger().info("[CommandUniform] updatedUniforms() - Loaded " + uniforms.size() + " generic, " + uniforms_classic.size() + " classic, " + uniforms_slim.size() + " slim uniforms.");
     }
 
     public static Point calculateOuterToInnerOffset(int x, int y) {

@@ -24,6 +24,7 @@ import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
+import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
 public class CharacterLoader {
@@ -51,12 +52,23 @@ public class CharacterLoader {
 
 			character.setFirstLoad(false);
 
-			if (profileProperty == null) {
-				if (!shouldSkipLoading(character)) {
-					SkinData.getOrCreate(url, skinUUID, character.isSlim(), SkinQueue.PRIO_LOAD, player, character.getCharacterUUID(), character.getName());
-				}
-			} else {
+			if (character.getTexture() != null && !character.getTexture().isEmpty() && character.getSignature() != null && !character.getSignature().isEmpty()) {
+				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] Using cached texture and signature for character: " + character.getName());
+				ProfileProperty prop = new ProfileProperty("textures", character.getTexture(), character.getSignature());
+				player.setPlayerProfile(SkinUtil.handleCachedSkin(player, prop));
+			} else if (profileProperty != null) {
+				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] Using memory-cached ProfileProperty for " + player.getName());
 				player.setPlayerProfile(SkinUtil.handleCachedSkin(player, profileProperty));
+				
+				// Persist memory-cached skin to Bungee if not already in Character data
+				String textureUrl = SkinUtil.getTextureUrl(profileProperty);
+				String signature = profileProperty.getSignature();
+				if (textureUrl != null && signature != null) {
+					BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), character.getCharacterUUID(), 1, character.getSkin(), character.getSkinUUID(), textureUrl, signature, character.isSlim());
+				}
+			} else if (!shouldSkipLoading(character)) {
+				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] No cached data for " + character.getName() + " - Triggering MineSkin fetch.");
+				SkinData.getOrCreate(url, skinUUID, character.isSlim(), SkinQueue.PRIO_LOAD, player, character.getCharacterUUID(), character.getName());
 			}
 
 			SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
