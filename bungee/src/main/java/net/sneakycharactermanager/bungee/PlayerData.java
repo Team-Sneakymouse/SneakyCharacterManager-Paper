@@ -314,7 +314,13 @@ public class PlayerData {
             }
         }
 
-        PaperMessagingUtil.sendByteArray(serverInfo, subChannel, this.playerUUID, requesterUUID, enabledCharacters);
+        // Send start packet with total count
+        PaperMessagingUtil.sendByteArray(serverInfo, subChannel + "Start", this.playerUUID, requesterUUID, enabledCharacters.size());
+
+        // Send characters one by one
+        for (Character character : enabledCharacters) {
+            PaperMessagingUtil.sendByteArray(serverInfo, subChannel + "Item", this.playerUUID, requesterUUID, character);
+        }
     }
 
     public String getLastPlayedCharacter() {

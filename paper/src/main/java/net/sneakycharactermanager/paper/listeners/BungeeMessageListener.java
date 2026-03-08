@@ -29,6 +29,9 @@ import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
 public class BungeeMessageListener implements PluginMessageListener {
+	
+	private final Map<String, List<Character>> guiCharacters = new HashMap<>();
+	private final Map<String, Integer> guiExpectedCounts = new HashMap<>();
 
 	private boolean verifySignature(byte[] messageBytes, String receivedSignature) {
 		try {
@@ -71,13 +74,21 @@ public class BungeeMessageListener implements PluginMessageListener {
 		ByteArrayDataInput messageIn = ByteStreams.newDataInput(messageBytes);
 		String subChannel = messageIn.readUTF();
 
+		String playerUUID;
+		String requesterUUID;
+		String characterUUID;
+		Player pl;
+		Character character;
+		List<Character> characters;
+		int expectedCount;
+
 		switch (subChannel) {
 			case "loadCharacter":
-				String playerUUID = messageIn.readUTF();
-				Character character = readCharacter(playerUUID, messageIn);
+				playerUUID = messageIn.readUTF();
+				character = readCharacter(playerUUID, messageIn);
 				boolean forced = messageIn.readBoolean();
 
-				Player pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+				pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
 
 				if (!forced && !Character.canPlayerLoadCharacter(pl, character.getCharacterUUID())) {
 					pl.sendMessage(ChatUtility.convertToComponent("&4You cannot access this character right now."));
@@ -96,7 +107,7 @@ public class BungeeMessageListener implements PluginMessageListener {
 				SneakyCharacterManager.getInstance().selectionMenu.openMenu(pl);
 				break;
 			case "loadTempCharacter":
-				String requesterUUID = messageIn.readUTF();
+				requesterUUID = messageIn.readUTF();
 				pl = Bukkit.getPlayer(UUID.fromString(requesterUUID));
 				character = readCharacter(requesterUUID, messageIn);
 				String characterSource = messageIn.readUTF();
@@ -106,63 +117,42 @@ public class BungeeMessageListener implements PluginMessageListener {
 				break;
 			case "loadTempCharacterFailed":
 				playerUUID = messageIn.readUTF();
-				String characterUUID = messageIn.readUTF();
+				characterUUID = messageIn.readUTF();
 
 				SneakyCharacterManager.getInstance().getLogger()
 						.warning("An attempt was made to load a temp character but it did not exist: [" + playerUUID
 								+ "," + characterUUID + "]");
 				break;
-			case "characterSelectionGUI":
+			case "characterSelectionGUIStart":
+			case "preloadSkinsStart":
 				playerUUID = messageIn.readUTF();
 				requesterUUID = messageIn.readUTF();
-				List<Character> characters = readCharacterList(playerUUID, messageIn);
-
-				SneakyCharacterManager.getInstance().selectionMenu.updateInventory(requesterUUID, characters);
+				expectedCount = messageIn.readInt();
+				
+				if (expectedCount == 0) {
+					handleListCompletion(subChannel.replace("Start", ""), playerUUID, requesterUUID, new ArrayList<>());
+				} else {
+					guiExpectedCounts.put(subChannel.replace("Start", "") + ":" + requesterUUID + ":" + playerUUID, expectedCount);
+					guiCharacters.put(subChannel.replace("Start", "") + ":" + requesterUUID + ":" + playerUUID, new ArrayList<>());
+				}
 				break;
-			case "preloadSkins":
+			case "characterSelectionGUIItem":
+			case "preloadSkinsItem":
 				playerUUID = messageIn.readUTF();
-				pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-				if (pl == null)
-					return;
 				requesterUUID = messageIn.readUTF();
-				characters = readCharacterList(requesterUUID, messageIn);
-
-				for (Character c : characters) {
-					// Base skin preloading
-					String skinUrl = c.getSkin();
-					if (skinUrl != null && !skinUrl.isEmpty()) {
-						ProfileProperty p = SkinCache.get(playerUUID, skinUrl);
-						
-						// If not in memory but we have raw data from Bungee
-						if (p == null && c.getTexture() != null && !c.getTexture().isEmpty()) {
-							p = new ProfileProperty("textures", c.getTexture(), c.getSignature());
-							SkinCache.put(playerUUID, skinUrl, p);
-						}
-
-						if (p == null) {
-							SkinData.getOrCreate(skinUrl, c.getSkinUUID(), c.isSlim(), SkinQueue.PRIO_ONLINE, pl, c.getCharacterUUID(), c.getName());
-						}
-					}
-
-					// Uniform variant preloading
-					for (Map.Entry<String, String[]> entry : c.getUniformVariants().entrySet()) {
-						String[] vData = entry.getValue();
-						String vUUID = vData[0];
-						String vUrl = vData[1];
-						if (vUrl == null || vUrl.isEmpty()) continue;
-
-						ProfileProperty vp = SkinCache.get(playerUUID, vUrl);
-						
-						// If not in memory but we have raw data from Bungee (Uniform variant data: 0:uuid, 1:url, 2:texture, 3:signature)
-						if (vp == null && vData.length > 2 && vData[2] != null && !vData[2].isEmpty()) {
-							vp = new ProfileProperty("textures", vData[2], vData[3]);
-							SkinCache.put(playerUUID, vUrl, vp);
-						}
-
-						if (vp == null) {
-							SkinData.getOrCreate(vUrl, vUUID, c.isSlim(), SkinQueue.PRIO_ONLINE, pl, c.getCharacterUUID(), c.getName())
-								.setUniformCacheInfo(c.getSkin(), entry.getKey());
-						}
+				Character characterItem = readCharacter(playerUUID, messageIn);
+				
+				String baseChannel = subChannel.replace("Item", "");
+				String guiKey = baseChannel + ":" + requesterUUID + ":" + playerUUID;
+				List<Character> charList = guiCharacters.get(guiKey);
+				Integer expected = guiExpectedCounts.get(guiKey);
+				
+				if (charList != null && expected != null) {
+					charList.add(characterItem);
+					if (charList.size() >= expected) {
+						handleListCompletion(baseChannel, playerUUID, requesterUUID, charList);
+						guiCharacters.remove(guiKey);
+						guiExpectedCounts.remove(guiKey);
 					}
 				}
 				break;
@@ -284,6 +274,63 @@ public class BungeeMessageListener implements PluginMessageListener {
 		}
 		
 		return character;
+	}
+
+
+	private void handleListCompletion(String baseChannel, String playerUUID, String requesterUUID, List<Character> characters) {
+		switch (baseChannel) {
+			case "characterSelectionGUI":
+				SneakyCharacterManager.getInstance().selectionMenu.updateInventory(requesterUUID, characters);
+				break;
+			case "preloadSkins":
+				Player pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
+				if (pl == null)
+					return;
+
+				// Online player loading their own skins → PRIO_ONLINE.
+				// Offline player being bulk-preloaded → PRIO_PRELOAD.
+				int skinPrio = requesterUUID.equals(playerUUID) ? SkinQueue.PRIO_ONLINE : SkinQueue.PRIO_PRELOAD;
+
+				for (Character c : characters) {
+					// Base skin preloading
+					String skinUrl = c.getSkin();
+					if (skinUrl != null && !skinUrl.isEmpty()) {
+						ProfileProperty p = SkinCache.get(playerUUID, skinUrl);
+						
+						// If not in memory but we have raw data from Bungee
+						if (p == null && c.getTexture() != null && !c.getTexture().isEmpty()) {
+							p = new ProfileProperty("textures", c.getTexture(), c.getSignature());
+							SkinCache.put(playerUUID, skinUrl, p);
+						}
+
+						if (p == null) {
+							SkinData.getOrCreate(skinUrl, c.getSkinUUID(), c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName());
+						}
+					}
+
+					// Uniform variant preloading
+					for (Map.Entry<String, String[]> entry : c.getUniformVariants().entrySet()) {
+						String[] vData = entry.getValue();
+						String vUUID = vData[0];
+						String vUrl = vData[1];
+						if (vUrl == null || vUrl.isEmpty()) continue;
+
+						ProfileProperty vp = SkinCache.get(playerUUID, vUrl);
+						
+						// If not in memory but we have raw data from Bungee (Uniform variant data: 0:uuid, 1:url, 2:texture, 3:signature)
+						if (vp == null && vData.length > 2 && vData[2] != null && !vData[2].isEmpty()) {
+							vp = new ProfileProperty("textures", vData[2], vData[3]);
+							SkinCache.put(playerUUID, vUrl, vp);
+						}
+
+						if (vp == null) {
+							SkinData.getOrCreate(vUrl, vUUID, c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName())
+								.setUniformCacheInfo(c.getSkin(), entry.getKey());
+						}
+					}
+				}
+				break;
+		}
 	}
 
 }
