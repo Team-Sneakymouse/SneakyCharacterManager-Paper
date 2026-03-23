@@ -153,7 +153,7 @@ public class CommandUniform extends CommandBaseAdmin {
                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
                     if (!cachedTexture.isEmpty() && !cachedSignature.isEmpty()) {
                         ProfileProperty property = new ProfileProperty("textures", cachedTexture, cachedSignature);
-                        player.setPlayerProfile(SkinUtil.handleCachedSkin(player, property));
+                        SkinUtil.applySkin(player, property);
                         SkinCache.put(player.getUniqueId().toString(), cachedUrl, property);
 
                         // Refresh player visually

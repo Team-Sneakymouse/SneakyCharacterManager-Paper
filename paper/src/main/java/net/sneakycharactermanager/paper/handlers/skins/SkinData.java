@@ -453,10 +453,7 @@ public class SkinData extends BukkitRunnable {
             // EXCEPTION: Don't apply a uniform variant automatically during character load (PRIO_LOAD).
             // It should only be applied if priority is PRIO_UNIFORM (4).
             if (!isUniform || this.priority == SkinQueue.PRIO_UNIFORM) {
-                this.player.setPlayerProfile(SkinUtil.handleCachedSkin(this.player, property));
-                Entity vehicle = player.getVehicle();
-                if (vehicle != null) vehicle.removePassenger(player);
-                player.teleport(player.getLocation().add(0, 1, 0));
+                SkinUtil.applySkin(this.player, property);
             }
 
             // PRIO_SKIN is used exclusively for /skin

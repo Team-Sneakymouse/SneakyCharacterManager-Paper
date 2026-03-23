@@ -2,7 +2,10 @@ package net.sneakycharactermanager.paper.util;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Entity;
+import org.bukkit.Bukkit;
 
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import com.google.gson.JsonObject;
@@ -29,6 +32,26 @@ public class SkinUtil {
             return playerProfile;
         }
     }
+
+	public static void applySkin(Player player, ProfileProperty profileProperty) {
+		player.setPlayerProfile(handleCachedSkin(player, profileProperty));
+
+		// Remove player from vehicle and teleport them up slightly to prevent them from getting stuck
+		Entity vehicle = player.getVehicle();
+		if (vehicle != null) vehicle.removePassenger(player);
+		player.teleport(player.getLocation().add(0, 1, 0));
+
+		// Hide the player from all players, and then show the player again. This forces client-sided mods that use skin-encoded
+		// settings to do a re-check for this player (such as EntityTextureFeatures)
+		for (Player p : Bukkit.getOnlinePlayers()) {
+			p.hidePlayer(SneakyCharacterManager.getInstance(), player);
+		}
+		Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
+			for (Player p : Bukkit.getOnlinePlayers()) {
+				p.showPlayer(SneakyCharacterManager.getInstance(), player);
+			}
+		}, 1);
+	}
 
 	public static String getTextureUrl(ProfileProperty property) {
 		if (property == null || !property.getName().equals("textures")) return null;

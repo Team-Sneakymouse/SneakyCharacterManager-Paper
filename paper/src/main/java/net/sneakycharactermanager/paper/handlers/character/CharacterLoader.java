@@ -55,10 +55,10 @@ public class CharacterLoader {
 			if (character.getTexture() != null && !character.getTexture().isEmpty() && character.getSignature() != null && !character.getSignature().isEmpty()) {
 				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] Using cached texture and signature for character: " + character.getName());
 				ProfileProperty prop = new ProfileProperty("textures", character.getTexture(), character.getSignature());
-				player.setPlayerProfile(SkinUtil.handleCachedSkin(player, prop));
+				SkinUtil.applySkin(player, prop);
 			} else if (profileProperty != null) {
 				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] Using memory-cached ProfileProperty for " + player.getName());
-				player.setPlayerProfile(SkinUtil.handleCachedSkin(player, profileProperty));
+				SkinUtil.applySkin(player, profileProperty);
 				
 				// Persist memory-cached skin to Bungee if not already in Character data
 				String textureUrl = SkinUtil.getTextureUrl(profileProperty);

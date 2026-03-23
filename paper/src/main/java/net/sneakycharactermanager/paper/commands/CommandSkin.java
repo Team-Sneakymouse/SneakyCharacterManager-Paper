@@ -39,6 +39,7 @@ import net.sneakycharactermanager.paper.handlers.character.CharacterLoader;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSkinChangeEvent;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
+import net.sneakycharactermanager.paper.util.SkinUtil;
 
 public class CommandSkin extends CommandBase {
 
@@ -204,7 +205,7 @@ public class CommandSkin extends CommandBase {
 							BungeeMessagingUtil.sendByteArray(player, "updateCharacter",
 									player.getUniqueId().toString(), character.getCharacterUUID(), 1, textureURL, isSlim);
 
-							player.setPlayerProfile(profile);
+							SkinUtil.applySkin(player, property);
 
 							Entity vehicle = player.getVehicle();
 							if (vehicle != null)
