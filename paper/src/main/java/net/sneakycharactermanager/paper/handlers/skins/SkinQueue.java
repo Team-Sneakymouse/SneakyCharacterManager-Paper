@@ -30,7 +30,7 @@ import com.google.gson.GsonBuilder;
 
 public class SkinQueue extends BukkitRunnable {
 
-    public static final int PRIO_PRELOAD = 0;
+    public static final int PRIO_OFFLINE = 0;
     public static final int PRIO_ONLINE = 1;
     public static final int PRIO_LOAD = 2;
     public static final int PRIO_SKIN = 3;
@@ -207,7 +207,7 @@ public class SkinQueue extends BukkitRunnable {
                 sb.append("Delay: ").append(delayMillis).append("ms, ");
                 sb.append("Processing: ").append(inProgress.size()).append(", ");
                 sb.append("Queued: [");
-                for (int p = PRIO_UNIFORM; p >= PRIO_PRELOAD; p--) {
+                for (int p = PRIO_UNIFORM; p >= PRIO_OFFLINE; p--) {
                     sb.append("P").append(p).append(":").append(queue.get(p).stream().filter(d -> !d.isProcessing()).count()).append(p > 0 ? ", " : "");
                 }
                 sb.append("]");
@@ -284,7 +284,7 @@ public class SkinQueue extends BukkitRunnable {
         }
 
         // P0: only when above reservation
-        for (SkinData data : queue.get(PRIO_PRELOAD)) {
+        for (SkinData data : queue.get(PRIO_OFFLINE)) {
             if (!data.processing && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
         }
 
@@ -301,7 +301,7 @@ public class SkinQueue extends BukkitRunnable {
             }
 
             // P0: only when above reservation
-            for (SkinData data : queue.get(PRIO_PRELOAD)) {
+            for (SkinData data : queue.get(PRIO_OFFLINE)) {
                 if (!data.processing) return data;
             }
         }
@@ -322,7 +322,7 @@ public class SkinQueue extends BukkitRunnable {
         export.put("delayMillis", delayMillis);
         
         Map<String, List<Map<String, Object>>> priorities = new LinkedHashMap<>();
-        for (int p = PRIO_UNIFORM; p >= PRIO_PRELOAD; p--) {
+        for (int p = PRIO_UNIFORM; p >= PRIO_OFFLINE; p--) {
             List<Map<String, Object>> list = new ArrayList<>();
             for (SkinData data : queue.get(p)) {
                 list.add(data.toMap());

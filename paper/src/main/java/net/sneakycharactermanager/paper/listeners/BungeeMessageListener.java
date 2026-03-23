@@ -288,8 +288,8 @@ public class BungeeMessageListener implements PluginMessageListener {
 					return;
 
 				// Online player loading their own skins → PRIO_ONLINE.
-				// Offline player being bulk-preloaded → PRIO_PRELOAD.
-				int skinPrio = requesterUUID.equals(playerUUID) ? SkinQueue.PRIO_ONLINE : SkinQueue.PRIO_PRELOAD;
+				// Offline player being bulk-preloaded → PRIO_OFFLINE.
+				int skinPrio = requesterUUID.equals(playerUUID) ? SkinQueue.PRIO_ONLINE : SkinQueue.PRIO_OFFLINE;
 
 				for (Character c : characters) {
 					// Base skin preloading

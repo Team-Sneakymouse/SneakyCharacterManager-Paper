@@ -73,7 +73,7 @@ public class CommandSkinQueue extends CommandBaseAdmin {
         sender.sendMessage(ChatUtility.convertToComponent("&7Click a tier to see details:"));
 
         // One line per P-tier, each clickable
-        for (int p = SkinQueue.PRIO_UNIFORM; p >= SkinQueue.PRIO_PRELOAD; p--) {
+        for (int p = SkinQueue.PRIO_UNIFORM; p >= SkinQueue.PRIO_OFFLINE; p--) {
             List<SkinData> list = queue.getOrDefault(p, Collections.emptyList());
             int size = list.size();
             long processing = list.stream().filter(SkinData::isProcessing).count();
@@ -96,7 +96,7 @@ public class CommandSkinQueue extends CommandBaseAdmin {
     }
 
     private void handleDetail(CommandSender sender, int p) {
-        if (p < SkinQueue.PRIO_PRELOAD || p > SkinQueue.PRIO_UNIFORM) {
+        if (p < SkinQueue.PRIO_OFFLINE || p > SkinQueue.PRIO_UNIFORM) {
             sender.sendMessage(ChatUtility.convertToComponent("&cPriority must be 0-" + SkinQueue.PRIO_UNIFORM + "."));
             return;
         }

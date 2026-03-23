@@ -69,7 +69,7 @@ public class ConnectionEventListeners implements Listener {
         } else {
             character.save();
         }
-        SneakyCharacterManager.getInstance().skinQueue.updatePriority(player, SkinQueue.PRIO_PRELOAD);
+        SneakyCharacterManager.getInstance().skinQueue.updatePriority(player, SkinQueue.PRIO_OFFLINE);
         Character.remove(player);
 
     }
