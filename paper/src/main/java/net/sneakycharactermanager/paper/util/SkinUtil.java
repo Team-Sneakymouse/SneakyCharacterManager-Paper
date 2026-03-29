@@ -40,17 +40,6 @@ public class SkinUtil {
 		Entity vehicle = player.getVehicle();
 		if (vehicle != null) vehicle.removePassenger(player);
 		player.teleport(player.getLocation().add(0, 1, 0));
-
-		// Hide the player from all players, and then show the player again. This forces client-sided mods that use skin-encoded
-		// settings to do a re-check for this player (such as EntityTextureFeatures)
-		for (Player p : Bukkit.getOnlinePlayers()) {
-			p.hidePlayer(SneakyCharacterManager.getInstance(), player);
-		}
-		Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
-			for (Player p : Bukkit.getOnlinePlayers()) {
-				p.showPlayer(SneakyCharacterManager.getInstance(), player);
-			}
-		}, 1);
 	}
 
 	public static String getTextureUrl(ProfileProperty property) {
