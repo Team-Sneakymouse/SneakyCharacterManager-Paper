@@ -45,6 +45,8 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
+import net.sneakycharactermanager.paper.handlers.skins.SkinState;
+import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
@@ -156,12 +158,10 @@ public class CommandUniform extends CommandBaseAdmin {
                         SkinUtil.applySkin(player, property);
                         SkinCache.put(player.getUniqueId().toString(), cachedUrl, property);
 
-                        // Refresh player visually
-                        org.bukkit.entity.Entity vehicle = player.getVehicle();
-                        if (vehicle != null) vehicle.removePassenger(player);
-                        player.teleport(player.getLocation().add(0, 1, 0));
-
-                        sender.sendMessage(ChatUtility.convertToComponent("&aApplying cached uniform skin instantly..."));
+                        SkinState state = SneakyCharacterManager.getInstance().skinStateManager.record(
+                                player, "Uniform", cachedTexture, cachedSignature,
+                                character.getCharacterUUID(), cachedUrl, true);
+                        SkinStateManager.sendSkinUpdatedMessage(player, state);
                     } else {
                         SkinData.getOrCreate(cachedUrl, cachedUUID, character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getCharacterUUID(), character.getName());
                     }

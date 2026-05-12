@@ -454,6 +454,16 @@ public class SkinData extends BukkitRunnable {
             // It should only be applied if priority is PRIO_UNIFORM (4).
             if (!isUniform || this.priority == SkinQueue.PRIO_UNIFORM) {
                 SkinUtil.applySkin(this.player, property);
+
+                if (this.characterUUID != null && !this.characterUUID.isEmpty()) {
+                    SkinStateManager mgr = SneakyCharacterManager.getInstance().skinStateManager;
+                    String stateName = isUniform ? "Uniform" : "Regular";
+                    SkinState state = mgr.record(this.player, stateName, texture, signature, this.characterUUID, this.url, isUniform);
+
+                    if (this.priority == SkinQueue.PRIO_SKIN || this.priority == SkinQueue.PRIO_UNIFORM) {
+                        SkinStateManager.sendSkinUpdatedMessage(this.player, state);
+                    }
+                }
             }
 
             // PRIO_SKIN is used exclusively for /skin

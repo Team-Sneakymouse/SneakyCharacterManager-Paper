@@ -34,6 +34,8 @@ import net.kyori.adventure.text.event.HoverEvent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
+import net.sneakycharactermanager.paper.handlers.skins.SkinState;
+import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterLoader;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSkinChangeEvent;
@@ -104,6 +106,50 @@ public class CommandSkin extends CommandBase {
 		}
 		;
 
+		if (args[0].equalsIgnoreCase("state")) {
+			if (args.length < 2) {
+				player.sendMessage(ChatUtility.convertToComponent("&4Usage: /skin state <id>"));
+				return true;
+			}
+			int stateId;
+			try {
+				stateId = Integer.parseInt(args[1]);
+			} catch (NumberFormatException e) {
+				player.sendMessage(ChatUtility.convertToComponent("&4Invalid state ID."));
+				return true;
+			}
+			SkinStateManager mgr = SneakyCharacterManager.getInstance().skinStateManager;
+			SkinState state = mgr.get(player.getUniqueId(), stateId);
+			if (state == null) {
+				player.sendMessage(ChatUtility.convertToComponent("&4Skin state not found."));
+				return true;
+			}
+			if (!state.characterUUID().equals(character.getCharacterUUID())) {
+				player.sendMessage(ChatUtility.convertToComponent("&4That skin state belongs to a different character."));
+				return true;
+			}
+			SkinState current = mgr.current(player.getUniqueId());
+			if (current != null && current.id() == stateId) {
+				player.sendMessage(ChatUtility.convertToComponent("&4You are already on that skin state."));
+				return true;
+			}
+			ProfileProperty stateProperty = new ProfileProperty("textures", state.texture(), state.signature());
+			SkinUtil.applySkin(player, stateProperty);
+
+			if (!state.proxyTextureUrl().equals(character.getSkin()) ||
+					!state.proxySignature().equals(character.getSignature())) {
+				character.setSkin(state.proxyTextureUrl());
+				character.setTexture(state.proxyTexture());
+				character.setSignature(state.proxySignature());
+				BungeeMessagingUtil.sendByteArray(player, "updateCharacter",
+						player.getUniqueId().toString(), character.getCharacterUUID(), 1,
+						state.proxyTextureUrl(), "", state.proxyTexture(), state.proxySignature(), character.isSlim());
+			}
+
+			mgr.setCurrent(player.getUniqueId(), stateId);
+			return true;
+		}
+
 		if (args[0].equalsIgnoreCase("default") || args[0].equalsIgnoreCase("revert")) {
 			CharacterSkinChangeEvent event = new CharacterSkinChangeEvent(player, character.getCharacterUUID(), "default", null);
 			Bukkit.getPluginManager().callEvent(event);
@@ -144,7 +190,7 @@ public class CommandSkin extends CommandBase {
 	public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, String[] args,
 			Location location) {
 		if (args.length == 1) {
-			return Arrays.asList("revert", "fetch");
+			return Arrays.asList("revert", "fetch", "state");
 		} else if (args.length == 2 && args[0].equalsIgnoreCase("fetch")
 				&& sender.hasPermission(SneakyCharacterManager.IDENTIFIER + ".skinfetch.others")) {
 			List<String> playerNames = new ArrayList<>();
@@ -206,6 +252,10 @@ public class CommandSkin extends CommandBase {
 									player.getUniqueId().toString(), character.getCharacterUUID(), 1, textureURL, isSlim);
 
 							SkinUtil.applySkin(player, property);
+
+							SneakyCharacterManager.getInstance().skinStateManager.record(
+									player, "Regular", textureValue, signatureValue,
+									character.getCharacterUUID(), textureURL, false);
 
 							Entity vehicle = player.getVehicle();
 							if (vehicle != null)

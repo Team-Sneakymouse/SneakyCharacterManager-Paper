@@ -28,6 +28,7 @@ import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMen
 import net.sneakycharactermanager.paper.handlers.nametags.NameTagRefresher;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
+import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
@@ -45,6 +46,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 	public NametagManager nametagManager;
 	public CharacterSelectionMenu selectionMenu;
 	public SkinQueue skinQueue;
+	public SkinStateManager skinStateManager;
 	public NameTagRefresher nameTagRefresher;
 	private Object svcIntegration;
 
@@ -54,6 +56,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		nametagManager = new NametagManager();
 		selectionMenu = new CharacterSelectionMenu();
 		skinQueue = new SkinQueue();
+		skinStateManager = new SkinStateManager();
 		nameTagRefresher = new NameTagRefresher();
 
 		saveDefaultConfig();

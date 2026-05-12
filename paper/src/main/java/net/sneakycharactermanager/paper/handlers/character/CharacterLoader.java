@@ -56,15 +56,20 @@ public class CharacterLoader {
 				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] Using cached texture and signature for character: " + character.getName());
 				ProfileProperty prop = new ProfileProperty("textures", character.getTexture(), character.getSignature());
 				SkinUtil.applySkin(player, prop);
+				SneakyCharacterManager.getInstance().skinStateManager.record(
+						player, "Regular", character.getTexture(), character.getSignature(),
+						character.getCharacterUUID(), character.getSkin(), false);
 			} else if (profileProperty != null) {
 				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] Using memory-cached ProfileProperty for " + player.getName());
 				SkinUtil.applySkin(player, profileProperty);
 				
-				// Persist memory-cached skin to Bungee if not already in Character data
 				String textureUrl = SkinUtil.getTextureUrl(profileProperty);
 				String signature = profileProperty.getSignature();
 				if (textureUrl != null && signature != null) {
 					BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), character.getCharacterUUID(), 1, character.getSkin(), character.getSkinUUID(), textureUrl, signature, character.isSlim());
+					SneakyCharacterManager.getInstance().skinStateManager.record(
+							player, "Regular", profileProperty.getValue(), signature,
+							character.getCharacterUUID(), character.getSkin(), false);
 				}
 			} else if (!shouldSkipLoading(character)) {
 				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] No cached data for " + character.getName() + " - Triggering MineSkin fetch.");
