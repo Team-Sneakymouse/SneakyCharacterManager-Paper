@@ -28,10 +28,23 @@ public final class PlayerData {
     }
 
     private void ensureInitialized() {
-        Map<String, Object> root = YamlFiles.loadOrEmpty(playerFile);
+        Map<String, Object> root = YamlFiles.load(playerFile, platform.logger());
+        if (root == null) {
+            // File exists but failed to parse -- do NOT overwrite it.
+            platform.logger().severe("Player data file is unreadable, refusing to overwrite: " + playerFile.getAbsolutePath());
+            this.lastPlayedCharacter = "";
+            return;
+        }
+
         this.lastPlayedCharacter = stringOrEmpty(root.get("lastPlayedCharacter"));
 
         if (this.lastPlayedCharacter == null || this.lastPlayedCharacter.isEmpty()) {
+            // Only create a default character when the file truly doesn't exist yet.
+            if (playerFile.exists() && playerFile.length() > 0) {
+                platform.logger().severe("Player data file exists but has no lastPlayedCharacter, refusing to overwrite: " + playerFile.getAbsolutePath());
+                return;
+            }
+
             String firstCharacterUUID = UUID.randomUUID().toString();
             this.lastPlayedCharacter = firstCharacterUUID;
             root.put("lastPlayedCharacter", firstCharacterUUID);
@@ -55,12 +68,13 @@ public final class PlayerData {
             section.put("gender", "");
 
             root.put(firstCharacterUUID, section);
-            YamlFiles.save(playerFile, root);
+            YamlFiles.save(playerFile, root, platform.logger());
         }
     }
 
     private void storeCharacters() {
-        Map<String, Object> root = YamlFiles.loadOrEmpty(playerFile);
+        Map<String, Object> root = YamlFiles.load(playerFile, platform.logger());
+        if (root == null) return;
         characterMap.clear();
 
         Object lpc = root.get("lastPlayedCharacter");
@@ -86,9 +100,14 @@ public final class PlayerData {
     }
 
     private void saveCharacter(CharacterData character) {
-        Map<String, Object> root = YamlFiles.loadOrEmpty(playerFile);
+        Map<String, Object> root = YamlFiles.load(playerFile, platform.logger());
+        if (root == null) {
+            platform.logger().severe("Cannot save character -- file is unreadable: " + playerFile.getAbsolutePath());
+            return;
+        }
+
         Object sectionObj = root.get(character.uuid());
-        Map<String, Object> section = sectionObj instanceof Map<?, ?> m ? new LinkedHashMap<>() : new LinkedHashMap<>();
+        Map<String, Object> section = new LinkedHashMap<>();
         if (sectionObj instanceof Map<?, ?> m) {
             for (Map.Entry<?, ?> e : m.entrySet()) {
                 if (e.getKey() != null) section.put(String.valueOf(e.getKey()), e.getValue());
@@ -107,13 +126,17 @@ public final class PlayerData {
 
         root.put(character.uuid(), section);
         root.put("lastPlayedCharacter", lastPlayedCharacter == null ? "" : lastPlayedCharacter);
-        YamlFiles.save(playerFile, root);
+        YamlFiles.save(playerFile, root, platform.logger());
     }
 
     private void saveLastPlayed() {
-        Map<String, Object> root = YamlFiles.loadOrEmpty(playerFile);
+        Map<String, Object> root = YamlFiles.load(playerFile, platform.logger());
+        if (root == null) {
+            platform.logger().severe("Cannot save lastPlayedCharacter -- file is unreadable: " + playerFile.getAbsolutePath());
+            return;
+        }
         root.put("lastPlayedCharacter", lastPlayedCharacter == null ? "" : lastPlayedCharacter);
-        YamlFiles.save(playerFile, root);
+        YamlFiles.save(playerFile, root, platform.logger());
     }
 
     public void loadCharacter(ProxyServerConnection server, ProxyMessenger messenger, String characterUUID, boolean forced) {

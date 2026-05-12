@@ -38,7 +38,8 @@ public final class PlayerDataRepository {
         List<String> characterInformation = new ArrayList<>();
         for (File playerFile : Objects.requireNonNull(characterDataFolder.listFiles())) {
             if (!playerFile.getName().endsWith(".yml")) continue;
-            Map<String, Object> root = net.sneakycharactermanager.proxy.common.YamlFiles.loadOrEmpty(playerFile);
+            Map<String, Object> root = net.sneakycharactermanager.proxy.common.YamlFiles.load(playerFile, platform.logger());
+            if (root == null) continue;
             String playerUUID = playerFile.getName().replace(".yml", "");
 
             for (String key : root.keySet()) {

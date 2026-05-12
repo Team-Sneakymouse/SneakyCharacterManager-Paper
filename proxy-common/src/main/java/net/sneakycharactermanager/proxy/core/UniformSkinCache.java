@@ -1,5 +1,6 @@
 package net.sneakycharactermanager.proxy.core;
 
+import net.sneakycharactermanager.proxy.common.ProxyLogger;
 import net.sneakycharactermanager.proxy.common.YamlFiles;
 
 import java.io.File;
@@ -35,15 +36,18 @@ public final class UniformSkinCache {
     }
 
     private final File configFile;
+    private final ProxyLogger logger;
     private final Map<String, List<Variant>> cache = new ConcurrentHashMap<>();
 
-    public UniformSkinCache(File dataFolder) {
+    public UniformSkinCache(File dataFolder, ProxyLogger logger) {
         this.configFile = new File(dataFolder, "uniform_skin_cache.yml");
+        this.logger = logger;
         load();
     }
 
     public synchronized void load() {
-        Map<String, Object> root = YamlFiles.loadOrEmpty(configFile);
+        Map<String, Object> root = YamlFiles.load(configFile, logger);
+        if (root == null) return;
         cache.clear();
 
         Object top = root.get("cache");
@@ -88,7 +92,7 @@ public final class UniformSkinCache {
         }
 
         root.put("cache", topList);
-        YamlFiles.save(configFile, root);
+        YamlFiles.save(configFile, root, logger);
     }
 
     public List<Variant> getVariants(String baseUrl) {

@@ -27,7 +27,7 @@ public final class ProxyCore {
         this.publicKey = keys.publicKey();
 
         this.playerDataRepository = new PlayerDataRepository(platform);
-        this.uniformSkinCache = new UniformSkinCache(platform.dataFolder());
+        this.uniformSkinCache = new UniformSkinCache(platform.dataFolder(), platform.logger());
         this.messenger = new ProxyMessenger(platform, privateKey, uniformSkinCache);
     }
 
