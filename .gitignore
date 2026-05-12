@@ -24,6 +24,7 @@ build.bat
 API keys.txt
 /.vscode
 /run
+/run_velocity
 
 /paper/bin
 /bungee/bin
