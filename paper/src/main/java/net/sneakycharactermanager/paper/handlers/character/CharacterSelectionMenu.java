@@ -269,6 +269,7 @@ public class CharacterSelectionMenu implements Listener {
                 BungeeMessagingUtil.sendByteArray(this.opener, "createNewCharacter", playerUUID);
                 this.player.sendMessage(ChatUtility.convertToComponent("&aCreating a new character... Please Wait..."));
                 this.player.sendMessage(ChatUtility.convertToComponent("&aOnce the character is created, use the /nick and /skin command to customize it!"));
+                this.player.closeInventory();
                 return;
             }
             
