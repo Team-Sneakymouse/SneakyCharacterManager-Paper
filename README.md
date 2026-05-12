@@ -1,20 +1,22 @@
 # SneakyCharacterManager
 
-Character management system for Paper + Bungee networks.
+Character management system for Paper + BungeeCord/Velocity networks.
 
-This plugin lets players maintain multiple roleplay characters while syncing character identity over Bungee and character gameplay state on Paper.
+This plugin lets players maintain multiple roleplay characters while syncing character identity over BungeeCord or Velocity and character gameplay state on Paper.
 
 ## Project layout
 
 - `paper/`: gameplay-side plugin (commands, nicknames, skins, placeholders, local character state files).
-- `bungee/`: proxy-side plugin (authoritative character list and metadata per player).
-- root project: build, publish, signing, and release tasks.
+- `proxy-common/`: shared proxy core (platform-agnostic logic, YAML persistence, RSA signing, character data, skin caching).
+- `bungee/`: BungeeCord adapter (thin wrapper that delegates to `proxy-common`).
+- `velocity/`: Velocity adapter (thin wrapper that delegates to `proxy-common`).
+- root project: build, publish, signing, and release tasks. Produces a single JAR containing all modules.
 
 ## Runtime requirements
 
 - Java 21
 - Paper server(s) (paperweight/dev setup targets 1.21.4)
-- BungeeCord proxy
+- BungeeCord or Velocity proxy
 - Optional soft dependencies on Paper side:
   - PlaceholderAPI
   - LuckPerms
@@ -22,16 +24,16 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 
 ## Network setup
 
-1. Install the Bungee plugin jar on your proxy.
-2. Install the Paper plugin jar on each backend server.
-3. Start Bungee first so it creates `keys.ser` in the Bungee plugin data folder.
-4. Copy that same `keys.ser` into each Paper plugin data folder.
+1. Install the single plugin JAR on your proxy (BungeeCord or Velocity) and on each Paper backend.
+2. Start the proxy first so it creates `keys.ser` in the proxy plugin data folder.
+3. Copy that same `keys.ser` into each Paper plugin data folder.
    - Paper only loads keys; it does not generate them.
    - If keys do not match between proxy and backend, plugin messaging auth will fail.
+   - Velocity note: the plugin overrides its data folder to `plugins/SneakyCharacterManager` (matching BungeeCord's casing) so data files are compatible when switching between proxy platforms.
 
 ## Data model (high-level)
 
-- Bungee stores identity metadata in:
+- Proxy stores identity metadata in:
   - `plugins/SneakyCharacterManager/characterdata/<playerUUID>.yml`
 - Paper stores per-character gameplay state in:
   - `plugins/SneakyCharacterManager/characterdata/<playerUUID>/<characterUUID>.yml`
@@ -74,7 +76,10 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 - `/char <name...>` (select by name)
 - `/char confirm` (confirm character deletion flow)
 - `/nick <name...>`
-- `/skin ...` (set/fetch/revert flows)
+- `/skin <url> [slim|classic]` (set skin from URL)
+- `/skin revert` (revert to Mojang default skin)
+- `/skin fetch [player]` (get a player's skin URL)
+- `/skin state <id>` (apply a previous skin state from this session)
 - `/names <on|off|character>`
 - `/chargender <masculine|feminine|nonbinary|clear>`
 
@@ -142,6 +147,24 @@ Prefix: `%sneakycharacters_<placeholder>%`
 - `skinqueue_total_queued`: Total pending jobs
 - `skinqueue_queued_p<0-4>`: Pending jobs per priority tier
 
+## SkinState undo / re-apply
+
+The plugin tracks skin changes during a server session, allowing players to undo and re-apply skins via clickable chat buttons.
+
+### How it works
+
+- Every time a skin is applied to a player (via `/skin`, `/uniform`, character load, or `/skin revert`), a **SkinState** is recorded in memory. Each state captures the texture, signature, character UUID, and what the proxy believes the skin to be.
+- When a skin changes due to `/skin` or `/uniform`, the player receives a clickable chat message:
+  - **[Undo]** reverts to the previous skin state.
+  - **[Re-apply]** re-applies the current state (useful after further changes).
+- Players can also manually apply any recorded state with `/skin state <id>`.
+- States persist across relogs within the same server session (cleared on server restart).
+- When loading a character that was already used this session, the most recent skin state for that character is restored automatically instead of re-fetching.
+
+### Proxy awareness
+
+When `/skin state` changes the skin to one with different proxy-side values (URL, texture, signature), an `updateCharacter` message is sent to keep the proxy's character data in sync. Uniform states carry forward the previous non-uniform proxy values so the proxy never sees uniform overlay data.
+
 ## Build tasks
 
 - Build all: `./gradlew build`
@@ -157,6 +180,8 @@ This repository is configured to publish:
 
 - `io.github.team-sneakymouse:sneakycharactermanager-paper:<version>`
 - `io.github.team-sneakymouse:sneakycharactermanager-bungee:<version>`
+
+The single JAR produced by `./gradlew build` bundles Paper, BungeeCord, Velocity, and proxy-common modules together and can be installed on any supported platform.
 
 ### 1) Credentials and signing setup
 
