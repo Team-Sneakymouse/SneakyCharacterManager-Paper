@@ -10,3 +10,5 @@ startParameter.isParallelProjectExecutionEnabled = true;
 rootProject.name = "SneakyCharacterManager-Paper"
 include(":paper")
 include(":bungee")
+include(":proxy-common")
+include(":velocity")

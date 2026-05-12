@@ -78,6 +78,12 @@ dependencies {
     implementation(project(path=":paper")){
         exclude(group = "org.jetbrains.kotlin")
     }
+    implementation(project(":proxy-common")) {
+        exclude(group = "org.jetbrains.kotlin")
+    }
+    implementation(project(":velocity")) {
+        exclude(group = "org.jetbrains.kotlin")
+    }
 }
 
 java {
@@ -178,15 +184,16 @@ subprojects {
 
 tasks {
     "shadowJar"(com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar::class) {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         manifest {
             attributes["Main-Class"] = "your.main.class"
         }
 
-        // Include the class files from the subprojects
-        //from(subprojects.map { it.sourceSets["main"].output })
+        // Include the class files + standard resources from subprojects
+        from(subprojects.map { it.extensions.getByType<SourceSetContainer>()["main"].output })
 
-        // Include the resources from the subprojects
-        from(subprojects.map { it.file("src/resources").absolutePath })
+        // Include any non-standard resources folders used by this repo
+        from(subprojects.map { it.file("src/resources") })
 
         exclude("**/kotlin/**")
         exclude("META-INF/*.kotlin_module")

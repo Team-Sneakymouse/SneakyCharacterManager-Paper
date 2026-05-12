@@ -1,0 +1,9 @@
+{
+  "id": "sneakycharactermanager",
+  "name": "SneakyCharacterManager",
+  "version": "1.0",
+  "description": "Proxy-side component of SneakyCharacterManager (Velocity)",
+  "authors": ["Team Sneakymouse"],
+  "main": "net.sneakycharactermanager.velocity.SneakyCharacterManagerVelocity"
+}
+

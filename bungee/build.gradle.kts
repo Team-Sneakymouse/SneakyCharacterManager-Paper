@@ -12,4 +12,5 @@ dependencies {
     compileOnly("net.md-5:bungeecord-api:1.20-R0.1") {
         exclude(group = "net.md-5", module = "brigadier") // Exclude the problematic brigadier dependency
     }
+    implementation(project(":proxy-common"))
 }
