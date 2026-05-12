@@ -123,9 +123,8 @@ public final class ProxyCore {
                 String playerUUID = in.readUTF();
                 String characterUUID = in.readUTF();
                 String url = in.readUTF();
-                String skinUUID = in.readUTF();
                 boolean slim = in.readBoolean();
-                playerDataRepository.get(playerUUID).setCharacterSkin(characterUUID, url, skinUUID, "", "", slim);
+                playerDataRepository.get(playerUUID).setCharacterSkin(characterUUID, url, "", "", "", slim);
             }
             case "createNewCharacter" -> {
                 String playerUUID = in.readUTF();
