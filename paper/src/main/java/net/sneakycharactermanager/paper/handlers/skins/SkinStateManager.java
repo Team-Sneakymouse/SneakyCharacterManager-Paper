@@ -85,6 +85,20 @@ public final class SkinStateManager {
         return get(playerUUID, id);
     }
 
+    /**
+     * Returns the most recent state for a specific character, scanning backwards.
+     */
+    @Nullable
+    public SkinState latestForCharacter(UUID playerUUID, String characterUUID) {
+        List<SkinState> states = statesByPlayer.get(playerUUID);
+        if (states == null) return null;
+        for (int i = states.size() - 1; i >= 0; i--) {
+            SkinState s = states.get(i);
+            if (s.characterUUID().equals(characterUUID)) return s;
+        }
+        return null;
+    }
+
     public void clearPlayer(UUID playerUUID) {
         statesByPlayer.remove(playerUUID);
         nextIdByPlayer.remove(playerUUID);

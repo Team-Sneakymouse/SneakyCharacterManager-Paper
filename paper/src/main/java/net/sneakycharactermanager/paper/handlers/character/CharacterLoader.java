@@ -24,6 +24,8 @@ import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
+import net.sneakycharactermanager.paper.handlers.skins.SkinState;
+import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
@@ -52,7 +54,14 @@ public class CharacterLoader {
 
 			character.setFirstLoad(false);
 
-			if (character.getTexture() != null && !character.getTexture().isEmpty() && character.getSignature() != null && !character.getSignature().isEmpty()) {
+			SkinState existingState = SneakyCharacterManager.getInstance().skinStateManager
+					.latestForCharacter(player.getUniqueId(), character.getCharacterUUID());
+			if (existingState != null) {
+				SneakyCharacterManager.getInstance().getLogger().info("[SkinState] Restoring session state for character: " + character.getName());
+				ProfileProperty prop = new ProfileProperty("textures", existingState.texture(), existingState.signature());
+				SkinUtil.applySkin(player, prop);
+				SneakyCharacterManager.getInstance().skinStateManager.setCurrent(player.getUniqueId(), existingState.id());
+			} else if (character.getTexture() != null && !character.getTexture().isEmpty() && character.getSignature() != null && !character.getSignature().isEmpty()) {
 				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] Using cached texture and signature for character: " + character.getName());
 				ProfileProperty prop = new ProfileProperty("textures", character.getTexture(), character.getSignature());
 				SkinUtil.applySkin(player, prop);
