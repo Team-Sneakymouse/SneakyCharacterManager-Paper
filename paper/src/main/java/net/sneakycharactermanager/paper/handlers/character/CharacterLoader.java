@@ -29,6 +29,8 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
+import org.jetbrains.annotations.Nullable;
+
 public class CharacterLoader {
 
 	public static boolean loadCharacter(Character character) {
@@ -111,22 +113,32 @@ public class CharacterLoader {
 	}
 
 	public static void updateSkin(Player player, String characterUUID, String url, Boolean slim) {
+		updateSkin(player, characterUUID, url, slim, null);
+	}
+
+	/**
+	 * Queues a skin fetch/apply for {@link SkinQueue#PRIO_SKIN}. When {@code skinStateName} is non-blank,
+	 * the resulting skin state uses that label in chat (hover / re-apply text).
+	 */
+	public static void updateSkin(Player player, String characterUUID, String url, Boolean slim, @Nullable String skinStateName) {
 		PlayerProfile playerProfile = player.getPlayerProfile();
 
 		if (slim == null) {
 			Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
 				checkSlimThenSetSkin(url,
-						playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM), player, characterUUID);
+						playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM), player, characterUUID, skinStateName);
 			});
 		} else {
-		Character character = Character.get(player);
-		String name = (character != null && character.getCharacterUUID().equals(characterUUID)) ? character.getName() : null;
-		SkinData.getOrCreate(url, "", slim, SkinQueue.PRIO_SKIN, player, characterUUID, name);
+			Character character = Character.get(player);
+			String name = (character != null && character.getCharacterUUID().equals(characterUUID)) ? character.getName() : null;
+			SkinData sd = SkinData.getOrCreate(url, "", slim, SkinQueue.PRIO_SKIN, player, characterUUID, name);
+			if (sd != null) {
+				sd.setSkinStateLabel(skinStateName);
+			}
 		}
 	}
 
-	private static void checkSlimThenSetSkin(String url, boolean slim, Player player, String characterUUID) {
-		try {
+	private static void checkSlimThenSetSkin(String url, boolean slim, Player player, String characterUUID, @Nullable String skinStateName) {		try {
 			HttpClient httpClient = HttpClient.newHttpClient();
 			HttpRequest request = HttpRequest.newBuilder().uri(
 					new URI(url.replace("imgur", "filmot")))
@@ -155,11 +167,14 @@ public class CharacterLoader {
 		}
 
 		final boolean slimFinal = slim;
+		final String skinStateLabel = skinStateName;
 		Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
 			Character character = Character.get(player);
 			String name = (character != null && character.getCharacterUUID().equals(characterUUID)) ? character.getName() : null;
-			SkinData.getOrCreate(url, "", slimFinal, SkinQueue.PRIO_SKIN, player, characterUUID, name);
-		});
-	}
+			SkinData sd = SkinData.getOrCreate(url, "", slimFinal, SkinQueue.PRIO_SKIN, player, characterUUID, name);
+			if (sd != null) {
+				sd.setSkinStateLabel(skinStateLabel);
+			}
+		});	}
 
 }
