@@ -13,6 +13,28 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class SkinStateManager {
 
+    /**
+     * Turns a uniform map key (e.g. file stem) into a short display label:
+     * dashes and underscores become spaces, lowercased, then first character uppercased.
+     * Pure 64-char hex keys (uniform hash cache keys) fall back to {@code "Uniform"}.
+     */
+    public static String uniformKeyToDisplayName(@Nullable String uniformKey) {
+        if (uniformKey == null || uniformKey.isBlank()) {
+            return "Uniform";
+        }
+        String trimmed = uniformKey.trim();
+        if (trimmed.length() == 64 && trimmed.chars().allMatch(c ->
+                (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
+            return "Uniform";
+        }
+        String spaced = trimmed.replace('-', ' ').replace('_', ' ');
+        String lower = spaced.toLowerCase(Locale.ROOT);
+        if (lower.isEmpty()) {
+            return "Uniform";
+        }
+        return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+    }
+
     private final Map<UUID, List<SkinState>> statesByPlayer = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> nextIdByPlayer = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> currentIdByPlayer = new ConcurrentHashMap<>();
@@ -21,7 +43,7 @@ public final class SkinStateManager {
      * Records a new SkinState after a skin has been applied to a player.
      *
      * @param player        the player whose skin changed
-     * @param name          human label ("Regular", "Uniform", etc.)
+     * @param name          human label ("Regular", or a formatted uniform name, etc.)
      * @param texture       base64 texture value that was applied
      * @param signature     signature that was applied
      * @param characterUUID the character this skin belongs to

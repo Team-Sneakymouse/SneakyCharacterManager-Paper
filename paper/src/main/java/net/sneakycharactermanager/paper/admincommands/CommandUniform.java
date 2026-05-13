@@ -159,11 +159,12 @@ public class CommandUniform extends CommandBaseAdmin {
                         SkinCache.put(player.getUniqueId().toString(), cachedUrl, property);
 
                         SkinState state = SneakyCharacterManager.getInstance().skinStateManager.record(
-                                player, "Uniform", cachedTexture, cachedSignature,
+                                player, SkinStateManager.uniformKeyToDisplayName(args[1]), cachedTexture, cachedSignature,
                                 character.getCharacterUUID(), cachedUrl, true);
                         SkinStateManager.sendSkinUpdatedMessage(player, state);
                     } else {
-                        SkinData.getOrCreate(cachedUrl, cachedUUID, character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getCharacterUUID(), character.getName());
+                        SkinData sd = SkinData.getOrCreate(cachedUrl, cachedUUID, character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getCharacterUUID(), character.getName());
+                        sd.setUniformCacheInfo(baseSkinUrl, uniformHash, args[1]);
                     }
                 });
                 return;
@@ -294,9 +295,10 @@ public class CommandUniform extends CommandBaseAdmin {
                             if (succes && url != null) {
                                 // Make skindata and add to skinqueue
                                  String urlFinal = new String(url);
+                                 final String uniformKeyForJob = args[1];
                                  Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
                                      SkinData sd = SkinData.getOrCreate(urlFinal, "", character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getCharacterUUID(), character.getName());
-                                     sd.setUniformCacheInfo(baseSkinUrl, uniformHash);
+                                     sd.setUniformCacheInfo(baseSkinUrl, uniformHash, uniformKeyForJob);
                                  });
                              }
                         }

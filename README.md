@@ -153,7 +153,7 @@ The plugin tracks skin changes during a server session, allowing players to undo
 
 ### How it works
 
-- Every time a skin is applied to a player (via `/skin`, `/uniform`, character load, or `/skin revert`), a **SkinState** is recorded in memory. Each state captures the texture, signature, character UUID, and what the proxy believes the skin to be.
+- Every time a skin is applied to a player (via `/skin`, `/uniform`, character load, or `/skin revert`), a **SkinState** is recorded in memory. Each state captures the texture, signature, character UUID, and what the proxy believes the skin to be. Non-uniform states are labeled **Regular**; uniform states use a short label derived from the uniform map key (e.g. `police_officer` → `Police officer`), or **Uniform** when no friendly key exists (e.g. hash-only cache keys).
 - When a skin changes due to `/skin` or `/uniform`, the player receives a clickable chat message:
   - **[Undo]** reverts to the previous skin state.
   - **[Re-apply]** re-applies the current state (useful after further changes).

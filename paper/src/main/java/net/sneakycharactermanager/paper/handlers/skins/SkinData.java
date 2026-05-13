@@ -65,6 +65,8 @@ public class SkinData extends BukkitRunnable {
 
     private String baseSkinUrl;
     private String uniformHash;
+    /** Map key / file stem for display; null uses {@code "Uniform"} in skin state names. */
+    private String uniformKey;
 
     private String getQueueUrl() {
         return SneakyCharacterManager.getInstance().getConfig().getString("mineskinQueueUrl", "https://api.mineskin.org/v2/queue");
@@ -457,7 +459,7 @@ public class SkinData extends BukkitRunnable {
 
                 if (this.characterUUID != null && !this.characterUUID.isEmpty()) {
                     SkinStateManager mgr = SneakyCharacterManager.getInstance().skinStateManager;
-                    String stateName = isUniform ? "Uniform" : "Regular";
+                    String stateName = isUniform ? SkinStateManager.uniformKeyToDisplayName(this.uniformKey) : "Regular";
                     SkinState state = mgr.record(this.player, stateName, texture, signature, this.characterUUID, this.url, isUniform);
 
                     if (this.priority == SkinQueue.PRIO_SKIN || this.priority == SkinQueue.PRIO_UNIFORM) {
@@ -597,8 +599,13 @@ public class SkinData extends BukkitRunnable {
     }
 
     public void setUniformCacheInfo(String baseSkinUrl, String uniformHash) {
+        setUniformCacheInfo(baseSkinUrl, uniformHash, null);
+    }
+
+    public void setUniformCacheInfo(String baseSkinUrl, String uniformHash, @Nullable String uniformKey) {
         this.baseSkinUrl = baseSkinUrl;
         this.uniformHash = uniformHash;
+        this.uniformKey = uniformKey;
     }
 
     /** True if this entry has an associated menu AND the player currently has it open. */

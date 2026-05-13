@@ -325,7 +325,7 @@ public class BungeeMessageListener implements PluginMessageListener {
 
 						if (vp == null) {
 							SkinData.getOrCreate(vUrl, vUUID, c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName())
-								.setUniformCacheInfo(c.getSkin(), entry.getKey());
+								.setUniformCacheInfo(c.getSkin(), entry.getKey(), entry.getKey());
 						}
 					}
 				}
