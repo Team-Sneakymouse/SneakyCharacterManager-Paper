@@ -151,7 +151,8 @@ public class CommandSkin extends CommandBase {
 		}
 
 		if (args[0].equalsIgnoreCase("default") || args[0].equalsIgnoreCase("revert")) {
-			CharacterSkinChangeEvent event = new CharacterSkinChangeEvent(player, character.getCharacterUUID(), "default", null);
+			CharacterSkinChangeEvent event = new CharacterSkinChangeEvent(player,
+					SkinState.pendingCharacterSkinChange(character.getCharacterUUID(), "default", null));
 			Bukkit.getPluginManager().callEvent(event);
 			if (event.isCancelled()) return false;
 
@@ -175,7 +176,8 @@ public class CommandSkin extends CommandBase {
 				slim = false;
 		}
 
-		CharacterSkinChangeEvent event = new CharacterSkinChangeEvent(player, character.getCharacterUUID(), url, slim);
+		CharacterSkinChangeEvent event = new CharacterSkinChangeEvent(player,
+				SkinState.pendingCharacterSkinChange(character.getCharacterUUID(), url, slim));
 		Bukkit.getPluginManager().callEvent(event);
 		if (event.isCancelled()) return false;
 

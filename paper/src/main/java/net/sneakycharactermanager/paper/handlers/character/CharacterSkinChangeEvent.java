@@ -1,5 +1,7 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
+import net.sneakycharactermanager.paper.handlers.skins.SkinState;
+
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.HandlerList;
@@ -12,22 +14,21 @@ public class CharacterSkinChangeEvent extends PlayerEvent implements Cancellable
 	protected static final HandlerList handlers = new HandlerList();
 	private boolean cancel = false;
 
-	private final String characterUUID;
-	private final String skinUrl;
-	private final @Nullable Boolean slim;
+	private final SkinState skinState;
 
 	/**
-	 * @param player        The player changing their skin
-	 * @param characterUUID The UUID of the character being modified
-	 * @param skinUrl       The skin URL being applied, or "default" when reverting to the player's Mojang skin
-	 * @param slim          True for slim, false for classic, null if unspecified (auto-detect)
+	 * @param player    The player changing their skin
+	 * @param skinState A <strong>pending</strong> snapshot from {@link SkinState#pendingCharacterSkinChange(String, String, Boolean)}.
+	 *                  {@link SkinState#proxyTextureUrl()} is the skin URL to fetch or the literal {@code "default"} for Mojang revert;
+	 *                  {@link SkinState#slimModel()} is slim/classic when known, or {@code null} to auto-detect.
 	 */
-	public CharacterSkinChangeEvent(@NotNull Player player, String characterUUID, String skinUrl,
-			@Nullable Boolean slim) {
+	public CharacterSkinChangeEvent(@NotNull Player player, @NotNull SkinState skinState) {
 		super(player);
-		this.characterUUID = characterUUID;
-		this.skinUrl = skinUrl;
-		this.slim = slim;
+		if (!skinState.isPendingSkinChange()) {
+			throw new IllegalArgumentException(
+					"CharacterSkinChangeEvent requires a pending skin state; use SkinState.pendingCharacterSkinChange(...)");
+		}
+		this.skinState = skinState;
 	}
 
 	@Override
@@ -49,16 +50,21 @@ public class CharacterSkinChangeEvent extends PlayerEvent implements Cancellable
 		this.cancel = cancel;
 	}
 
-	public String getCharacterUUID() {
-		return characterUUID;
+	public @NotNull SkinState getSkinState() {
+		return skinState;
 	}
 
+	public String getCharacterUUID() {
+		return skinState.characterUUID();
+	}
+
+	/** @return Requested skin URL, or {@code "default"} when reverting to Mojang skin */
 	public String getSkinUrl() {
-		return skinUrl;
+		return skinState.proxyTextureUrl();
 	}
 
 	public @Nullable Boolean getSlim() {
-		return slim;
+		return skinState.slimModel();
 	}
 
 }

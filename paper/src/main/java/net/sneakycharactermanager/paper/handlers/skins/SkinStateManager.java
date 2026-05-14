@@ -73,7 +73,7 @@ public final class SkinStateManager {
             proxySignature = signature;
         }
 
-        SkinState state = new SkinState(id, name, texture, signature, characterUUID, proxyTextureUrl, proxyTexture, proxySignature, previousId);
+        SkinState state = new SkinState(id, name, texture, signature, characterUUID, proxyTextureUrl, proxyTexture, proxySignature, previousId, null);
         states.add(state);
         currentIdByPlayer.put(uuid, id);
         return state;
