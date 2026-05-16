@@ -11,13 +11,19 @@ import java.util.concurrent.ConcurrentMap;
 public final class PlayerDataRepository {
 
     private final ProxyPlatform platform;
+    private final GlobalSkinCache globalSkinCache;
     private final File characterDataFolder;
     private final ConcurrentMap<String, PlayerData> playerDataMap = new ConcurrentHashMap<>();
 
-    public PlayerDataRepository(ProxyPlatform platform) {
+    public PlayerDataRepository(ProxyPlatform platform, GlobalSkinCache globalSkinCache) {
         this.platform = platform;
+        this.globalSkinCache = globalSkinCache;
         this.characterDataFolder = new File(platform.dataFolder(), "characterdata");
         if (!characterDataFolder.exists()) characterDataFolder.mkdirs();
+    }
+
+    public GlobalSkinCache globalSkinCache() {
+        return globalSkinCache;
     }
 
     public File characterDataFolder() {

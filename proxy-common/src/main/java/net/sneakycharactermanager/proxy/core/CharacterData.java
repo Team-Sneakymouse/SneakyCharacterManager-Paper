@@ -7,6 +7,7 @@ public final class CharacterData {
     private final String uuid;
     private boolean enabled;
     private String name;
+    private String skinId;
     private String skin;
     private String skinUUID;
     private boolean slim;
@@ -19,6 +20,7 @@ public final class CharacterData {
             String uuid,
             boolean enabled,
             String name,
+            String skinId,
             String skin,
             String skinUUID,
             String texture,
@@ -30,6 +32,7 @@ public final class CharacterData {
         this.uuid = uuid;
         this.enabled = enabled;
         this.name = name;
+        this.skinId = skinId == null ? "" : skinId;
         this.skin = skin;
         this.skinUUID = skinUUID;
         this.texture = texture == null ? "" : texture;
@@ -44,6 +47,9 @@ public final class CharacterData {
     public void enabled(boolean enabled) { this.enabled = enabled; }
     public String name() { return name; }
     public void name(String name) { this.name = name; }
+    public String skinId() { return skinId; }
+    public void skinId(String skinId) { this.skinId = skinId == null ? "" : skinId; }
+    public boolean usesSkinIdFormat() { return skinId != null && !skinId.isEmpty(); }
     public String skin() { return skin; }
     public void skin(String skin) { this.skin = skin; }
     public String skinUUID() { return skinUUID; }
@@ -65,4 +71,3 @@ public final class CharacterData {
         return matcher.replaceAll("");
     }
 }
-

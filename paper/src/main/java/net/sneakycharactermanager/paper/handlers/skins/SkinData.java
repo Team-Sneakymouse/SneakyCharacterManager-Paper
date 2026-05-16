@@ -69,6 +69,8 @@ public class SkinData extends BukkitRunnable {
     private String uniformKey;
     /** When set and priority is {@link SkinQueue#PRIO_SKIN}, used as {@link SkinState} name instead of {@code "Regular"}. */
     @Nullable private String skinStateLabel;
+    /** Content id from proxy resolve (MISS); used when registering after MineSkin. */
+    private String pendingSkinId = "";
 
     private String getQueueUrl() {
         return SneakyCharacterManager.getInstance().getConfig().getString("mineskinQueueUrl", "https://api.mineskin.org/v2/queue");
@@ -502,11 +504,10 @@ public class SkinData extends BukkitRunnable {
                 character.setSlim(this.isSlim());
                 character.setTexture(texture);
                 character.setSignature(signature);
-                BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), characterUUID, 1, skinURL, skinUUID, texture, signature, this.isSlim());
             }
         }
 
-        SkinCache.put(this.player.getUniqueId().toString(), this.url, property);
+        SkinApplyService.onMineSkinApplied(this, property);
 
         // Apply the skin to the /char menu if there is one
         if (isMenuOpen()) {
@@ -514,19 +515,16 @@ public class SkinData extends BukkitRunnable {
             holder.displayCurrentPage();
         }
 
-        if (this.characterUUID != null && !this.characterUUID.isEmpty() && this.uniformHash == null) {
+        if (this.characterUUID != null && !this.characterUUID.isEmpty() && this.uniformHash == null
+                && priority == SkinQueue.PRIO_LOAD) {
             SneakyCharacterManager.getInstance().getLogger().info("Skin Update (Cache Persistence): [" + this.player.getName() + "," + characterName + "," + url + "]");
-            BungeeMessagingUtil.sendByteArray(this.player, "updateCharacter", this.player.getUniqueId().toString(), characterUUID, 1, url, skinUUID, texture, signature, this.isSlim());
         }
 
         // Notify Bungee of new uniform variant
         if (baseSkinUrl != null && uniformHash != null) {
-            ProfileProperty prop = SkinCache.get(this.player.getUniqueId().toString(), this.url);
-            if (prop != null) {
-                String textureUrl = SkinUtil.getTextureUrl(prop);
-                if (textureUrl != null) {
-                    BungeeMessagingUtil.sendByteArray(this.player, "saveUniformVariant", baseSkinUrl, uniformHash, skinUUID, textureUrl, texture, signature);
-                }
+            String textureUrl = SkinUtil.getTextureUrl(property);
+            if (textureUrl != null) {
+                BungeeMessagingUtil.sendByteArray(this.player, "saveUniformVariant", baseSkinUrl, uniformHash, skinUUID, textureUrl, texture, signature);
             }
         }
 
@@ -615,6 +613,18 @@ public class SkinData extends BukkitRunnable {
         this.baseSkinUrl = baseSkinUrl;
         this.uniformHash = uniformHash;
         this.uniformKey = uniformKey;
+    }
+
+    public String getUniformHash() {
+        return uniformHash;
+    }
+
+    public void setPendingSkinId(String pendingSkinId) {
+        this.pendingSkinId = pendingSkinId == null ? "" : pendingSkinId;
+    }
+
+    public String getPendingSkinId() {
+        return pendingSkinId;
     }
 
     /**

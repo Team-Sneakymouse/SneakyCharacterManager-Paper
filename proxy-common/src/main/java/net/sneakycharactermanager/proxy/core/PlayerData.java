@@ -2,6 +2,8 @@ package net.sneakycharactermanager.proxy.core;
 
 import net.sneakycharactermanager.proxy.common.ProxyPlatform;
 import net.sneakycharactermanager.proxy.common.ProxyServerConnection;
+import net.sneakycharactermanager.proxy.common.SkinContentHash;
+import net.sneakycharactermanager.proxy.common.SkinImageFetcher;
 import net.sneakycharactermanager.proxy.common.YamlFiles;
 
 import java.io.File;
@@ -87,6 +89,7 @@ public final class PlayerData {
 
             boolean enabled = boolOrDefault(section.get("enabled"), true);
             String name = stringOrEmpty(section.get("name"));
+            String skinId = stringOrEmpty(section.get("skinId"));
             String skin = stringOrEmpty(section.get("skin"));
             String skinUUID = stringOrEmpty(section.get("skinUUID"));
             String texture = stringOrEmpty(section.get("texture"));
@@ -95,7 +98,7 @@ public final class PlayerData {
             String tags = normalizeTags(section.get("tags"));
             String gender = stringOrEmpty(section.get("gender"));
 
-            characterMap.put(key, new CharacterData(key, enabled, name, skin, skinUUID, texture, signature, slim, tags, gender));
+            characterMap.put(key, new CharacterData(key, enabled, name, skinId, skin, skinUUID, texture, signature, slim, tags, gender));
         }
     }
 
@@ -116,13 +119,23 @@ public final class PlayerData {
 
         section.put("enabled", character.enabled());
         section.put("name", character.name());
-        section.put("skin", character.skin());
-        section.put("skinUUID", character.skinUUID());
-        section.put("texture", character.texture());
-        section.put("signature", character.signature());
         section.put("slim", character.slim());
         section.put("tags", character.tags());
         section.put("gender", Gender.toConfigKeyNullable(character.gender()));
+
+        if (character.usesSkinIdFormat()) {
+            section.put("skinId", character.skinId());
+            section.remove("skin");
+            section.remove("skinUUID");
+            section.remove("texture");
+            section.remove("signature");
+        } else {
+            section.remove("skinId");
+            section.put("skin", character.skin());
+            section.put("skinUUID", character.skinUUID());
+            section.put("texture", character.texture());
+            section.put("signature", character.signature());
+        }
 
         root.put(character.uuid(), section);
         root.put("lastPlayedCharacter", lastPlayedCharacter == null ? "" : lastPlayedCharacter);
@@ -148,7 +161,8 @@ public final class PlayerData {
         }
 
         messenger.send(server, "loadCharacter", playerUUID, character, forced);
-        if (character.skin() == null || character.skin().isEmpty()) {
+        CharacterSkinWire.Resolved resolved = CharacterSkinWire.resolve(character, repo.globalSkinCache(), platform.logger());
+        if (resolved.skin().isEmpty() && !character.usesSkinIdFormat()) {
             messenger.send(server, "defaultSkin", playerUUID, character.uuid());
         }
 
@@ -185,7 +199,7 @@ public final class PlayerData {
 
     public String createNewCharacter(String uuid, String name, String skin, String skinUUID, boolean slim) {
         storeCharacters();
-        CharacterData character = new CharacterData(uuid, true, name, skin, skinUUID, "", "", slim, "", "");
+        CharacterData character = new CharacterData(uuid, true, name, "", skin, skinUUID, "", "", slim, "", "");
         characterMap.put(character.uuid(), character);
         saveCharacter(character);
         return character.uuid();
@@ -198,12 +212,78 @@ public final class PlayerData {
             platform.logger().severe("Attempted to reskin missing character [" + playerUUID + ", " + characterUUID + "]");
             return;
         }
-        character.skin(skin);
-        character.skinUUID(skinUUID);
-        character.texture(texture);
-        character.signature(signature);
+        character.slim(slim);
+        migrateLegacySkinToCacheAndId(character, skin, texture, signature);
+        saveCharacter(character);
+    }
+
+    public void setCharacterSkinById(String characterUUID, String skinId, boolean slim) {
+        storeCharacters();
+        CharacterData character = characterMap.get(characterUUID);
+        if (character == null) {
+            platform.logger().severe("Attempted to reskin missing character [" + playerUUID + ", " + characterUUID + "]");
+            return;
+        }
+        if (skinId == null || skinId.isEmpty()) {
+            platform.logger().warning("Refusing to set empty skinId on character " + characterUUID);
+            return;
+        }
+        if (repo.globalSkinCache().getById(skinId).isEmpty()) {
+            platform.logger().warning("skinId " + skinId + " not in global cache when saving character " + characterUUID);
+        }
+        character.skinId(skinId);
+        character.skin("");
+        character.skinUUID("");
+        character.texture("");
+        character.signature("");
         character.slim(slim);
         saveCharacter(character);
+    }
+
+    private void migrateLegacySkinToCacheAndId(CharacterData character, String skin, String texture, String signature) {
+        String mojangUrl = skin;
+        if (mojangUrl == null || mojangUrl.isEmpty()) {
+            mojangUrl = SkinContentHash.mojangUrlFromTextureProperty(texture);
+        }
+        if (mojangUrl != null && !mojangUrl.isEmpty()) {
+            mojangUrl = SkinContentHash.normalizeMojangTextureUrl(mojangUrl);
+        }
+
+        String skinId = "";
+        if (texture != null && !texture.isEmpty() && signature != null && !signature.isEmpty()) {
+            Optional<GlobalSkinCache.Entry> existing = mojangUrl != null && !mojangUrl.isEmpty()
+                    ? repo.globalSkinCache().getByMojangUrl(mojangUrl)
+                    : Optional.empty();
+            if (existing.isPresent()) {
+                skinId = existing.get().skinId;
+            } else if (mojangUrl != null && !mojangUrl.isEmpty()) {
+                try {
+                    SkinImageFetcher fetcher = new SkinImageFetcher(5, 1024 * 1024);
+                    String computed = SkinContentHash.skinIdFromImage(fetcher.downloadImage(mojangUrl));
+                    if (computed != null) {
+                        skinId = computed;
+                        GlobalSkinCache.Entry entry = new GlobalSkinCache.Entry(skinId, mojangUrl, texture, signature);
+                        repo.globalSkinCache().putAndIndexSourceUrl(entry, mojangUrl);
+                    }
+                } catch (Exception e) {
+                    platform.logger().warning("Could not compute skinId during migration: " + e.getMessage());
+                }
+            }
+        }
+
+        if (!skinId.isEmpty()) {
+            character.skinId(skinId);
+            character.skin("");
+            character.skinUUID("");
+            character.texture("");
+            character.signature("");
+        } else {
+            character.skinId("");
+            character.skin(skin == null ? "" : skin);
+            character.skinUUID("");
+            character.texture(texture == null ? "" : texture);
+            character.signature(signature == null ? "" : signature);
+        }
     }
 
     public void setCharacterName(String characterUUID, String name) {

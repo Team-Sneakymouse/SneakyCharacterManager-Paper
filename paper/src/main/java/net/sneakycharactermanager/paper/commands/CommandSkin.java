@@ -33,6 +33,9 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
+import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
+import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
+import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinState;
 import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
@@ -250,14 +253,29 @@ public class CommandSkin extends CommandBase {
 
 							character.setSkin(textureURL);
 							character.setSlim(isSlim);
-							BungeeMessagingUtil.sendByteArray(player, "updateCharacter",
-									player.getUniqueId().toString(), character.getCharacterUUID(), 1, textureURL, isSlim);
+							character.setTexture(textureValue);
+							character.setSignature(signatureValue);
 
 							SkinUtil.applySkin(player, property);
 
 							SneakyCharacterManager.getInstance().skinStateManager.record(
 									player, "Regular", textureValue, signatureValue,
 									character.getCharacterUUID(), textureURL, false);
+
+							SkinCache.resolve(player, textureURL, isSlim).thenAccept(resolveResult -> {
+								Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+									if (!player.isOnline() || character.getCharacterUUID() == null) return;
+									String skinId = resolveResult.skinId;
+									if (!skinId.isEmpty()) {
+										SkinCache.register(player, skinId, textureURL, textureValue, signatureValue, textureURL);
+										SkinCache.updateCharacterSkin(player, character.getCharacterUUID(), skinId, isSlim);
+									} else {
+										BungeeMessagingUtil.sendByteArray(player, "updateCharacter",
+												player.getUniqueId().toString(), character.getCharacterUUID(), 1,
+												textureURL, "", textureValue, signatureValue, isSlim);
+									}
+								});
+							});
 
 							Entity vehicle = player.getVehicle();
 							if (vehicle != null)

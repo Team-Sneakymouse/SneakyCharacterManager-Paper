@@ -12,9 +12,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class ProxyCore {
 
+    private static final int SKIN_RESOLVE_TIMEOUT_SECONDS = 5;
+    private static final int SKIN_DOWNLOAD_MAX_BYTES = 1024 * 1024;
+
     private final ProxyPlatform platform;
     private final PlayerDataRepository playerDataRepository;
     private final UniformSkinCache uniformSkinCache;
+    private final GlobalSkinCache globalSkinCache;
+    private final SkinResolveService skinResolveService;
     private final PrivateKey privateKey;
     private final PublicKey publicKey;
     private final ProxyMessenger messenger;
@@ -26,9 +31,11 @@ public final class ProxyCore {
         this.privateKey = keys.privateKey();
         this.publicKey = keys.publicKey();
 
-        this.playerDataRepository = new PlayerDataRepository(platform);
+        this.globalSkinCache = new GlobalSkinCache(platform.dataFolder(), platform.logger());
         this.uniformSkinCache = new UniformSkinCache(platform.dataFolder(), platform.logger());
-        this.messenger = new ProxyMessenger(platform, privateKey, uniformSkinCache);
+        this.playerDataRepository = new PlayerDataRepository(platform, globalSkinCache);
+        this.skinResolveService = new SkinResolveService(globalSkinCache, SKIN_RESOLVE_TIMEOUT_SECONDS, SKIN_DOWNLOAD_MAX_BYTES, platform.logger());
+        this.messenger = new ProxyMessenger(platform, privateKey, uniformSkinCache, globalSkinCache);
     }
 
     public void onPlayerDisconnect(UUID playerUniqueId) {
@@ -98,6 +105,7 @@ public final class ProxyCore {
                 PlayerData pd = playerDataRepository.get(playerUUID);
                 switch (type) {
                     case 1 -> pd.setCharacterSkin(characterUUID, in.readUTF(), in.readUTF(), in.readUTF(), in.readUTF(), in.readBoolean());
+                    case 6 -> pd.setCharacterSkinById(characterUUID, in.readUTF(), in.readBoolean());
                     case 2 -> {
                         pd.setCharacterName(characterUUID, in.readUTF());
                         pd.updateCharacterList(server, messenger);
@@ -155,6 +163,30 @@ public final class ProxyCore {
                 String sig = in.readUTF();
                 uniformSkinCache.addVariant(baseUrl, uHash, sUUID, tUrl, tex, sig);
             }
+            case "resolveSkin" -> {
+                String playerUUID = in.readUTF();
+                String requestId = in.readUTF();
+                String sourceUrl = in.readUTF();
+                @SuppressWarnings("unused")
+                boolean slim = in.readBoolean();
+                skinResolveService.resolve(sourceUrl).thenAccept(result ->
+                        messenger.send(server, "resolveSkinResult", playerUUID, requestId,
+                                result.status.name(),
+                                result.skinId,
+                                result.mojangTextureUrl,
+                                result.texture,
+                                result.signature,
+                                result.errorMessage));
+            }
+            case "registerSkin" -> {
+                String skinId = in.readUTF();
+                String mojangUrl = in.readUTF();
+                String texture = in.readUTF();
+                String signature = in.readUTF();
+                String sourceUrl = in.readUTF();
+                GlobalSkinCache.Entry entry = new GlobalSkinCache.Entry(skinId, mojangUrl, texture, signature);
+                globalSkinCache.putAndIndexSourceUrl(entry, sourceUrl);
+            }
             case "getAllCharacters" -> {
                 String requesterUUID = in.readUTF();
                 String filter = in.readUTF();
@@ -169,4 +201,3 @@ public final class ProxyCore {
         }
     }
 }
-

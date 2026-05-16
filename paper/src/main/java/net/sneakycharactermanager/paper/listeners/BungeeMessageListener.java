@@ -23,6 +23,8 @@ import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
+import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
+import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
@@ -83,6 +85,24 @@ public class BungeeMessageListener implements PluginMessageListener {
 		int expectedCount;
 
 		switch (subChannel) {
+			case "resolveSkinResult":
+				messageIn.readUTF(); // playerUUID (logged for routing; match is by requestId)
+				String resolveRequestId = messageIn.readUTF();
+				String resolveStatus = messageIn.readUTF();
+				String resolveSkinId = messageIn.readUTF();
+				String resolveMojangUrl = messageIn.readUTF();
+				String resolveTexture = messageIn.readUTF();
+				String resolveSignature = messageIn.readUTF();
+				String resolveError = messageIn.readUTF();
+				SkinCache.ResolveStatus status;
+				try {
+					status = SkinCache.ResolveStatus.valueOf(resolveStatus);
+				} catch (IllegalArgumentException e) {
+					status = SkinCache.ResolveStatus.ERROR;
+				}
+				SkinCache.completeResolve(resolveRequestId, new SkinCache.ResolveResult(
+						status, resolveSkinId, resolveMojangUrl, resolveTexture, resolveSignature, resolveError));
+				break;
 			case "loadCharacter":
 				playerUUID = messageIn.readUTF();
 				character = readCharacter(playerUUID, messageIn);
@@ -295,16 +315,16 @@ public class BungeeMessageListener implements PluginMessageListener {
 					// Base skin preloading
 					String skinUrl = c.getSkin();
 					if (skinUrl != null && !skinUrl.isEmpty()) {
-						ProfileProperty p = SkinCache.get(playerUUID, skinUrl);
-						
-						// If not in memory but we have raw data from Bungee
-						if (p == null && c.getTexture() != null && !c.getTexture().isEmpty()) {
-							p = new ProfileProperty("textures", c.getTexture(), c.getSignature());
+						if (net.sneakycharactermanager.paper.handlers.character.CharacterLoader.hasPersistedSkinProperty(c)) {
+							ProfileProperty p = new ProfileProperty("textures", c.getTexture(), c.getSignature());
+							String cacheKey = net.sneakycharactermanager.paper.util.SkinUtil.getTextureUrl(p);
+							if (cacheKey == null || cacheKey.isEmpty()) cacheKey = skinUrl;
+							SkinCache.put(playerUUID, cacheKey, p);
 							SkinCache.put(playerUUID, skinUrl, p);
-						}
-
-						if (p == null) {
-							SkinData.getOrCreate(skinUrl, c.getSkinUUID(), c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName());
+							SneakyCharacterManager.getInstance().skinQueue.removePendingForCharacter(pl, c.getCharacterUUID());
+						} else {
+							SkinApplyService.requestSkin(pl, c.getCharacterUUID(), skinUrl, c.isSlim(),
+									skinPrio, SkinApplyContext.preload());
 						}
 					}
 

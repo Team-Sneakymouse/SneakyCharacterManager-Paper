@@ -71,6 +71,17 @@ public class SkinQueue extends BukkitRunnable {
         queue.values().forEach(list -> list.removeIf(data -> data.getPlayer().equals(player)));
     }
 
+    /**
+     * Drops queued MineSkin jobs for a specific character (e.g. after applying a stored texture/signature).
+     */
+    public void removePendingForCharacter(Player player, String characterUUID) {
+        if (player == null || characterUUID == null || characterUUID.isEmpty()) return;
+        queue.values().forEach(list -> list.removeIf(data ->
+                data.getPlayer().getUniqueId().equals(player.getUniqueId())
+                        && Objects.equals(data.getCharacterUUID(), characterUUID)
+                        && data.getUniformHash() == null));
+    }
+
     public void updatePriority(Player player, int newPriority) {
         boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
         List<SkinData> toMove = new ArrayList<>();

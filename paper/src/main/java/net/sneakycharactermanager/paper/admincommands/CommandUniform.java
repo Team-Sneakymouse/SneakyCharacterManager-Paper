@@ -41,10 +41,10 @@ import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
-import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinState;
 import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import net.sneakycharactermanager.paper.util.ChatUtility;
@@ -156,7 +156,7 @@ public class CommandUniform extends CommandBaseAdmin {
                     if (!cachedTexture.isEmpty() && !cachedSignature.isEmpty()) {
                         ProfileProperty property = new ProfileProperty("textures", cachedTexture, cachedSignature);
                         SkinUtil.applySkin(player, property);
-                        SkinCache.put(player.getUniqueId().toString(), cachedUrl, property);
+                        SkinApplyService.registerGlobalSkinCacheAfterApply(player, cachedUrl, property, character.isSlim());
 
                         SkinState state = SneakyCharacterManager.getInstance().skinStateManager.record(
                                 player, SkinStateManager.uniformKeyToDisplayName(args[1]), cachedTexture, cachedSignature,

@@ -32,8 +32,10 @@ import net.kyori.adventure.text.TextComponent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
+import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
+import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
-import net.sneakycharactermanager.paper.handlers.skins.SkinData;
+import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 import net.sneakycharactermanager.paper.util.SkinUtil;
@@ -63,7 +65,6 @@ public class CharacterSelectionMenu implements Listener {
         protected Player player = null;
         protected final Player opener;
         private Inventory inventory;
-        private List<SkinData> queuedDatas = new ArrayList<>();
         protected int currentPage = 1;
         protected List<Character> allCharacters = new ArrayList<>();
 
@@ -232,8 +233,9 @@ public class CharacterSelectionMenu implements Listener {
             if (profileProperty == null) {
                 inventory.setItem(index, characterHead);
 
-                SkinData data = SkinData.getOrCreate(character.getSkin(), character.getSkinUUID(), character.isSlim(), SkinQueue.PRIO_ONLINE, this.opener, character.getCharacterUUID(), character.getName(), skullMeta, characterHead, inventory, index);
-                this.queuedDatas.add(data);
+                SkinApplyService.requestSkin(this.opener, character.getCharacterUUID(), character.getSkin(), character.isSlim(),
+                        SkinQueue.PRIO_ONLINE,
+                        SkinApplyContext.forMenu(skullMeta, characterHead, inventory, index));
             } else {
                 if(this.player == null){
                     updateHead(skullMeta, this.opener, profileProperty, characterHead, inventory, index);
@@ -323,9 +325,8 @@ public class CharacterSelectionMenu implements Listener {
         }
 
         public void cleanup() {
-            // Do not cancel skins on menu close. They are valuable as pre-cached data 
+            // Do not cancel skins on menu close. They are valuable as pre-cached data
             // and might be shared with background preloaders.
-            queuedDatas.clear();
         }
     }
 

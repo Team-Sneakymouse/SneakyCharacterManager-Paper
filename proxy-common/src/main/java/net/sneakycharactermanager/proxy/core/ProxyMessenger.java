@@ -15,11 +15,13 @@ public final class ProxyMessenger {
     private final ProxyPlatform platform;
     private final PrivateKey privateKey;
     private final UniformSkinCache uniformSkinCache;
+    private final GlobalSkinCache globalSkinCache;
 
-    public ProxyMessenger(ProxyPlatform platform, PrivateKey privateKey, UniformSkinCache uniformSkinCache) {
+    public ProxyMessenger(ProxyPlatform platform, PrivateKey privateKey, UniformSkinCache uniformSkinCache, GlobalSkinCache globalSkinCache) {
         this.platform = platform;
         this.privateKey = privateKey;
         this.uniformSkinCache = uniformSkinCache;
+        this.globalSkinCache = globalSkinCache;
     }
 
     public void send(ProxyServerConnection server, String subChannel, Object... objects) {
@@ -46,7 +48,6 @@ public final class ProxyMessenger {
     }
 
     private byte[] encodeUnsigned(String subChannel, Object... objects) throws IOException {
-        // This method mirrors ProxyMessageIO, but supports CharacterData with uniform variants.
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         DataOutputStream dout = new DataOutputStream(out);
 
@@ -87,17 +88,20 @@ public final class ProxyMessenger {
     }
 
     private void writeCharacter(DataOutputStream out, CharacterData character) throws IOException {
+        CharacterSkinWire.Resolved resolved = CharacterSkinWire.resolve(character, globalSkinCache, platform.logger());
+        String baseUrl = CharacterSkinWire.baseSkinUrlForUniforms(resolved, character);
+
         out.writeUTF(character.uuid());
         out.writeUTF(character.name());
-        out.writeUTF(character.skin());
-        out.writeUTF(character.skinUUID());
-        out.writeUTF(character.texture() != null ? character.texture() : "");
-        out.writeUTF(character.signature() != null ? character.signature() : "");
+        out.writeUTF(resolved.skin());
+        out.writeUTF(resolved.skinUUID());
+        out.writeUTF(resolved.texture() != null ? resolved.texture() : "");
+        out.writeUTF(resolved.signature() != null ? resolved.signature() : "");
         out.writeBoolean(character.slim());
         out.writeUTF(character.tags());
         out.writeUTF(Gender.toConfigKeyNullable(character.gender()));
 
-        List<UniformSkinCache.Variant> variants = uniformSkinCache.getVariants(character.skin());
+        List<UniformSkinCache.Variant> variants = uniformSkinCache.getVariants(baseUrl);
         out.writeInt(variants.size());
         for (UniformSkinCache.Variant v : variants) {
             out.writeUTF(v.uniformHash);
@@ -113,4 +117,3 @@ public final class ProxyMessenger {
         for (String string : strings) out.writeUTF(string);
     }
 }
-

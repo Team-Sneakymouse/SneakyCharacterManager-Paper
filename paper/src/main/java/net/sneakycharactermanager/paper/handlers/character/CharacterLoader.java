@@ -21,12 +21,11 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
-import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
+import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
+import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
-import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.handlers.skins.SkinState;
 import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
 import org.jetbrains.annotations.Nullable;
@@ -35,7 +34,6 @@ public class CharacterLoader {
 
 	public static boolean loadCharacter(Character character) {
 		String url = character.getSkin();
-		String skinUUID = character.getSkinUUID();
 		Player player = character.getPlayer();
 
 		LoadCharacterEvent event = new LoadCharacterEvent(
@@ -52,8 +50,6 @@ public class CharacterLoader {
 		if (!event.isCancelled()) {
 			ConsoleCommandCharTemp.playerTempCharRemove(player.getUniqueId().toString());
 
-			ProfileProperty profileProperty = SkinCache.get(player.getUniqueId().toString(), url);
-
 			character.setFirstLoad(false);
 
 			SkinState existingState = SneakyCharacterManager.getInstance().skinStateManager
@@ -63,28 +59,18 @@ public class CharacterLoader {
 				ProfileProperty prop = new ProfileProperty("textures", existingState.texture(), existingState.signature());
 				SkinUtil.applySkin(player, prop);
 				SneakyCharacterManager.getInstance().skinStateManager.setCurrent(player.getUniqueId(), existingState.id());
-			} else if (character.getTexture() != null && !character.getTexture().isEmpty() && character.getSignature() != null && !character.getSignature().isEmpty()) {
+			} else if (hasPersistedSkinProperty(character)) {
 				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] Using cached texture and signature for character: " + character.getName());
+				SneakyCharacterManager.getInstance().skinQueue.removePendingForCharacter(player, character.getCharacterUUID());
 				ProfileProperty prop = new ProfileProperty("textures", character.getTexture(), character.getSignature());
 				SkinUtil.applySkin(player, prop);
 				SneakyCharacterManager.getInstance().skinStateManager.record(
 						player, "Regular", character.getTexture(), character.getSignature(),
 						character.getCharacterUUID(), character.getSkin(), false);
-			} else if (profileProperty != null) {
-				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] Using memory-cached ProfileProperty for " + player.getName());
-				SkinUtil.applySkin(player, profileProperty);
-				
-				String textureUrl = SkinUtil.getTextureUrl(profileProperty);
-				String signature = profileProperty.getSignature();
-				if (textureUrl != null && signature != null) {
-					BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), character.getCharacterUUID(), 1, character.getSkin(), character.getSkinUUID(), textureUrl, signature, character.isSlim());
-					SneakyCharacterManager.getInstance().skinStateManager.record(
-							player, "Regular", profileProperty.getValue(), signature,
-							character.getCharacterUUID(), character.getSkin(), false);
-				}
 			} else if (!shouldSkipLoading(character)) {
-				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] No cached data for " + character.getName() + " - Triggering MineSkin fetch.");
-				SkinData.getOrCreate(url, skinUUID, character.isSlim(), SkinQueue.PRIO_LOAD, player, character.getCharacterUUID(), character.getName());
+				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] Resolving skin for " + character.getName());
+				SkinApplyService.requestSkin(player, character.getCharacterUUID(), url, character.isSlim(),
+						SkinQueue.PRIO_LOAD, SkinApplyContext.defaults());
 			}
 
 			SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
@@ -92,6 +78,11 @@ public class CharacterLoader {
 			return true;
 		}
 		return false;
+	}
+
+	public static boolean hasPersistedSkinProperty(Character character) {
+		return character.getTexture() != null && !character.getTexture().isEmpty()
+				&& character.getSignature() != null && !character.getSignature().isEmpty();
 	}
 
 	private static boolean shouldSkipLoading(Character character) {
@@ -129,16 +120,15 @@ public class CharacterLoader {
 						playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM), player, characterUUID, skinStateName);
 			});
 		} else {
-			Character character = Character.get(player);
-			String name = (character != null && character.getCharacterUUID().equals(characterUUID)) ? character.getName() : null;
-			SkinData sd = SkinData.getOrCreate(url, "", slim, SkinQueue.PRIO_SKIN, player, characterUUID, name);
-			if (sd != null) {
-				sd.setSkinStateLabel(skinStateName);
-			}
+			SkinApplyContext ctx = skinStateName != null && !skinStateName.isBlank()
+					? SkinApplyContext.withSkinStateLabel(skinStateName.trim())
+					: SkinApplyContext.defaults();
+			SkinApplyService.requestSkin(player, characterUUID, url, slim, SkinQueue.PRIO_SKIN, ctx);
 		}
 	}
 
-	private static void checkSlimThenSetSkin(String url, boolean slim, Player player, String characterUUID, @Nullable String skinStateName) {		try {
+	private static void checkSlimThenSetSkin(String url, boolean slim, Player player, String characterUUID, @Nullable String skinStateName) {
+		try {
 			HttpClient httpClient = HttpClient.newHttpClient();
 			HttpRequest request = HttpRequest.newBuilder().uri(
 					new URI(url.replace("imgur", "filmot")))
@@ -146,7 +136,6 @@ public class CharacterLoader {
 					.build();
 			HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
-			// Check the HTTP response status
 			int statusCode = response.statusCode();
 
 			if (statusCode == 200) {
@@ -167,14 +156,11 @@ public class CharacterLoader {
 		}
 
 		final boolean slimFinal = slim;
-		final String skinStateLabel = skinStateName;
-		Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-			Character character = Character.get(player);
-			String name = (character != null && character.getCharacterUUID().equals(characterUUID)) ? character.getName() : null;
-			SkinData sd = SkinData.getOrCreate(url, "", slimFinal, SkinQueue.PRIO_SKIN, player, characterUUID, name);
-			if (sd != null) {
-				sd.setSkinStateLabel(skinStateLabel);
-			}
-		});	}
+		SkinApplyContext ctx = skinStateName != null && !skinStateName.isBlank()
+				? SkinApplyContext.withSkinStateLabel(skinStateName.trim())
+				: SkinApplyContext.defaults();
+		Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () ->
+				SkinApplyService.requestSkin(player, characterUUID, url, slimFinal, SkinQueue.PRIO_SKIN, ctx));
+	}
 
 }

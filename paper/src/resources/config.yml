@@ -9,6 +9,8 @@ mineskinQueueUrl: 'https://api.mineskin.org/v2/queue'
 mineskinSkinsUrl: 'https://api.mineskin.org/v2/skins'
 mineskinAuth: ''
 mineskinUserAgent: 'SneakyCharacterManager/1.0'
+skin:
+  resolveTimeoutSeconds: 5
 mineskin:
   logging:
     enabled: true
