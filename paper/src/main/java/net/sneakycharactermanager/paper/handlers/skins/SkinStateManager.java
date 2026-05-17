@@ -81,9 +81,29 @@ public final class SkinStateManager {
 
     /**
      * Sets an existing state as the player's current state without creating a new one.
-     * Used by /skin state to switch back to a previous state.
      */
     public void setCurrent(UUID playerUUID, int stateId) {
+        currentIdByPlayer.put(playerUUID, stateId);
+    }
+
+    /**
+     * Applies an existing state as current and moves it to the end of the history list so
+     * {@link #latestForCharacter} will restore it after character reload in this session.
+     */
+    public void activateState(UUID playerUUID, int stateId) {
+        List<SkinState> states = statesByPlayer.get(playerUUID);
+        if (states == null) return;
+        int index = -1;
+        for (int i = 0; i < states.size(); i++) {
+            if (states.get(i).id() == stateId) {
+                index = i;
+                break;
+            }
+        }
+        if (index < 0) return;
+        if (index < states.size() - 1) {
+            states.add(states.remove(index));
+        }
         currentIdByPlayer.put(playerUUID, stateId);
     }
 

@@ -149,7 +149,7 @@ public class CommandSkin extends CommandBase {
 						state.proxyTextureUrl(), "", state.proxyTexture(), state.proxySignature(), character.isSlim());
 			}
 
-			mgr.setCurrent(player.getUniqueId(), stateId);
+			mgr.activateState(player.getUniqueId(), stateId);
 			return true;
 		}
 
