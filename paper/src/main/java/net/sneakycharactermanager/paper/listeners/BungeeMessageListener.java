@@ -86,22 +86,27 @@ public class BungeeMessageListener implements PluginMessageListener {
 
 		switch (subChannel) {
 			case "resolveSkinResult":
-				messageIn.readUTF(); // playerUUID (logged for routing; match is by requestId)
-				String resolveRequestId = messageIn.readUTF();
-				String resolveStatus = messageIn.readUTF();
-				String resolveSkinId = messageIn.readUTF();
-				String resolveMojangUrl = messageIn.readUTF();
-				String resolveTexture = messageIn.readUTF();
-				String resolveSignature = messageIn.readUTF();
-				String resolveError = messageIn.readUTF();
-				SkinCache.ResolveStatus status;
 				try {
-					status = SkinCache.ResolveStatus.valueOf(resolveStatus);
-				} catch (IllegalArgumentException e) {
-					status = SkinCache.ResolveStatus.ERROR;
+					messageIn.readUTF(); // playerUUID (routing; match is by requestId)
+					String resolveRequestId = messageIn.readUTF();
+					String resolveStatus = messageIn.readUTF();
+					String resolveSkinId = messageIn.readUTF();
+					String resolveMojangUrl = messageIn.readUTF();
+					String resolveTexture = messageIn.readUTF();
+					String resolveSignature = messageIn.readUTF();
+					String resolveError = messageIn.readUTF();
+					SkinCache.ResolveStatus status;
+					try {
+						status = SkinCache.ResolveStatus.valueOf(resolveStatus);
+					} catch (IllegalArgumentException e) {
+						status = SkinCache.ResolveStatus.ERROR;
+					}
+					SkinCache.completeResolveOnMainThread(resolveRequestId, new SkinCache.ResolveResult(
+							status, resolveSkinId, resolveMojangUrl, resolveTexture, resolveSignature, resolveError));
+				} catch (Exception e) {
+					SneakyCharacterManager.getInstance().getLogger().severe(
+							"Failed to handle resolveSkinResult: " + e.getMessage());
 				}
-				SkinCache.completeResolve(resolveRequestId, new SkinCache.ResolveResult(
-						status, resolveSkinId, resolveMojangUrl, resolveTexture, resolveSignature, resolveError));
 				break;
 			case "loadCharacter":
 				playerUUID = messageIn.readUTF();

@@ -17,7 +17,24 @@ import java.io.FileInputStream;
 import java.security.MessageDigest;
 
 public class SkinUtil {
-    
+
+	private static final String MOJANG_TEXTURE_PREFIX = "http://textures.minecraft.net/texture/";
+
+	public static boolean isMojangTextureUrl(String url) {
+		if (url == null || url.isEmpty()) return false;
+		return url.startsWith(MOJANG_TEXTURE_PREFIX)
+				|| url.startsWith("https://textures.minecraft.net/texture/");
+	}
+
+	public static String normalizeMojangTextureUrl(String url) {
+		if (url == null) return "";
+		String trimmed = url.trim();
+		if (trimmed.startsWith("https://textures.minecraft.net/texture/")) {
+			return MOJANG_TEXTURE_PREFIX + trimmed.substring("https://textures.minecraft.net/texture/".length());
+		}
+		return trimmed;
+	}
+
     public static PlayerProfile handleCachedSkin(OfflinePlayer player, ProfileProperty profileProperty) {
         PlayerProfile playerProfile = player.getPlayerProfile();
         playerProfile.removeProperty("textures");

@@ -1,10 +1,8 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
 import java.awt.image.BufferedImage;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -112,22 +110,34 @@ public class CharacterLoader {
 	 * the resulting skin state uses that label in chat (hover / re-apply text).
 	 */
 	public static void updateSkin(Player player, String characterUUID, String url, Boolean slim, @Nullable String skinStateName) {
-		PlayerProfile playerProfile = player.getPlayerProfile();
+		String sourceUrl = SkinUtil.isMojangTextureUrl(url) ? SkinUtil.normalizeMojangTextureUrl(url) : url;
+		SkinApplyContext ctx = skinStateName != null && !skinStateName.isBlank()
+				? SkinApplyContext.withSkinStateLabel(skinStateName.trim())
+				: SkinApplyContext.defaults();
 
-		if (slim == null) {
-			Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
-				checkSlimThenSetSkin(url,
-						playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM), player, characterUUID, skinStateName);
-			});
-		} else {
-			SkinApplyContext ctx = skinStateName != null && !skinStateName.isBlank()
-					? SkinApplyContext.withSkinStateLabel(skinStateName.trim())
-					: SkinApplyContext.defaults();
-			SkinApplyService.requestSkin(player, characterUUID, url, slim, SkinQueue.PRIO_SKIN, ctx);
+		if (slim != null) {
+			SkinApplyService.requestSkin(player, characterUUID, sourceUrl, slim, SkinQueue.PRIO_SKIN, ctx);
+			return;
 		}
+
+		// Mojang texture URLs are resolved via the proxy global cache — no PNG pre-download for slim detection.
+		if (SkinUtil.isMojangTextureUrl(sourceUrl)) {
+			boolean slimFromProfile = player.getPlayerProfile().getTextures().getSkinModel()
+					.equals(PlayerTextures.SkinModel.SLIM);
+			SkinApplyService.requestSkin(player, characterUUID, sourceUrl, slimFromProfile, SkinQueue.PRIO_SKIN, ctx);
+			return;
+		}
+
+		PlayerProfile playerProfile = player.getPlayerProfile();
+		Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
+			checkSlimThenSetSkin(sourceUrl,
+					playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM),
+					player, characterUUID, ctx);
+		});
 	}
 
-	private static void checkSlimThenSetSkin(String url, boolean slim, Player player, String characterUUID, @Nullable String skinStateName) {
+	private static void checkSlimThenSetSkin(String url, boolean slim, Player player, String characterUUID,
+	                                         SkinApplyContext ctx) {
 		try {
 			HttpClient httpClient = HttpClient.newHttpClient();
 			HttpRequest request = HttpRequest.newBuilder().uri(
@@ -136,31 +146,25 @@ public class CharacterLoader {
 					.build();
 			HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
-			int statusCode = response.statusCode();
-
-			if (statusCode == 200) {
+			if (response.statusCode() == 200) {
 				try (InputStream inputStream = response.body()) {
 					if (inputStream != null) {
 						BufferedImage image = ImageIO.read(inputStream);
-
-						if (image != null) {
-							int pixel = image.getRGB(55, 20);
-							int alpha = (pixel >> 24) & 0xFF;
+						if (image != null && image.getWidth() > 55 && image.getHeight() > 20) {
+							int alpha = (image.getRGB(55, 20) >> 24) & 0xFF;
 							slim = alpha == 0;
 						}
 					}
 				}
 			}
-		} catch (IOException | InterruptedException | URISyntaxException e) {
-			e.printStackTrace();
+		} catch (Exception e) {
+			SneakyCharacterManager.getInstance().getLogger().warning(
+					"Slim detection failed for " + url + ": " + e.getMessage());
+		} finally {
+			final boolean slimFinal = slim;
+			Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () ->
+					SkinApplyService.requestSkin(player, characterUUID, url, slimFinal, SkinQueue.PRIO_SKIN, ctx));
 		}
-
-		final boolean slimFinal = slim;
-		SkinApplyContext ctx = skinStateName != null && !skinStateName.isBlank()
-				? SkinApplyContext.withSkinStateLabel(skinStateName.trim())
-				: SkinApplyContext.defaults();
-		Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () ->
-				SkinApplyService.requestSkin(player, characterUUID, url, slimFinal, SkinQueue.PRIO_SKIN, ctx));
 	}
 
 }

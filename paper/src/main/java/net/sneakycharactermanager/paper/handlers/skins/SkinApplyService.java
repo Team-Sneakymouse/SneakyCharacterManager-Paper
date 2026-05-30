@@ -4,6 +4,7 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ChatUtility;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -19,30 +20,62 @@ public final class SkinApplyService {
         if (sourceUrl == null || sourceUrl.isEmpty() || player == null) return;
         SkinApplyContext context = ctx == null ? SkinApplyContext.defaults() : ctx;
         boolean slimValue = slim != null ? slim : false;
+        final String resolveUrl = SkinUtil.isMojangTextureUrl(sourceUrl)
+                ? SkinUtil.normalizeMojangTextureUrl(sourceUrl)
+                : sourceUrl;
 
         // Always resolve the requested sourceUrl. Do not reuse in-memory texture/signature from a prior
         // /skin — CharacterLoader applies proxy-persisted skins on login without calling requestSkin.
-        SkinCache.resolve(player, sourceUrl, slimValue).thenAccept(result -> {
-            Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                if (!player.isOnline()) return;
-
-                if (result.status == SkinCache.ResolveStatus.HIT) {
-                    ProfileProperty property = result.toProfileProperty();
-                    if (property == null) {
-                        queueMineSkin(player, characterUUID, sourceUrl, slimValue, priority, context);
-                        return;
-                    }
-                    applyResolved(player, characterUUID, sourceUrl, result.skinId, result.mojangTextureUrl,
-                            property, priority, context);
-                } else if (result.status == SkinCache.ResolveStatus.MISS) {
-                    queueMineSkin(player, characterUUID, sourceUrl, slimValue, priority, context, result.skinId);
-                } else {
-                    SneakyCharacterManager.getInstance().getLogger().warning(
-                            "Skin resolve error for " + player.getName() + ": " + result.errorMessage);
-                    queueMineSkin(player, characterUUID, sourceUrl, slimValue, priority, context);
-                }
-            });
+        SkinCache.resolve(player, resolveUrl, slimValue).whenComplete((result, ex) -> {
+            SkinCache.ResolveResult resolved = result;
+            if (ex != null || resolved == null) {
+                resolved = new SkinCache.ResolveResult(
+                        SkinCache.ResolveStatus.ERROR, "", "", "", "",
+                        ex != null ? ex.getMessage() : "Resolve failed");
+            }
+            final SkinCache.ResolveResult resultFinal = resolved;
+            Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () ->
+                    handleResolveResult(player, characterUUID, resolveUrl, slimValue, priority, context, resultFinal));
         });
+    }
+
+    private static void handleResolveResult(Player player, String characterUUID, String resolveUrl, boolean slimValue,
+                                            int priority, SkinApplyContext context, SkinCache.ResolveResult result) {
+        if (!player.isOnline()) return;
+
+        if (result.status == SkinCache.ResolveStatus.HIT) {
+            ProfileProperty property = result.toProfileProperty();
+            if (property == null) {
+                player.sendMessage(ChatUtility.convertToComponent(
+                        "&4Skin cache returned no texture data for that URL."));
+                SneakyCharacterManager.getInstance().getLogger().warning(
+                        "Skin cache HIT with empty texture for " + player.getName() + ": " + resolveUrl);
+                if (!SkinUtil.isMojangTextureUrl(resolveUrl)) {
+                    queueMineSkin(player, characterUUID, resolveUrl, slimValue, priority, context);
+                }
+                return;
+            }
+            applyResolved(player, characterUUID, resolveUrl, result.skinId, result.mojangTextureUrl,
+                    property, priority, context);
+        } else if (result.status == SkinCache.ResolveStatus.MISS) {
+            if (SkinUtil.isMojangTextureUrl(resolveUrl)) {
+                player.sendMessage(ChatUtility.convertToComponent(
+                        "&4That Mojang skin is not in the global cache (id "
+                                + (result.skinId.isEmpty() ? "unknown" : result.skinId) + ")."));
+                SneakyCharacterManager.getInstance().getLogger().warning(
+                        "Mojang skin cache MISS for " + player.getName() + ": " + resolveUrl);
+                return;
+            }
+            queueMineSkin(player, characterUUID, resolveUrl, slimValue, priority, context, result.skinId);
+        } else {
+            SneakyCharacterManager.getInstance().getLogger().warning(
+                    "Skin resolve error for " + player.getName() + ": " + result.errorMessage);
+            player.sendMessage(ChatUtility.convertToComponent(
+                    "&4Could not resolve skin from cache. Try again in a moment."));
+            if (!SkinUtil.isMojangTextureUrl(resolveUrl)) {
+                queueMineSkin(player, characterUUID, resolveUrl, slimValue, priority, context);
+            }
+        }
     }
 
     private static void queueMineSkin(Player player, String characterUUID, String sourceUrl, boolean slim,
@@ -91,9 +124,12 @@ public final class SkinApplyService {
                 String stateName = context.skinStateLabel() != null ? context.skinStateLabel() : "Regular";
                 String textureUrl = mojangUrl.isEmpty() ? textureUrlFromProperty(property) : mojangUrl;
                 if (textureUrl == null) textureUrl = sourceUrl;
-                SneakyCharacterManager.getInstance().skinStateManager.record(
+                SkinState state = SneakyCharacterManager.getInstance().skinStateManager.record(
                         player, stateName, property.getValue(), property.getSignature(),
                         characterUUID, textureUrl, false);
+                if (priority == SkinQueue.PRIO_SKIN || priority == SkinQueue.PRIO_UNIFORM) {
+                    SkinStateManager.sendSkinUpdatedMessage(player, state);
+                }
             }
 
             Character character = Character.get(player);
@@ -106,9 +142,18 @@ public final class SkinApplyService {
                 }
             }
 
-            if (context.updateProxyCharacter() && !skinId.isEmpty()) {
+            if (context.updateProxyCharacter()) {
                 boolean slim = character != null && character.isSlim();
-                SkinCache.updateCharacterSkin(player, characterUUID, skinId, slim);
+                if (!skinId.isEmpty()) {
+                    SkinCache.updateCharacterSkin(player, characterUUID, skinId, slim);
+                } else {
+                    String resolvedUrl = mojangUrl.isEmpty() ? textureUrlFromProperty(property) : mojangUrl;
+                    if (resolvedUrl != null && character != null) {
+                        BungeeMessagingUtil.sendByteArray(player, "updateCharacter",
+                                player.getUniqueId().toString(), characterUUID, 1,
+                                resolvedUrl, "", property.getValue(), property.getSignature(), slim);
+                    }
+                }
             }
         }
     }

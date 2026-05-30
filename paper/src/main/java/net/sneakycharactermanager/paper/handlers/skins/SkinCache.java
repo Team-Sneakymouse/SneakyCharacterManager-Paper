@@ -3,6 +3,8 @@ package net.sneakycharactermanager.paper.handlers.skins;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.SkinUtil;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import javax.annotation.Nullable;
@@ -60,6 +62,10 @@ public final class SkinCache {
                     new ResolveResult(ResolveStatus.ERROR, "", "", "", "", "Empty URL"));
         }
 
+        if (SkinUtil.isMojangTextureUrl(sourceUrl)) {
+            sourceUrl = SkinUtil.normalizeMojangTextureUrl(sourceUrl);
+        }
+
         ProfileProperty session = sessionHits.get(sessionKey(sourceUrl));
         if (session != null) {
             String mojang = net.sneakycharactermanager.paper.util.SkinUtil.getTextureUrl(session);
@@ -72,12 +78,10 @@ public final class SkinCache {
         CompletableFuture<ResolveResult> future = new CompletableFuture<>();
         pending.put(requestId, future);
 
-        future.orTimeout(resolveTimeoutSeconds(), TimeUnit.SECONDS).whenComplete((res, ex) -> {
-            pending.remove(requestId);
-            if (ex != null && !future.isDone()) {
-                future.complete(new ResolveResult(ResolveStatus.ERROR, "", "", "", "", "Resolve timed out"));
-            }
-        });
+        future.completeOnTimeout(
+                new ResolveResult(ResolveStatus.ERROR, "", "", "", "", "Resolve timed out"),
+                resolveTimeoutSeconds(), TimeUnit.SECONDS)
+                .whenComplete((res, ex) -> pending.remove(requestId));
 
         BungeeMessagingUtil.sendByteArray(requester, "resolveSkin",
                 requester == null ? "" : requester.getUniqueId().toString(),
@@ -87,15 +91,28 @@ public final class SkinCache {
 
     public static void completeResolve(String requestId, ResolveResult result) {
         CompletableFuture<ResolveResult> future = pending.remove(requestId);
-        if (future != null) {
-            if (result.status == ResolveStatus.HIT && result.toProfileProperty() != null) {
-                cacheSession(result.mojangTextureUrl, result.toProfileProperty());
-                if (!result.skinId.isEmpty()) {
-                    cacheSession(result.skinId, result.toProfileProperty());
-                }
-            }
-            future.complete(result);
+        if (future == null) {
+            SneakyCharacterManager.getInstance().getLogger().fine(
+                    "resolveSkinResult for unknown or timed-out request: " + requestId);
+            return;
         }
+        if (result.status == ResolveStatus.HIT && result.toProfileProperty() != null) {
+            cacheSession(result.mojangTextureUrl, result.toProfileProperty());
+            if (!result.skinId.isEmpty()) {
+                cacheSession(result.skinId, result.toProfileProperty());
+            }
+        }
+        future.complete(result);
+    }
+
+    /** Runs {@link #completeResolve} on the server main thread (plugin messages may arrive off-thread). */
+    public static void completeResolveOnMainThread(String requestId, ResolveResult result) {
+        if (Bukkit.isPrimaryThread()) {
+            completeResolve(requestId, result);
+            return;
+        }
+        Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(),
+                () -> completeResolve(requestId, result));
     }
 
     public static void register(@Nullable Player requester, String skinId, String mojangTextureUrl,

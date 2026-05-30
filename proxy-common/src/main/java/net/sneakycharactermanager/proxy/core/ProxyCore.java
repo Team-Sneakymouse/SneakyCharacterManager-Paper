@@ -2,6 +2,7 @@ package net.sneakycharactermanager.proxy.core;
 
 import net.sneakycharactermanager.proxy.common.ProxyPlatform;
 import net.sneakycharactermanager.proxy.common.ProxyServerConnection;
+import net.sneakycharactermanager.proxy.common.SkinContentHash;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -169,14 +170,30 @@ public final class ProxyCore {
                 String sourceUrl = in.readUTF();
                 @SuppressWarnings("unused")
                 boolean slim = in.readBoolean();
-                skinResolveService.resolve(sourceUrl).thenAccept(result ->
-                        messenger.send(server, "resolveSkinResult", playerUUID, requestId,
-                                result.status.name(),
-                                result.skinId,
-                                result.mojangTextureUrl,
-                                result.texture,
-                                result.signature,
-                                result.errorMessage));
+                if (SkinContentHash.isMojangTextureUrl(sourceUrl)) {
+                    sourceUrl = SkinContentHash.normalizeMojangTextureUrl(sourceUrl);
+                }
+                final String urlFinal = sourceUrl;
+                skinResolveService.resolve(urlFinal).whenComplete((result, err) -> {
+                    SkinResolveService.Result toSend = result;
+                    if (err != null || toSend == null) {
+                        platform.logger().warning("resolveSkin failed for " + urlFinal + ": "
+                                + (err != null ? err.getMessage() : "null result"));
+                        toSend = SkinResolveService.Result.error(err != null ? err.getMessage() : "Resolve failed");
+                    } else if (toSend.status == SkinResolveService.Status.HIT) {
+                        platform.logger().info("resolveSkin HIT " + urlFinal + " -> " + toSend.skinId);
+                    } else {
+                        platform.logger().info("resolveSkin " + toSend.status + " for " + urlFinal
+                                + (toSend.skinId.isEmpty() ? "" : " (id " + toSend.skinId + ")"));
+                    }
+                    messenger.send(server, "resolveSkinResult", playerUUID, requestId,
+                            toSend.status.name(),
+                            toSend.skinId,
+                            toSend.mojangTextureUrl,
+                            toSend.texture,
+                            toSend.signature,
+                            toSend.errorMessage);
+                });
             }
             case "registerSkin" -> {
                 String skinId = in.readUTF();

@@ -6,6 +6,7 @@ import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.connection.PluginMessageEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
+import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.ServerConnection;
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
@@ -65,17 +66,25 @@ public final class SneakyCharacterManagerVelocity {
     @Subscribe
     public void onPluginMessage(PluginMessageEvent event) {
         if (!event.getIdentifier().equals(channelIdentifier)) return;
-        if (!(event.getSource() instanceof ServerConnection serverConnection)) return;
 
+        ServerConnection serverConnection = null;
+        if (event.getSource() instanceof ServerConnection sc) {
+            serverConnection = sc;
+        } else if (event.getSource() instanceof Player player) {
+            serverConnection = player.getCurrentServer().orElse(null);
+        }
+        if (serverConnection == null) return;
+
+        final ServerConnection replyConnection = serverConnection;
         ProxyServerConnection serverConn = new ProxyServerConnection() {
             @Override
             public void sendPluginMessage(byte[] data) {
-                serverConnection.sendPluginMessage(channelIdentifier, data);
+                replyConnection.sendPluginMessage(channelIdentifier, data);
             }
 
             @Override
             public String debugName() {
-                return serverConnection.getServerInfo().getName();
+                return replyConnection.getServerInfo().getName();
             }
         };
 

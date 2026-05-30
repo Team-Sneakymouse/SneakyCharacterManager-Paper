@@ -72,8 +72,26 @@ public final class SkinResolveService {
         if (key.isEmpty()) {
             return CompletableFuture.completedFuture(Result.error("Empty source URL"));
         }
+        if (SkinContentHash.isMojangTextureUrl(key)) {
+            key = SkinContentHash.normalizeMojangTextureUrl(key);
+        }
+        final String resolveKey = key;
 
-        return inFlight.computeIfAbsent(key, k -> doResolve(key).whenComplete((res, err) -> inFlight.remove(key)));
+        CompletableFuture<Result> existing = inFlight.get(resolveKey);
+        if (existing != null) {
+            return existing;
+        }
+
+        CompletableFuture<Result> future = doResolve(resolveKey);
+        CompletableFuture<Result> racing = inFlight.putIfAbsent(resolveKey, future);
+        if (racing != null) {
+            return racing;
+        }
+
+        // Do not remove from inFlight inside computeIfAbsent / on the same stack as a
+        // just-completed future — that triggers ConcurrentHashMap "Recursive update".
+        future.whenComplete((res, err) -> inFlight.remove(resolveKey, future));
+        return future;
     }
 
     private CompletableFuture<Result> doResolve(String sourceUrl) {
