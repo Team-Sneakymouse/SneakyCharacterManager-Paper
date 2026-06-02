@@ -81,12 +81,12 @@ public class CharacterSelectionMenu implements Listener {
 
             int size = 9;
             if(this.player != null){
-                if (CommandChar.tabCompleteMap.containsKey(this.player.getUniqueId().toString())) {
-                    size = Math.min((int) Math.floor((CommandChar.tabCompleteMap.get(this.player.getUniqueId().toString()).size() + 1) / 9) * 9 + 9, 54);
-                }
+                int count = Character.getPlayerCharacters(this.player.getUniqueId()).size();
+                size = Math.min((int) Math.floor((count + 1) / 9) * 9 + 9, 54);
             }else {
-                if (this.offlinePlayer.getUniqueId() != null && CommandChar.tabCompleteMap.containsKey(this.offlinePlayer.getUniqueId().toString())) {
-                    size = Math.min((int) Math.floor((CommandChar.tabCompleteMap.get(this.offlinePlayer.getUniqueId().toString()).size() + 1) / 9) * 9 + 9, 54);
+                if (this.offlinePlayer.getUniqueId() != null) {
+                    int count = Character.getPlayerCharacters(this.offlinePlayer.getUniqueId()).size();
+                    size = Math.min((int) Math.floor((count + 1) / 9) * 9 + 9, 54);
                 }
             }
 
@@ -114,7 +114,7 @@ public class CharacterSelectionMenu implements Listener {
         }
 
         private void requestCharacterList() {
-            BungeeMessagingUtil.sendByteArray(this.opener, "characterSelectionGUI", playerUUID, opener.getUniqueId().toString());
+            BungeeMessagingUtil.sendByteArray(this.opener, "syncCharacters", playerUUID, opener.getUniqueId().toString() + "|openGUI");
         }
 
         private void receivedCharacterList(List<Character> characters) {

@@ -171,7 +171,7 @@ public final class PlayerData {
             saveLastPlayed();
         }
 
-        updateCharacterList(server, messenger);
+        syncCharactersToSelf(server, messenger);
     }
 
     public void loadTempCharacter(ProxyServerConnection server, ProxyMessenger messenger, String requesterUUID, String characterUUID) {
@@ -330,13 +330,13 @@ public final class PlayerData {
         saveCharacter(character);
     }
 
-    public void sendEnabledCharacters(ProxyServerConnection server, ProxyMessenger messenger, String subChannel, String requesterUUID) {
+    public void syncCharacters(ProxyServerConnection server, ProxyMessenger messenger, String requesterUUID) {
         storeCharacters();
         List<CharacterData> enabledCharacters = new ArrayList<>();
         for (CharacterData c : characterMap.values()) if (c.enabled()) enabledCharacters.add(c);
 
-        messenger.send(server, subChannel + "Start", playerUUID, requesterUUID, enabledCharacters.size());
-        for (CharacterData c : enabledCharacters) messenger.send(server, subChannel + "Item", playerUUID, requesterUUID, c);
+        messenger.send(server, "syncCharactersStart", playerUUID, requesterUUID, enabledCharacters.size());
+        for (CharacterData c : enabledCharacters) messenger.send(server, "syncCharactersItem", playerUUID, requesterUUID, c);
     }
 
     public void loadCharacterByName(ProxyServerConnection server, ProxyMessenger messenger, String characterName) {
@@ -352,13 +352,8 @@ public final class PlayerData {
         messenger.send(server, "selectCharacterByNameFailed", playerUUID);
     }
 
-    public void updateCharacterList(ProxyServerConnection server, ProxyMessenger messenger) {
-        storeCharacters();
-        List<String> enabledCharacterNames = new ArrayList<>();
-        for (CharacterData c : characterMap.values()) {
-            if (c.enabled() && !Objects.equals(lastPlayedCharacter, c.uuid())) enabledCharacterNames.add(c.nameUnformatted());
-        }
-        if (!enabledCharacterNames.isEmpty()) messenger.send(server, "updateCharacterList", playerUUID, enabledCharacterNames);
+    public void syncCharactersToSelf(ProxyServerConnection server, ProxyMessenger messenger) {
+        syncCharacters(server, messenger, playerUUID);
     }
 
     private static String stringOrEmpty(Object o) {

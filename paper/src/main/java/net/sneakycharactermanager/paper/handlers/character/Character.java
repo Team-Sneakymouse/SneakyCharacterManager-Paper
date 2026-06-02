@@ -41,9 +41,12 @@ import net.sneakycharactermanager.paper.util.InventoryUtility;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 public class Character {
 
 	private static Map<Player, Character> characterMap = new HashMap<>();
+	private static final Map<UUID, List<Character>> playerCharactersCache = new ConcurrentHashMap<>();
 
 	private final Player player;
 	private String characterUUID;
@@ -501,6 +504,15 @@ public class Character {
 
 	public static void remove(Player player) {
 		characterMap.remove(player);
+		playerCharactersCache.remove(player.getUniqueId());
+	}
+
+	public static List<Character> getPlayerCharacters(UUID playerUUID) {
+		return playerCharactersCache.getOrDefault(playerUUID, new ArrayList<>());
+	}
+
+	public static void updatePlayerCharacters(UUID playerUUID, List<Character> characters) {
+		playerCharactersCache.put(playerUUID, new ArrayList<>(characters));
 	}
 
 	public static void saveAll() {

@@ -29,7 +29,7 @@ public class ConnectionEventListeners implements Listener {
         SneakyCharacterManager.getInstance().nametagManager.loadNames(player);
 
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
-            BungeeMessagingUtil.sendByteArray(player, "preloadSkins", player.getUniqueId().toString());
+            BungeeMessagingUtil.sendByteArray(player, "syncCharacters", player.getUniqueId().toString(), player.getUniqueId().toString());
 
             SneakyCharacterManager.getInstance().skinQueue.updatePriority(player, SkinQueue.PRIO_ONLINE);
 
@@ -59,7 +59,6 @@ public class ConnectionEventListeners implements Listener {
         //Un-Nick player who is disconnecting from the server
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
 
-        CommandChar.tabCompleteMap.remove(player.getUniqueId().toString());
         //SkinCache.remove(player.getUniqueId().toString());
 
         Character character = Character.get(player);

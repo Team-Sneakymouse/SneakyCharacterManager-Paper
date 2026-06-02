@@ -98,11 +98,12 @@ public class ConsoleCommandCharTemp extends CommandBaseConsole {
             if (pl != null) uuid = pl.getUniqueId().toString();
 
             List<String> names = new ArrayList<>();
-            if (CommandChar.tabCompleteMap.containsKey(uuid)) {
-                for (String name : CommandChar.tabCompleteMap.get(uuid)) {
+            try {
+                for (net.sneakycharactermanager.paper.handlers.character.Character c : net.sneakycharactermanager.paper.handlers.character.Character.getPlayerCharacters(java.util.UUID.fromString(uuid))) {
+                    String name = c.getNameUnformatted();
                     if (!names.contains(name) && name.toLowerCase().startsWith(args[2].toLowerCase())) names.add(name);
                 }
-            }
+            } catch (Exception e) {}
             return names;
         } else {
             return new ArrayList<>();

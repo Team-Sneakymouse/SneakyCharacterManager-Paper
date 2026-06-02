@@ -14,7 +14,6 @@ import net.sneakycharactermanager.paper.util.ChatUtility;
 public class CommandChar extends CommandBase {
 
     public static Map<Player, String> deleteConfirmationMap = new HashMap<>();
-    public static Map<String, List<String>> tabCompleteMap = new HashMap<>();
 
     public CommandChar() {
         super("char");
@@ -65,17 +64,15 @@ public class CommandChar extends CommandBase {
     @Override
     public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
         if(!(sender instanceof Player player)) return List.of();
-        if (tabCompleteMap.containsKey(player.getUniqueId().toString()) && args.length == 1) {
+        if (args.length == 1) {
             List<String> names = new ArrayList<>();
-
-            for (String name : tabCompleteMap.get(player.getUniqueId().toString())) {
+            for (net.sneakycharactermanager.paper.handlers.character.Character c : net.sneakycharactermanager.paper.handlers.character.Character.getPlayerCharacters(player.getUniqueId())) {
+                String name = c.getNameUnformatted();
                 if (!names.contains(name) && name.toLowerCase().startsWith(args[0].toLowerCase())) names.add(name);
             }
-
             return names;
-        } else {
-            return new ArrayList<>();
         }
+        return new ArrayList<>();
     }
     
 }

@@ -73,14 +73,10 @@ public final class ProxyCore {
                 String playerUUID = in.readUTF();
                 playerDataRepository.remove(playerUUID);
             }
-            case "characterSelectionGUI" -> {
+            case "syncCharacters" -> {
                 String playerUUID = in.readUTF();
                 String requesterUUID = in.readUTF();
-                playerDataRepository.get(playerUUID).sendEnabledCharacters(server, messenger, subChannel, requesterUUID);
-            }
-            case "preloadSkins" -> {
-                String playerUUID = in.readUTF();
-                playerDataRepository.get(playerUUID).sendEnabledCharacters(server, messenger, subChannel, playerUUID);
+                playerDataRepository.get(playerUUID).syncCharacters(server, messenger, requesterUUID);
             }
             case "selectCharacter" -> {
                 String playerUUID = in.readUTF();
@@ -109,7 +105,7 @@ public final class ProxyCore {
                     case 6 -> pd.setCharacterSkinById(characterUUID, in.readUTF(), in.readBoolean());
                     case 2 -> {
                         pd.setCharacterName(characterUUID, in.readUTF());
-                        pd.updateCharacterList(server, messenger);
+                        pd.syncCharactersToSelf(server, messenger);
                     }
                     case 3 -> {
                         boolean newEnabled = in.readBoolean();
@@ -118,12 +114,12 @@ public final class ProxyCore {
                         if (!newEnabled && character != null) {
                             messenger.send(server, "deleteConfirmed", playerUUID, character.name(), characterUUID);
                         }
-                        pd.updateCharacterList(server, messenger);
+                        pd.syncCharactersToSelf(server, messenger);
                     }
                     case 4 -> pd.setCharacterTags(characterUUID, in.readUTF());
                     case 5 -> {
                         pd.setCharacterGender(characterUUID, in.readUTF());
-                        pd.updateCharacterList(server, messenger);
+                        pd.syncCharactersToSelf(server, messenger);
                     }
                     default -> { /* ignore */ }
                 }
