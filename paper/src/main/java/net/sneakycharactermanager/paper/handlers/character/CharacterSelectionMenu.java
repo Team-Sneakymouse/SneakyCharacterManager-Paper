@@ -36,7 +36,7 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
@@ -114,7 +114,7 @@ public class CharacterSelectionMenu implements Listener {
         }
 
         private void requestCharacterList() {
-            BungeeMessagingUtil.sendByteArray(this.opener, "syncCharacters", playerUUID, opener.getUniqueId().toString() + "|openGUI");
+            ProxyMessagingUtil.sendByteArray(this.opener, "syncCharacters", playerUUID, opener.getUniqueId().toString() + "|openGUI");
         }
 
         private void receivedCharacterList(List<Character> characters) {
@@ -268,7 +268,7 @@ public class CharacterSelectionMenu implements Listener {
             }
 
             if (clickedItem.getType().equals(Material.LIME_STAINED_GLASS_PANE)) {
-                BungeeMessagingUtil.sendByteArray(this.opener, "createNewCharacter", playerUUID);
+                ProxyMessagingUtil.sendByteArray(this.opener, "createNewCharacter", playerUUID);
                 this.player.sendMessage(ChatUtility.convertToComponent("&aCreating a new character... Please Wait..."));
                 this.player.sendMessage(ChatUtility.convertToComponent("&aOnce the character is created, use the /nick and /skin command to customize it!"));
                 this.player.closeInventory();
@@ -291,7 +291,7 @@ public class CharacterSelectionMenu implements Listener {
 
             this.player.sendMessage(ChatUtility.convertToComponent("&aLoading your character... Please Wait..."));
             this.player.closeInventory();
-            BungeeMessagingUtil.sendByteArray(this.opener, "selectCharacter", playerUUID, characterUUID);
+            ProxyMessagingUtil.sendByteArray(this.opener, "selectCharacter", playerUUID, characterUUID);
         }
 
         

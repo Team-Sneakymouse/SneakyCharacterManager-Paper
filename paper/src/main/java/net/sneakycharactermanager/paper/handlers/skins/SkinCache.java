@@ -2,7 +2,7 @@ package net.sneakycharactermanager.paper.handlers.skins;
 
 import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -83,7 +83,7 @@ public final class SkinCache {
                 resolveTimeoutSeconds(), TimeUnit.SECONDS)
                 .whenComplete((res, ex) -> pending.remove(requestId));
 
-        BungeeMessagingUtil.sendByteArray(requester, "resolveSkin",
+        ProxyMessagingUtil.sendByteArray(requester, "resolveSkin",
                 requester == null ? "" : requester.getUniqueId().toString(),
                 requestId, sourceUrl, slim);
         return future;
@@ -131,7 +131,7 @@ public final class SkinCache {
     }
 
     public static void updateCharacterSkin(Player player, String characterUUID, String skinId, boolean slim) {
-        BungeeMessagingUtil.sendByteArray(player, "updateCharacter",
+        ProxyMessagingUtil.sendByteArray(player, "updateCharacter",
                 player.getUniqueId().toString(), characterUUID, 6, skinId, slim);
     }
 
@@ -174,7 +174,7 @@ public final class SkinCache {
 
         static void register(@Nullable Player requester, String skinId, String mojangTextureUrl,
                              String texture, String signature, @Nullable String sourceUrl) {
-            BungeeMessagingUtil.sendByteArray(requester, "registerSkin",
+            ProxyMessagingUtil.sendByteArray(requester, "registerSkin",
                     skinId,
                     mojangTextureUrl == null ? "" : mojangTextureUrl,
                     texture,

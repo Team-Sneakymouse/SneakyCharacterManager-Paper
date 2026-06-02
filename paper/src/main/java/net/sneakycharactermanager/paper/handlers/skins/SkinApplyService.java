@@ -3,7 +3,7 @@ package net.sneakycharactermanager.paper.handlers.skins;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 import org.bukkit.Bukkit;
@@ -149,7 +149,7 @@ public final class SkinApplyService {
                 } else {
                     String resolvedUrl = mojangUrl.isEmpty() ? textureUrlFromProperty(property) : mojangUrl;
                     if (resolvedUrl != null && character != null) {
-                        BungeeMessagingUtil.sendByteArray(player, "updateCharacter",
+                        ProxyMessagingUtil.sendByteArray(player, "updateCharacter",
                                 player.getUniqueId().toString(), characterUUID, 1,
                                 resolvedUrl, "", property.getValue(), property.getSignature(), slim);
                     }
@@ -216,7 +216,7 @@ public final class SkinApplyService {
 
         if (skinId == null || skinId.isEmpty()) {
             if (skinData.getPlayer() != null) {
-                BungeeMessagingUtil.sendByteArray(skinData.getPlayer(), "updateCharacter",
+                ProxyMessagingUtil.sendByteArray(skinData.getPlayer(), "updateCharacter",
                         skinData.getPlayer().getUniqueId().toString(), skinData.getCharacterUUID(), 1,
                         mojangUrl, skinData.getSkinUUID(), property.getValue(), property.getSignature(), skinData.isSlim());
             }

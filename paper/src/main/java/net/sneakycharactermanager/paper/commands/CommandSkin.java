@@ -42,7 +42,7 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterLoader;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSkinChangeEvent;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
@@ -144,7 +144,7 @@ public class CommandSkin extends CommandBase {
 				character.setSkin(state.proxyTextureUrl());
 				character.setTexture(state.proxyTexture());
 				character.setSignature(state.proxySignature());
-				BungeeMessagingUtil.sendByteArray(player, "updateCharacter",
+				ProxyMessagingUtil.sendByteArray(player, "updateCharacter",
 						player.getUniqueId().toString(), character.getCharacterUUID(), 1,
 						state.proxyTextureUrl(), "", state.proxyTexture(), state.proxySignature(), character.isSlim());
 			}
@@ -270,7 +270,7 @@ public class CommandSkin extends CommandBase {
 										SkinCache.register(player, skinId, textureURL, textureValue, signatureValue, textureURL);
 										SkinCache.updateCharacterSkin(player, character.getCharacterUUID(), skinId, isSlim);
 									} else {
-										BungeeMessagingUtil.sendByteArray(player, "updateCharacter",
+										ProxyMessagingUtil.sendByteArray(player, "updateCharacter",
 												player.getUniqueId().toString(), character.getCharacterUUID(), 1,
 												textureURL, "", textureValue, signatureValue, isSlim);
 									}

@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.commands.CommandChar;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 
 public class ConsoleCommandCharTemp extends CommandBaseConsole {
 
@@ -67,7 +67,7 @@ public class ConsoleCommandCharTemp extends CommandBaseConsole {
             return false;
         }
 
-        BungeeMessagingUtil.sendByteArray(player, "tempCharacter", player.getUniqueId().toString(), uuid, args[2]);
+        ProxyMessagingUtil.sendByteArray(player, "tempCharacter", player.getUniqueId().toString(), uuid, args[2]);
         return true;
     }
 
@@ -131,7 +131,7 @@ public class ConsoleCommandCharTemp extends CommandBaseConsole {
             return;
         }
 
-        BungeeMessagingUtil.sendByteArray(requester, "tempCharacter", playerUUID, entry.characterSource, entry.characterID);
+        ProxyMessagingUtil.sendByteArray(requester, "tempCharacter", playerUUID, entry.characterSource, entry.characterID);
     }
 
     private static class TempCharEntry {

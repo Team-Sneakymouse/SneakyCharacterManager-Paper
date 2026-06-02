@@ -27,10 +27,10 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
-public class BungeeMessageListener implements PluginMessageListener {
+public class ProxyMessageListener implements PluginMessageListener {
 	
 	private final Map<String, List<Character>> guiCharacters = new HashMap<>();
 	private final Map<String, Integer> guiExpectedCounts = new HashMap<>();
@@ -191,7 +191,7 @@ public class BungeeMessageListener implements PluginMessageListener {
 				String skinURL = textures.getSkin().toString();
 				boolean slim = textures.getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
 
-				BungeeMessagingUtil.sendByteArray(pl, "defaultSkin", playerUUID, characterUUID, skinURL, slim);
+				ProxyMessagingUtil.sendByteArray(pl, "defaultSkin", playerUUID, characterUUID, skinURL, slim);
 				break;
 			case "deleteConfirmed":
 				playerUUID = messageIn.readUTF();
@@ -343,7 +343,7 @@ public class BungeeMessageListener implements PluginMessageListener {
 
 					ProfileProperty vp = SkinCache.get(playerUUID, vUrl);
 					
-					// If not in memory but we have raw data from Bungee (Uniform variant data: 0:uuid, 1:url, 2:texture, 3:signature)
+					// If not in memory but we have raw data from proxy (Uniform variant data: 0:uuid, 1:url, 2:texture, 3:signature)
 					if (vp == null && vData.length > 2 && vData[2] != null && !vData[2].isEmpty()) {
 						vp = new ProfileProperty("textures", vData[2], vData[3]);
 						SkinCache.put(playerUUID, vUrl, vp);

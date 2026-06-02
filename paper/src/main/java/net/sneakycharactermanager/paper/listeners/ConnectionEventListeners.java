@@ -16,7 +16,7 @@ import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 
 public class ConnectionEventListeners implements Listener {
 
@@ -29,7 +29,7 @@ public class ConnectionEventListeners implements Listener {
         SneakyCharacterManager.getInstance().nametagManager.loadNames(player);
 
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
-            BungeeMessagingUtil.sendByteArray(player, "syncCharacters", player.getUniqueId().toString(), player.getUniqueId().toString());
+            ProxyMessagingUtil.sendByteArray(player, "syncCharacters", player.getUniqueId().toString(), player.getUniqueId().toString());
 
             SneakyCharacterManager.getInstance().skinQueue.updatePriority(player, SkinQueue.PRIO_ONLINE);
 
@@ -42,7 +42,7 @@ public class ConnectionEventListeners implements Listener {
                         if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
                             ConsoleCommandCharTemp.reApply(player);
                         } else {
-                            BungeeMessagingUtil.sendByteArray(player, "playerJoin", player.getUniqueId().toString());
+                            ProxyMessagingUtil.sendByteArray(player, "playerJoin", player.getUniqueId().toString());
                         }
                     }
                 }, 1, 20);

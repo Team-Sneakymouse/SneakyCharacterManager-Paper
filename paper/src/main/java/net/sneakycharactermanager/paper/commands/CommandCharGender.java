@@ -13,7 +13,7 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.Gender;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
 public class CommandCharGender extends CommandBase {
@@ -61,7 +61,7 @@ public class CommandCharGender extends CommandBase {
 		character.setGender(gender);
 		SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
 
-		BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(),
+		ProxyMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(),
 				character.getCharacterUUID(), 5, Gender.toConfigKeyNullable(gender));
 
 		if (gender == null) {

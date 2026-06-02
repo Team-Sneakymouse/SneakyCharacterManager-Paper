@@ -29,7 +29,7 @@ import net.sneakycharactermanager.paper.handlers.nametags.NameTagRefresher;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 	public static final String IDENTIFIER = "sneakycharacters";
@@ -87,7 +87,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharTemp());
 
 		getServer().getMessenger().registerIncomingPluginChannel(this, "sneakymouse:" + IDENTIFIER,
-				new BungeeMessageListener());
+				new ProxyMessageListener());
 		getServer().getMessenger().registerOutgoingPluginChannel(this, "sneakymouse:" + IDENTIFIER);
 
 		getServer().getPluginManager().registerEvents(this, this);
@@ -126,7 +126,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 					Bukkit.getScheduler().cancelTask(taskIdMap.get(player));
 					taskIdMap.remove(player);
 				} else {
-					BungeeMessagingUtil.sendByteArray(player, "playerJoin", player.getUniqueId().toString());
+					ProxyMessagingUtil.sendByteArray(player, "playerJoin", player.getUniqueId().toString());
 				}
 			}, 0, 20);
 

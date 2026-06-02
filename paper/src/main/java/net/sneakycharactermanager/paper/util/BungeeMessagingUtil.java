@@ -13,7 +13,7 @@ import org.bukkit.entity.Player;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 
-public class BungeeMessagingUtil {
+public class ProxyMessagingUtil {
 
 	private static String signMessage(byte[] messageBytes, PrivateKey privateKey) throws Exception {
 		Signature signature = Signature.getInstance("SHA256withRSA");

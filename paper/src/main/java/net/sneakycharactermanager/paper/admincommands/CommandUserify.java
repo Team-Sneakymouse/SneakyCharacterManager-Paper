@@ -1,6 +1,6 @@
 package net.sneakycharactermanager.paper.admincommands;
 
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -27,7 +27,7 @@ public class CommandUserify extends CommandBaseAdmin {
         }
         String characterName = userBuilder.substring(0, userBuilder.length()-1);
 
-        BungeeMessagingUtil.sendByteArray(player, "getAllCharacters", player.getUniqueId().toString(), characterName);
+        ProxyMessagingUtil.sendByteArray(player, "getAllCharacters", player.getUniqueId().toString(), characterName);
         return false;
     }
 }

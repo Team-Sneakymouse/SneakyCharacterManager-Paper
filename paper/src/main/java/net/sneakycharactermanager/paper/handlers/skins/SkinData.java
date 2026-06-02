@@ -5,7 +5,7 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu.CharacterMenuHolder;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 import org.apache.http.Header;
@@ -520,11 +520,11 @@ public class SkinData extends BukkitRunnable {
             SneakyCharacterManager.getInstance().getLogger().info("Skin Update (Cache Persistence): [" + this.player.getName() + "," + characterName + "," + url + "]");
         }
 
-        // Notify Bungee of new uniform variant
+        // Notify proxy of new uniform variant
         if (baseSkinUrl != null && uniformHash != null) {
             String textureUrl = SkinUtil.getTextureUrl(property);
             if (textureUrl != null) {
-                BungeeMessagingUtil.sendByteArray(this.player, "saveUniformVariant", baseSkinUrl, uniformHash, skinUUID, textureUrl, texture, signature);
+                ProxyMessagingUtil.sendByteArray(this.player, "saveUniformVariant", baseSkinUrl, uniformHash, skinUUID, textureUrl, texture, signature);
             }
         }
 

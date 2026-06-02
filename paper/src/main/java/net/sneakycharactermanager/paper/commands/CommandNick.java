@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
 public class CommandNick extends CommandBase {
@@ -89,7 +89,7 @@ public class CommandNick extends CommandBase {
 
         character.setName(nickname);
         SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
-        BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), character.getCharacterUUID(), 2, nickname);
+        ProxyMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), character.getCharacterUUID(), 2, nickname);
         player.sendMessage(ChatUtility.convertToComponent("&eName updated to: " + nickname));
         return true;
     }

@@ -8,7 +8,7 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.util.BungeeMessagingUtil;
+import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 
 public class CommandChar extends CommandBase {
@@ -34,7 +34,7 @@ public class CommandChar extends CommandBase {
                 if (deleteConfirmationMap.containsKey(player)) {
                     String[] s = deleteConfirmationMap.get(player).split(";");
                     if (System.currentTimeMillis() < Long.valueOf(s[0]) + 10000) {
-                        BungeeMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), s[1], 3, false);
+                        ProxyMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), s[1], 3, false);
                         sender.sendMessage(ChatUtility.convertToComponent("&aDeleting character..."));
                         deleteConfirmationMap.remove(player);
                         return true;
@@ -50,7 +50,7 @@ public class CommandChar extends CommandBase {
             } else {
                 String name = String.join(" ", args);
                 player.sendMessage(ChatUtility.convertToComponent("&aLoading character &b`" + name + "`&r&a... Please Wait..."));
-                BungeeMessagingUtil.sendByteArray(player, "selectCharacterByName", player.getUniqueId().toString(), name);
+                ProxyMessagingUtil.sendByteArray(player, "selectCharacterByName", player.getUniqueId().toString(), name);
                 return true;
             }
         }
