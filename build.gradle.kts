@@ -291,6 +291,24 @@ tasks {
         dependsOn(shadowJar)
         minecraftVersion("1.21.4")
     }
+
+    register<Exec>("runBungee") {
+        group = "SneakyCharacterManager"
+        description = "Builds the jar, copies it to the Bungee server plugins folder, and runs BungeeCord."
+        dependsOn("shadowJar")
+        
+        doFirst {
+            val src = file("build/libs/SneakyCharacterManager.jar")
+            val dest = file("/mnt/files/Desktop/Minecraft/bungee/plugins/SneakyCharacterManager.jar")
+            if (src.exists()) {
+                dest.parentFile.mkdirs()
+                src.copyTo(dest, overwrite = true)
+            }
+        }
+        
+        workingDir = file("/mnt/files/Desktop/Minecraft/bungee")
+        commandLine = listOf("java", "-jar", "BungeeCord.jar")
+    }
 }
 
 artifacts {
