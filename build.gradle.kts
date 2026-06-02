@@ -198,8 +198,7 @@ tasks {
         exclude("**/kotlin/**")
         exclude("META-INF/*.kotlin_module")
 
-        archiveBaseName.set("SneakyCharacterManager")
-        archiveClassifier.set("")
+        archiveFileName.set("SneakyCharacterManager.jar")
     }
     compileJava {
         options.release = 21
