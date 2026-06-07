@@ -129,6 +129,9 @@ public class NicknameEntity {
         for (Player tracker : this.player.getTrackedBy()) {
             mgr.refreshNickname(ownerNickname, tracker);
         }
+        if (SneakyCharacterManager.getInstance().getConfig().getBoolean("see-own-nameplate", false)) {
+            mgr.refreshNickname(ownerNickname, this.player);
+        }
     }
 
     public void destroy() {
