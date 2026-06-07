@@ -58,14 +58,6 @@ public final class SkinApplyService {
             applyResolved(player, characterUUID, resolveUrl, result.skinId, result.mojangTextureUrl,
                     property, priority, context);
         } else if (result.status == SkinCache.ResolveStatus.MISS) {
-            if (SkinUtil.isMojangTextureUrl(resolveUrl)) {
-                player.sendMessage(ChatUtility.convertToComponent(
-                        "&4That Mojang skin is not in the global cache (id "
-                                + (result.skinId.isEmpty() ? "unknown" : result.skinId) + ")."));
-                SneakyCharacterManager.getInstance().getLogger().warning(
-                        "Mojang skin cache MISS for " + player.getName() + ": " + resolveUrl);
-                return;
-            }
             queueMineSkin(player, characterUUID, resolveUrl, slimValue, priority, context, result.skinId);
         } else {
             SneakyCharacterManager.getInstance().getLogger().warning(
