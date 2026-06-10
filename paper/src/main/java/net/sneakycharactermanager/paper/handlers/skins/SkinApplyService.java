@@ -56,7 +56,7 @@ public final class SkinApplyService {
                 return;
             }
             applyResolved(player, characterUUID, resolveUrl, result.skinId, result.mojangTextureUrl,
-                    property, priority, context);
+                    property, priority, context, slimValue);
         } else if (result.status == SkinCache.ResolveStatus.MISS) {
             queueMineSkin(player, characterUUID, resolveUrl, slimValue, priority, context, result.skinId);
         } else {
@@ -100,7 +100,7 @@ public final class SkinApplyService {
 
     private static void applyResolved(Player player, String characterUUID, String sourceUrl, String skinId,
                                       String mojangUrl, ProfileProperty property, int priority,
-                                      SkinApplyContext context) {
+                                      SkinApplyContext context, boolean slimFallback) {
         if (context.skullMeta() != null && context.characterHead() != null && context.inventory() != null) {
             SkullMeta skullMeta = context.skullMeta();
             skullMeta.setPlayerProfile(SkinUtil.handleCachedSkin(player, property));
@@ -125,17 +125,18 @@ public final class SkinApplyService {
             }
 
             Character character = Character.get(player);
+            boolean slim = SkinUtil.isSlimModel(property, slimFallback);
             if (character != null && character.getCharacterUUID().equals(characterUUID)) {
                 String resolvedUrl = mojangUrl.isEmpty() ? textureUrlFromProperty(property) : mojangUrl;
                 if (resolvedUrl != null) {
                     character.setSkin(resolvedUrl);
                     character.setTexture(property.getValue());
                     character.setSignature(property.getSignature());
+                    character.setSlim(slim);
                 }
             }
 
             if (context.updateProxyCharacter()) {
-                boolean slim = character != null && character.isSlim();
                 if (!skinId.isEmpty()) {
                     SkinCache.updateCharacterSkin(player, characterUUID, skinId, slim);
                 } else {

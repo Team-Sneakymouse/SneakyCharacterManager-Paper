@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.io.File;
 import java.io.FileInputStream;
 import java.security.MessageDigest;
+import org.jetbrains.annotations.Nullable;
 
 public class SkinUtil {
 
@@ -62,12 +63,41 @@ public class SkinUtil {
 	public static String getTextureUrl(ProfileProperty property) {
 		if (property == null || !property.getName().equals("textures")) return null;
 		try {
-			String decoded = new String(Base64.getDecoder().decode(property.getValue()), StandardCharsets.UTF_8);
-			JsonObject json = JsonParser.parseString(decoded).getAsJsonObject();
-			return json.getAsJsonObject("textures").getAsJsonObject("SKIN").get("url").getAsString();
+			JsonObject skin = skinJsonFromProperty(property);
+			if (skin == null) return null;
+			return skin.get("url").getAsString();
 		} catch (Exception e) {
 			return null;
 		}
+	}
+
+	/**
+	 * Reads {@code textures.SKIN.metadata.model} from a signed texture property.
+	 * Missing {@code metadata} or {@code model} means classic (not slim).
+	 *
+	 * @param fallbackIfUnparseable used when the property cannot be decoded
+	 */
+	public static boolean isSlimModel(ProfileProperty property, boolean fallbackIfUnparseable) {
+		try {
+			JsonObject skin = skinJsonFromProperty(property);
+			if (skin == null) return fallbackIfUnparseable;
+			if (!skin.has("metadata") || skin.get("metadata").isJsonNull()) return false;
+			JsonObject metadata = skin.getAsJsonObject("metadata");
+			if (!metadata.has("model") || metadata.get("model").isJsonNull()) return false;
+			return "slim".equalsIgnoreCase(metadata.get("model").getAsString());
+		} catch (Exception e) {
+			return fallbackIfUnparseable;
+		}
+	}
+
+	@Nullable
+	private static JsonObject skinJsonFromProperty(ProfileProperty property) {
+		if (property == null || !property.getName().equals("textures")) return null;
+		String decoded = new String(Base64.getDecoder().decode(property.getValue()), StandardCharsets.UTF_8);
+		JsonObject json = JsonParser.parseString(decoded).getAsJsonObject();
+		JsonObject textures = json.getAsJsonObject("textures");
+		if (textures == null || !textures.has("SKIN")) return null;
+		return textures.getAsJsonObject("SKIN");
 	}
 
 	public static String getFileHash(File file) {
