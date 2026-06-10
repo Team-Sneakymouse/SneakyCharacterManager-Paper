@@ -110,13 +110,17 @@ public class CharacterLoader {
 	 * the resulting skin state uses that label in chat (hover / re-apply text).
 	 */
 	public static void updateSkin(Player player, String characterUUID, String url, Boolean slim, @Nullable String skinStateName) {
+		updateSkin(player, characterUUID, url, slim, skinStateName, SkinQueue.PRIO_SKIN);
+	}
+
+	public static void updateSkin(Player player, String characterUUID, String url, Boolean slim, @Nullable String skinStateName, int priority) {
 		String sourceUrl = SkinUtil.isMojangTextureUrl(url) ? SkinUtil.normalizeMojangTextureUrl(url) : url;
 		SkinApplyContext ctx = skinStateName != null && !skinStateName.isBlank()
 				? SkinApplyContext.withSkinStateLabel(skinStateName.trim())
 				: SkinApplyContext.defaults();
 
 		if (slim != null) {
-			SkinApplyService.requestSkin(player, characterUUID, sourceUrl, slim, SkinQueue.PRIO_SKIN, ctx);
+			SkinApplyService.requestSkin(player, characterUUID, sourceUrl, slim, priority, ctx);
 			return;
 		}
 
@@ -124,7 +128,7 @@ public class CharacterLoader {
 		if (SkinUtil.isMojangTextureUrl(sourceUrl)) {
 			boolean slimFromProfile = player.getPlayerProfile().getTextures().getSkinModel()
 					.equals(PlayerTextures.SkinModel.SLIM);
-			SkinApplyService.requestSkin(player, characterUUID, sourceUrl, slimFromProfile, SkinQueue.PRIO_SKIN, ctx);
+			SkinApplyService.requestSkin(player, characterUUID, sourceUrl, slimFromProfile, priority, ctx);
 			return;
 		}
 
@@ -132,12 +136,12 @@ public class CharacterLoader {
 		Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
 			checkSlimThenSetSkin(sourceUrl,
 					playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM),
-					player, characterUUID, ctx);
+					player, characterUUID, ctx, priority);
 		});
 	}
 
 	private static void checkSlimThenSetSkin(String url, boolean slim, Player player, String characterUUID,
-	                                         SkinApplyContext ctx) {
+	                                         SkinApplyContext ctx, int priority) {
 		try {
 			HttpClient httpClient = HttpClient.newHttpClient();
 			HttpRequest request = HttpRequest.newBuilder().uri(
@@ -163,7 +167,7 @@ public class CharacterLoader {
 		} finally {
 			final boolean slimFinal = slim;
 			Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () ->
-					SkinApplyService.requestSkin(player, characterUUID, url, slimFinal, SkinQueue.PRIO_SKIN, ctx));
+					SkinApplyService.requestSkin(player, characterUUID, url, slimFinal, priority, ctx));
 		}
 	}
 
