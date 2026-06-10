@@ -124,14 +124,6 @@ public class CharacterLoader {
 			return;
 		}
 
-		// Mojang texture URLs are resolved via the proxy global cache — no PNG pre-download for slim detection.
-		if (SkinUtil.isMojangTextureUrl(sourceUrl)) {
-			boolean slimFromProfile = player.getPlayerProfile().getTextures().getSkinModel()
-					.equals(PlayerTextures.SkinModel.SLIM);
-			SkinApplyService.requestSkin(player, characterUUID, sourceUrl, slimFromProfile, priority, ctx);
-			return;
-		}
-
 		PlayerProfile playerProfile = player.getPlayerProfile();
 		Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
 			checkSlimThenSetSkin(sourceUrl,
