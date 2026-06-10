@@ -214,10 +214,10 @@ Default project version is `1.0-SNAPSHOT`.
 ./gradlew releaseToCentral
 ```
 
-### 3) Release publish (example: tag `v1.6.0`)
+### 3) Release publish (example: tag `v1.6.1`)
 
 ```bash
-./gradlew releaseToCentral -PreleaseVersion=1.6.0 --rerun-tasks
+./gradlew releaseToCentral -PreleaseVersion=1.6.1 --rerun-tasks
 ```
 
 `--rerun-tasks` is recommended for release retries to ensure fresh signature artifacts.
@@ -242,9 +242,9 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.github.team-sneakymouse:sneakycharactermanager-paper:1.6.0")
+    compileOnly("io.github.team-sneakymouse:sneakycharactermanager-paper:1.6.1")
     // or bungee module:
-    // compileOnly("io.github.team-sneakymouse:sneakycharactermanager-bungee:1.6.0")
+    // compileOnly("io.github.team-sneakymouse:sneakycharactermanager-bungee:1.6.1")
 }
 ```
 
@@ -271,8 +271,8 @@ repositories {
 }
 
 dependencies {
-    compileOnly "io.github.team-sneakymouse:sneakycharactermanager-paper:1.6.0"
-    // compileOnly "io.github.team-sneakymouse:sneakycharactermanager-bungee:1.6.0"
+    compileOnly "io.github.team-sneakymouse:sneakycharactermanager-paper:1.6.1"
+    // compileOnly "io.github.team-sneakymouse:sneakycharactermanager-bungee:1.6.1"
 }
 ```
 
@@ -298,7 +298,7 @@ Release:
   <dependency>
     <groupId>io.github.team-sneakymouse</groupId>
     <artifactId>sneakycharactermanager-paper</artifactId>
-    <version>1.6.0</version>
+    <version>1.6.1</version>
     <scope>provided</scope>
   </dependency>
 </dependencies>
