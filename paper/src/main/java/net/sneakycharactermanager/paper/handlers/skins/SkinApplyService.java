@@ -57,16 +57,8 @@ public final class SkinApplyService {
             }
             applyResolved(player, characterUUID, resolveUrl, result.skinId, result.mojangTextureUrl,
                     property, priority, context, slimValue);
-        } else if (result.status == SkinCache.ResolveStatus.MISS) {
-            queueMineSkin(player, characterUUID, resolveUrl, slimValue, priority, context, result.skinId);
         } else {
-            SneakyCharacterManager.getInstance().getLogger().warning(
-                    "Skin resolve error for " + player.getName() + ": " + result.errorMessage);
-            player.sendMessage(ChatUtility.convertToComponent(
-                    "&4Could not resolve skin from cache. Try again in a moment."));
-            if (!SkinUtil.isMojangTextureUrl(resolveUrl)) {
-                queueMineSkin(player, characterUUID, resolveUrl, slimValue, priority, context);
-            }
+            queueMineSkin(player, characterUUID, resolveUrl, slimValue, priority, context, result.skinId);
         }
     }
 
