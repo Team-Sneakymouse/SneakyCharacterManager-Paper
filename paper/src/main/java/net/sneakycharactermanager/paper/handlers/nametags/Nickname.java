@@ -69,6 +69,14 @@ public class Nickname {
         nametag.sendOff(requester);
     }
 
+    public void showHiddenName(Player requester) {
+        nametag.sendHiddenOn(requester);
+    }
+
+    public String getOwnerUuid() {
+        return uuid;
+    }
+
     public void setTalking(boolean talking) {
         nametag.setTalking(talking);
     }

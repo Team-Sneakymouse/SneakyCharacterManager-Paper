@@ -57,6 +57,7 @@ public class ConnectionEventListeners implements Listener {
         Player player = event.getPlayer();
             
         //Un-Nick player who is disconnecting from the server
+        SneakyCharacterManager.getInstance().nametagManager.clearHidingOwnName(player);
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
 
         //SkinCache.remove(player.getUniqueId().toString());

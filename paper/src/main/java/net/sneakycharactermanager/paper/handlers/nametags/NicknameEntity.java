@@ -34,6 +34,8 @@ public class NicknameEntity {
     private ClientboundSetEntityDataPacket packetOn;
     private ClientboundSetEntityDataPacket packetCharacterTalking;
     private ClientboundSetEntityDataPacket packetOnTalking;
+    private ClientboundSetEntityDataPacket packetHiddenOn;
+    private ClientboundSetEntityDataPacket packetHiddenOnTalking;
     private boolean talking = false;
     private static final int COLOR_TALKING = Color.fromARGB(160, 255, 220, 100).asARGB();
     private static final int COLOR_DEFAULT_BACKGROUND = 956301312;
@@ -55,6 +57,15 @@ public class NicknameEntity {
         player.addPassenger(mounted);
 
         packetOff = makePacket(Component.text(" "), 0.01F, 0);
+
+        packetHiddenOn = makePacket(
+            ChatUtility.convertToComponent("<gray>[ Hidden ]<newline><gray>[" + player.getName() + "]"),
+            0.2F,
+            COLOR_DEFAULT_BACKGROUND);
+        packetHiddenOnTalking = makePacket(
+            ChatUtility.convertToComponent("<gray>[ Hidden ] \uD83D\uDD0A<newline><gold>[" + player.getName() + "]"),
+            0.2F,
+            COLOR_TALKING);
     }
 
     public void updatePackets(String name) {
@@ -113,6 +124,10 @@ public class NicknameEntity {
 
     public void sendOn(Player requester) {
         send(talking ? packetOnTalking : packetOn, requester);
+    }
+
+    public void sendHiddenOn(Player requester) {
+        send(talking ? packetHiddenOnTalking : packetHiddenOn, requester);
     }
 
     private void send(ClientboundSetEntityDataPacket packet, Player requester) {

@@ -17,6 +17,7 @@ public class NametagManager {
 
     private final HashMap<String, Boolean> isShowingNameplates;
     private final List<String> showingRealNames;
+    private final Set<String> hidingOwnName;
 
     private final Map<String, Nickname> nicknames;
 
@@ -25,6 +26,7 @@ public class NametagManager {
 
         isShowingNameplates = new HashMap<>();
         showingRealNames = new ArrayList<>();
+        hidingOwnName = new HashSet<>();
     }
 
     /**
@@ -80,12 +82,18 @@ public class NametagManager {
     public void refreshNickname(Nickname name, Player requester) {
         String requesterUUID = requester.getUniqueId().toString();
 
-        if (showingRealNames.contains(requesterUUID)) {
-            name.showRealName(requester, true);
-        } else if (isShowingNameplates.getOrDefault(requesterUUID, true)) {
-            name.showRealName(requester, false);
-        } else {
+        if (!isShowingNameplates.getOrDefault(requesterUUID, true)) {
             name.hideName(requester);
+        } else if (hidingOwnName.contains(name.getOwnerUuid())) {
+            if (showingRealNames.contains(requesterUUID)) {
+                name.showHiddenName(requester);
+            } else {
+                name.hideName(requester);
+            }
+        } else if (showingRealNames.contains(requesterUUID)) {
+            name.showRealName(requester, true);
+        } else {
+            name.showRealName(requester, false);
         }
     }
 
@@ -106,9 +114,31 @@ public class NametagManager {
             isShowingNameplates.put(requester.getUniqueId().toString(), true);
             showingRealNames.remove(requester.getUniqueId().toString());
         }
-        for(Nickname name : nicknames.values()) {
-            name.showRealName(requester, enabled);
+        for (Nickname name : nicknames.values()) {
+            refreshNickname(name, requester);
         }
+    }
+
+    public void setHidingOwnName(Player player, boolean hide) {
+        String uuid = player.getUniqueId().toString();
+        if (hide) {
+            hidingOwnName.add(uuid);
+        } else {
+            hidingOwnName.remove(uuid);
+        }
+
+        Nickname nickname = nicknames.get(uuid);
+        if (nickname != null) {
+            refreshNicknames(player, nickname, null);
+        }
+    }
+
+    public boolean isHidingOwnName(Player player) {
+        return hidingOwnName.contains(player.getUniqueId().toString());
+    }
+
+    public void clearHidingOwnName(Player player) {
+        hidingOwnName.remove(player.getUniqueId().toString());
     }
 
     /**
