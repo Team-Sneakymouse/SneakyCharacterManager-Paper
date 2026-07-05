@@ -15,17 +15,12 @@ import me.clip.placeholderapi.PlaceholderAPI;
  * */
 public class NametagManager {
 
-    private final HashMap<String, Boolean> isShowingNameplates;
-    private final List<String> showingRealNames;
     private final Set<String> hidingOwnName;
 
     private final Map<String, Nickname> nicknames;
 
     public NametagManager() {
         nicknames = new HashMap<>();
-
-        isShowingNameplates = new HashMap<>();
-        showingRealNames = new ArrayList<>();
         hidingOwnName = new HashSet<>();
     }
 
@@ -80,42 +75,43 @@ public class NametagManager {
     }
 
     public void refreshNickname(Nickname name, Player requester) {
-        String requesterUUID = requester.getUniqueId().toString();
+        refreshNickname(name, requester, NamesPreferenceHandler.get(requester));
+    }
 
-        if (!isShowingNameplates.getOrDefault(requesterUUID, true)) {
-            name.hideName(requester);
-        } else if (hidingOwnName.contains(name.getOwnerUuid())) {
-            if (showingRealNames.contains(requesterUUID)) {
-                name.showHiddenName(requester);
-            } else {
-                name.hideName(requester);
+    public void refreshNickname(Nickname name, Player requester, NamesPreference preference) {
+        switch (preference) {
+            case OFF -> name.hideName(requester);
+            case ON -> {
+                if (hidingOwnName.contains(name.getOwnerUuid())) {
+                    name.showHiddenName(requester);
+                } else {
+                    name.showRealName(requester, true);
+                }
             }
-        } else if (showingRealNames.contains(requesterUUID)) {
-            name.showRealName(requester, true);
-        } else {
-            name.showRealName(requester, false);
+            case CHARACTER -> {
+                if (hidingOwnName.contains(name.getOwnerUuid())) {
+                    name.hideName(requester);
+                } else {
+                    name.showRealName(requester, false);
+                }
+            }
         }
     }
 
-    /**
-     * Create a localized nickname for the requested player to see!
-     * Currently, this just shows the 'real' name of all nicknamed players!
-     * @param requester Who requested the localized nickname change?
-     * @param enabled Are they enabling or disabling the feature?
-     * @deprecated Going to change to 'showRealName' instead of createLocalized
-     *               May use "createLocalized" as a sub function for locally changing a players nickname.
-     * */
-    @Deprecated
-    public void createLocalized(Player requester, boolean enabled) {
-        if (enabled) {
-            isShowingNameplates.put(requester.getUniqueId().toString(), true);
-            if (!showingRealNames.contains(requester.getUniqueId().toString())) showingRealNames.add(requester.getUniqueId().toString());
-        }else{
-            isShowingNameplates.put(requester.getUniqueId().toString(), true);
-            showingRealNames.remove(requester.getUniqueId().toString());
-        }
+    public void applyNamesPreference(Player requester) {
+        applyNamesPreference(requester, NamesPreferenceHandler.get(requester));
+    }
+
+    public void applyNamesPreference(Player requester, NamesPreference preference) {
         for (Nickname name : nicknames.values()) {
-            refreshNickname(name, requester);
+            refreshNickname(name, requester, preference);
+        }
+
+        if (SneakyCharacterManager.getInstance().getConfig().getBoolean("see-own-nameplate", false)) {
+            Nickname own = nicknames.get(requester.getUniqueId().toString());
+            if (own != null) {
+                refreshNickname(own, requester, preference);
+            }
         }
     }
 
@@ -153,41 +149,12 @@ public class NametagManager {
     }
 
     /**
-     * Hide nametags for the requested player
-     * @param requester Player who wishes to change hidden name state
-     * @param state State of hidden names
-     * */
-    public void hideNames(Player requester, boolean state) {
-        if (state) {
-            isShowingNameplates.put(requester.getUniqueId().toString(), false);
-            showingRealNames.remove(requester.getUniqueId().toString());
-
-            
-            for(Nickname nickname : nicknames.values()) {
-                nickname.hideName(requester);
-            }
-        }
-        else {
-            isShowingNameplates.put(requester.getUniqueId().toString(), true);
-        }
-    }
-
-    /**
      * Load all active nicknames for a player.
      * Required because the nickname entities are fake, they do not exist on player connect
      * @param player Player to load names for
      * */
     public void loadNames(Player player) {
-        if(!isShowingNameplates.getOrDefault(player.getUniqueId().toString(), true)){
-            hideNames(player, true);
-        }else{
-            hideNames(player, false);
-            if(showingRealNames.contains(player.getUniqueId().toString())){
-                createLocalized(player, true);
-            }else{
-                createLocalized(player, false);
-            }
-        }
+        applyNamesPreference(player);
     }
 
     /**

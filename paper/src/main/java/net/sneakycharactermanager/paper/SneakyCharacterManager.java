@@ -42,6 +42,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 	private static Map<Player, Integer> taskIdMap = new HashMap<>();
 	public boolean papiActive = false;
+	public boolean luckPermsActive = false;
 
 	public NametagManager nametagManager;
 	public CharacterSelectionMenu selectionMenu;
@@ -108,6 +109,9 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".admin.command.*"));
 		getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".admin.bypass.*"));
 		getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".skinfetch.others"));
+		getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".names.on"));
+		getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".names.off"));
+		getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".names.character"));
 
 		if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
 			papiActive = true;
@@ -115,6 +119,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		}
 
 		if (Bukkit.getPluginManager().getPlugin("LuckPerms") != null) {
+			luckPermsActive = true;
 			new ContextCalculatorCharacterTag().register();
 		}
 
