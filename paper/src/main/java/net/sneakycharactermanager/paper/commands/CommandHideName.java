@@ -48,11 +48,6 @@ public class CommandHideName extends CommandBase {
         }
 
         SneakyCharacterManager.getInstance().nametagManager.setHidingOwnName(player, hide);
-        if (hide) {
-            player.sendMessage(ChatUtility.convertToComponent("&eYour character name is now hidden."));
-        } else {
-            player.sendMessage(ChatUtility.convertToComponent("&eYour character name is now visible."));
-        }
 
         return true;
     }
