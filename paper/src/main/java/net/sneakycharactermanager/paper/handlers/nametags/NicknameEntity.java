@@ -20,7 +20,7 @@ import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.network.syncher.SynchedEntityData.DataValue;
 import net.minecraft.world.entity.Entity.RemovalReason;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 
@@ -93,7 +93,7 @@ public class NicknameEntity {
     private ClientboundSetEntityDataPacket makePacket(Component name, float height, int backgroundColor) {
         net.minecraft.world.entity.Display.TextDisplay c = (net.minecraft.world.entity.Display.TextDisplay) ((CraftEntity) mounted).getHandle();
 
-        net.minecraft.world.entity.Display.TextDisplay temp = new net.minecraft.world.entity.Display.TextDisplay(EntityType.TEXT_DISPLAY, ((CraftPlayer) player).getHandle().level());
+        net.minecraft.world.entity.Display.TextDisplay temp = new net.minecraft.world.entity.Display.TextDisplay(EntityTypes.TEXT_DISPLAY, ((CraftPlayer) player).getHandle().level());
 
         temp.setText(PaperAdventure.asVanilla(name));
         temp.setTransformation(new com.mojang.math.Transformation(new Vector3f(0F,height,0F), new Quaternionf(), new Vector3f(1), new Quaternionf()));

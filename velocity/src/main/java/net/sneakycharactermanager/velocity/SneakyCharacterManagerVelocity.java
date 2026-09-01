@@ -23,7 +23,7 @@ import java.util.UUID;
 @Plugin(
         id = "sneakycharactermanager",
         name = "SneakyCharacterManager",
-        version = "1.0",
+        version = BuildVersion.VALUE,
         authors = {"Team Sneakymouse"}
 )
 public final class SneakyCharacterManagerVelocity {

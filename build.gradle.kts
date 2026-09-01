@@ -2,7 +2,9 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.util.Base64
 import java.util.Properties
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
+import org.gradle.language.jvm.tasks.ProcessResources
 
 val localGradleProperties = Properties().apply {
     val localPropsFile = rootDir.resolve(".gradle/gradle.properties")
@@ -10,7 +12,6 @@ val localGradleProperties = Properties().apply {
         localPropsFile.inputStream().use { load(it) }
     }
 }
-
 fun localGradleProperty(name: String): String = localGradleProperties.getProperty(name)?.trim().orEmpty()
 
 fun resolveConfigValue(propertyName: String, envName: String? = null, defaultValue: String = ""): String {
@@ -30,9 +31,8 @@ fun resolveConfigValue(propertyName: String, envName: String? = null, defaultVal
 
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "1.8.10"
-    id("com.github.johnrengelman.shadow") version "8.1.0"
-    id("xyz.jpenilla.run-paper") version "2.3.1"
+    id("com.gradleup.shadow") version "9.2.2"
+    id("xyz.jpenilla.run-paper") version "3.0.2"
 }
 
 val pomName = providers.gradleProperty("POM_NAME").orElse("SneakyCharacterManager")
@@ -59,7 +59,8 @@ val sonatypePassword = resolveConfigValue("sonatypePassword", "SONATYPE_PASSWORD
 val centralPortalNamespace = resolveConfigValue("centralPortalNamespace", defaultValue = "io.github.team-sneakymouse")
 val signingKey = resolveConfigValue("signingKey", "SIGNING_KEY")
 val signingPassword = resolveConfigValue("signingPassword", "SIGNING_PASSWORD")
-val releaseVersion = resolveConfigValue("releaseVersion", defaultValue = "1.0-SNAPSHOT")
+val pluginVersion = resolveConfigValue("pluginVersion", defaultValue = "1.0.0")
+val releaseVersion = resolveConfigValue("releaseVersion", defaultValue = pluginVersion)
 
 allprojects {
     group = "io.github.team-sneakymouse"
@@ -67,6 +68,7 @@ allprojects {
 
     repositories {
         mavenCentral()
+        maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://maven.maxhenkel.de/repository/public")
     }
 }
@@ -87,14 +89,17 @@ dependencies {
 }
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
 }
 
 subprojects {
-    apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "java")
     apply(plugin = "maven-publish")
     apply(plugin = "signing")
+
+    extensions.getByType<SourceSetContainer>().named("main") {
+        resources.srcDir("src/resources")
+    }
 
     repositories {
         mavenCentral()
@@ -108,7 +113,7 @@ subprojects {
     }
 
     java {
-        toolchain.languageVersion = JavaLanguageVersion.of(21)
+        toolchain.languageVersion = JavaLanguageVersion.of(25)
         withSourcesJar()
         withJavadocJar()
     }
@@ -117,6 +122,12 @@ subprojects {
         // Keep generating javadocs for Central while avoiding hard failure on legacy/missing tags.
         isFailOnError = false
         (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:none", "-quiet")
+    }
+
+    tasks.withType<ProcessResources>().configureEach {
+        filesMatching(listOf("paper-plugin.yml", "bungee.yml", "velocity-plugin.json")) {
+            expand("pluginVersion" to pluginVersion)
+        }
     }
 
     afterEvaluate {
@@ -192,16 +203,17 @@ tasks {
         // Include the class files + standard resources from subprojects
         from(subprojects.map { it.extensions.getByType<SourceSetContainer>()["main"].output })
 
-        // Include any non-standard resources folders used by this repo
-        from(subprojects.map { it.file("src/resources") })
-
         exclude("**/kotlin/**")
         exclude("META-INF/*.kotlin_module")
+
+        filesMatching(listOf("paper-plugin.yml", "bungee.yml", "velocity-plugin.json")) {
+            expand("pluginVersion" to pluginVersion)
+        }
 
         archiveFileName.set("SneakyCharacterManager.jar")
     }
     compileJava {
-        options.release = 21
+        options.release = 25
     }
     build {
         dependsOn(subprojects.map { it.tasks.named("publishToMavenLocal") })
@@ -288,7 +300,7 @@ tasks {
     }
     runServer {
         dependsOn(shadowJar)
-        minecraftVersion("1.21.4")
+        minecraftVersion("26.2")
     }
 
     register<Exec>("runBungee") {
@@ -308,8 +320,4 @@ tasks {
         workingDir = file("/mnt/files/Desktop/Minecraft/bungee")
         commandLine = listOf("java", "-jar", "BungeeCord.jar")
     }
-}
-
-artifacts {
-    add("archives", tasks.named("shadowJar"))
 }

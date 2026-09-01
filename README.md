@@ -14,8 +14,8 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 
 ## Runtime requirements
 
-- Java 21
-- Paper server(s) (paperweight/dev setup targets 1.21.4)
+- Java 25
+- Paper server(s) (paperweight/dev setup targets 26.2)
 - BungeeCord or Velocity proxy
 - Optional soft dependencies on Paper side:
   - PlaceholderAPI
@@ -208,7 +208,9 @@ Notes:
 
 ### 2) Snapshot publish
 
-Default project version is `1.0-SNAPSHOT`.
+The plugin version is defined once in `gradle.properties` as `pluginVersion`.
+The default project publication version is also `<pluginVersion>`; use
+`-PreleaseVersion=...` only when an explicit publishing override is needed.
 
 ```bash
 ./gradlew releaseToCentral

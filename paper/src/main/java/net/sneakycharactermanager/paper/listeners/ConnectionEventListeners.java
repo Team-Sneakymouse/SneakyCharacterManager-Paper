@@ -1,13 +1,12 @@
 package net.sneakycharactermanager.paper.listeners;
 
-import java.util.*;
-
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.commands.CommandChar;
@@ -19,8 +18,6 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 
 public class ConnectionEventListeners implements Listener {
-
-    private static Map<Player, Integer> taskIdMap = new HashMap<>();
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
@@ -34,20 +31,20 @@ public class ConnectionEventListeners implements Listener {
             SneakyCharacterManager.getInstance().skinQueue.updatePriority(player, SkinQueue.PRIO_ONLINE);
 
             if (!ConsoleCommandCharDisable.isPlayerCharDisabled(player.getUniqueId().toString())) {
-                int taskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(SneakyCharacterManager.getInstance(), () -> {
-                    if (!player.isOnline() || Character.isPlayedMapped(player)) {
-                        Bukkit.getScheduler().cancelTask(taskIdMap.get(player));
-                        taskIdMap.remove(player);
-                    } else {
-                        if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
-                            ConsoleCommandCharTemp.reApply(player);
-                        } else {
-                            ProxyMessagingUtil.sendByteArray(player, "playerJoin", player.getUniqueId().toString());
-                        }
+                new BukkitRunnable() {
+                    private final PendingCharacterJoinTask pendingJoin = new PendingCharacterJoinTask(
+                            player,
+                            this::cancel,
+                            () -> Character.isPlayedMapped(player),
+                            () -> ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString()),
+                            () -> ConsoleCommandCharTemp.reApply(player),
+                            () -> ProxyMessagingUtil.sendByteArray(player, "playerJoin", player.getUniqueId().toString()));
+
+                    @Override
+                    public void run() {
+                        pendingJoin.run();
                     }
-                }, 1, 20);
-            
-                taskIdMap.put(player, taskId);
+                }.runTaskTimer(SneakyCharacterManager.getInstance(), 1, 20);
             }
         }, 5);
     }

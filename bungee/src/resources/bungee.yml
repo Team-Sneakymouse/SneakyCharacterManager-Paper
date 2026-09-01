@@ -1,4 +1,4 @@
 name: SneakyCharacterManager
 main: net.sneakycharactermanager.bungee.SneakyCharacterManager
-version: 1.0
+version: ${pluginVersion}
 author: Team Sneakymouse

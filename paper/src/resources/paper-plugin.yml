@@ -1,10 +1,10 @@
 name: SneakyCharacterManager
-version: 1.0.0
+version: ${pluginVersion}
 main: net.sneakycharactermanager.paper.SneakyCharacterManager
 description: Paper/Bungee/Velocity plugin for switching characters in DvZ and LoM
 author: Team Sneakymouse
 website: https://rawb.tv
-api-version: 1.19
+api-version: '26.2'
 
 dependencies:
   server:
