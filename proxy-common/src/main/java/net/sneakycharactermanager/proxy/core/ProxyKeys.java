@@ -1,5 +1,6 @@
 package net.sneakycharactermanager.proxy.core;
 
+import net.sneakycharactermanager.common.io.AtomicFiles;
 import net.sneakycharactermanager.proxy.common.ProxyLogger;
 
 import java.io.*;
@@ -36,11 +37,12 @@ public final class ProxyKeys {
             keyPairGenerator.initialize(2048);
             KeyPair keyPair = keyPairGenerator.generateKeyPair();
 
-            keyFile.getParentFile().mkdirs();
-            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(keyFile))) {
+            ByteArrayOutputStream serializedKeys = new ByteArrayOutputStream();
+            try (ObjectOutputStream oos = new ObjectOutputStream(serializedKeys)) {
                 oos.writeObject(keyPair.getPrivate());
                 oos.writeObject(keyPair.getPublic());
             }
+            AtomicFiles.write(keyFile.toPath(), serializedKeys.toByteArray());
 
             logger.info("Generated new keys and saved to " + keyFile.getAbsolutePath());
             return new ProxyKeys(keyPair.getPrivate(), keyPair.getPublic());

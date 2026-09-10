@@ -6,6 +6,7 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 
 ## Project layout
 
+- `common/`: filesystem helpers shared by Paper and proxy persistence.
 - `paper/`: gameplay-side plugin (commands, nicknames, skins, placeholders, local character state files).
 - `proxy-common/`: shared proxy core (platform-agnostic logic, YAML persistence, RSA signing, character data, skin caching).
 - `bungee/`: BungeeCord adapter (thin wrapper that delegates to `proxy-common`).
@@ -178,10 +179,13 @@ When `/skin state` changes the skin to one with different proxy-side values (URL
 
 This repository is configured to publish:
 
+- `io.github.team-sneakymouse:sneakycharactermanager-common:<version>`
 - `io.github.team-sneakymouse:sneakycharactermanager-paper:<version>`
+- `io.github.team-sneakymouse:sneakycharactermanager-proxy-common:<version>`
 - `io.github.team-sneakymouse:sneakycharactermanager-bungee:<version>`
+- `io.github.team-sneakymouse:sneakycharactermanager-velocity:<version>`
 
-The single JAR produced by `./gradlew build` bundles Paper, BungeeCord, Velocity, and proxy-common modules together and can be installed on any supported platform.
+The single JAR produced by `./gradlew build` bundles all modules together and can be installed on any supported platform.
 
 ### 1) Credentials and signing setup
 

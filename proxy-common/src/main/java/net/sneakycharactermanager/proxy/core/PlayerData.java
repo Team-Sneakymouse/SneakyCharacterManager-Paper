@@ -9,6 +9,11 @@ import net.sneakycharactermanager.proxy.common.YamlFiles;
 import java.io.File;
 import java.util.*;
 
+/**
+ * Owns one player's in-memory character state and persisted YAML snapshot.
+ * Public operations synchronize snapshot loading, mutation, and saving so an
+ * older operation cannot overwrite a newer one within this proxy process.
+ */
 public final class PlayerData {
 
     private final ProxyPlatform platform;
@@ -152,7 +157,7 @@ public final class PlayerData {
         YamlFiles.save(playerFile, root, platform.logger());
     }
 
-    public void loadCharacter(ProxyServerConnection server, ProxyMessenger messenger, String characterUUID, boolean forced) {
+    public synchronized void loadCharacter(ProxyServerConnection server, ProxyMessenger messenger, String characterUUID, boolean forced) {
         storeCharacters();
         CharacterData character = characterMap.get(characterUUID);
         if (character == null) {
@@ -174,7 +179,7 @@ public final class PlayerData {
         syncCharactersToSelf(server, messenger);
     }
 
-    public void loadTempCharacter(ProxyServerConnection server, ProxyMessenger messenger, String requesterUUID, String characterUUID) {
+    public synchronized void loadTempCharacter(ProxyServerConnection server, ProxyMessenger messenger, String requesterUUID, String characterUUID) {
         storeCharacters();
         CharacterData character = characterMap.get(characterUUID);
         if (character == null) {
@@ -184,20 +189,20 @@ public final class PlayerData {
         messenger.send(server, "loadTempCharacter", requesterUUID, character, playerUUID);
     }
 
-    public void loadLastPlayedCharacter(ProxyServerConnection server, ProxyMessenger messenger) {
+    public synchronized void loadLastPlayedCharacter(ProxyServerConnection server, ProxyMessenger messenger) {
         loadCharacter(server, messenger, lastPlayedCharacter, true);
     }
 
-    public CharacterData getCharacter(String characterUUID) {
+    public synchronized CharacterData getCharacter(String characterUUID) {
         storeCharacters();
         return characterMap.get(characterUUID);
     }
 
-    public String createNewCharacter(String name) {
+    public synchronized String createNewCharacter(String name) {
         return createNewCharacter(UUID.randomUUID().toString(), name, "", "", false);
     }
 
-    public String createNewCharacter(String uuid, String name, String skin, String skinUUID, boolean slim) {
+    public synchronized String createNewCharacter(String uuid, String name, String skin, String skinUUID, boolean slim) {
         storeCharacters();
         CharacterData character = new CharacterData(uuid, true, name, "", skin, skinUUID, "", "", slim, "", "");
         characterMap.put(character.uuid(), character);
@@ -205,7 +210,7 @@ public final class PlayerData {
         return character.uuid();
     }
 
-    public void setCharacterSkin(String characterUUID, String skin, String skinUUID, String texture, String signature, boolean slim) {
+    public synchronized void setCharacterSkin(String characterUUID, String skin, String skinUUID, String texture, String signature, boolean slim) {
         storeCharacters();
         CharacterData character = characterMap.get(characterUUID);
         if (character == null) {
@@ -217,7 +222,7 @@ public final class PlayerData {
         saveCharacter(character);
     }
 
-    public void setCharacterSkinById(String characterUUID, String skinId, boolean slim) {
+    public synchronized void setCharacterSkinById(String characterUUID, String skinId, boolean slim) {
         storeCharacters();
         CharacterData character = characterMap.get(characterUUID);
         if (character == null) {
@@ -286,7 +291,7 @@ public final class PlayerData {
         }
     }
 
-    public void setCharacterName(String characterUUID, String name) {
+    public synchronized void setCharacterName(String characterUUID, String name) {
         storeCharacters();
         CharacterData character = characterMap.get(characterUUID);
         if (character == null) {
@@ -297,7 +302,7 @@ public final class PlayerData {
         saveCharacter(character);
     }
 
-    public void setCharacterEnabled(String characterUUID, boolean enabled) {
+    public synchronized void setCharacterEnabled(String characterUUID, boolean enabled) {
         storeCharacters();
         CharacterData character = characterMap.get(characterUUID);
         if (character == null) {
@@ -308,7 +313,7 @@ public final class PlayerData {
         saveCharacter(character);
     }
 
-    public void setCharacterTags(String characterUUID, String tags) {
+    public synchronized void setCharacterTags(String characterUUID, String tags) {
         storeCharacters();
         CharacterData character = characterMap.get(characterUUID);
         if (character == null) {
@@ -319,7 +324,7 @@ public final class PlayerData {
         saveCharacter(character);
     }
 
-    public void setCharacterGender(String characterUUID, String gender) {
+    public synchronized void setCharacterGender(String characterUUID, String gender) {
         storeCharacters();
         CharacterData character = characterMap.get(characterUUID);
         if (character == null) {
@@ -330,7 +335,7 @@ public final class PlayerData {
         saveCharacter(character);
     }
 
-    public void syncCharacters(ProxyServerConnection server, ProxyMessenger messenger, String requesterUUID) {
+    public synchronized void syncCharacters(ProxyServerConnection server, ProxyMessenger messenger, String requesterUUID) {
         storeCharacters();
         List<CharacterData> enabledCharacters = new ArrayList<>();
         for (CharacterData c : characterMap.values()) if (c.enabled()) enabledCharacters.add(c);
@@ -339,7 +344,7 @@ public final class PlayerData {
         for (CharacterData c : enabledCharacters) messenger.send(server, "syncCharactersItem", playerUUID, requesterUUID, c);
     }
 
-    public void loadCharacterByName(ProxyServerConnection server, ProxyMessenger messenger, String characterName) {
+    public synchronized void loadCharacterByName(ProxyServerConnection server, ProxyMessenger messenger, String characterName) {
         storeCharacters();
         for (CharacterData c : characterMap.values()) {
             if (c.enabled()
@@ -352,7 +357,7 @@ public final class PlayerData {
         messenger.send(server, "selectCharacterByNameFailed", playerUUID);
     }
 
-    public void syncCharactersToSelf(ProxyServerConnection server, ProxyMessenger messenger) {
+    public synchronized void syncCharactersToSelf(ProxyServerConnection server, ProxyMessenger messenger) {
         syncCharacters(server, messenger, playerUUID);
     }
 

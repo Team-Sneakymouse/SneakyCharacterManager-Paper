@@ -1,5 +1,6 @@
 package net.sneakycharactermanager.paper.admincommands;
 
+import net.sneakycharactermanager.common.io.AtomicFiles;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 import net.sneakycharactermanager.paper.util.InventoryUtility;
@@ -133,7 +134,7 @@ public class CommandMigrateInventories extends CommandBaseAdmin {
                     if (migratedYaml != null) {
                         // Migration successful, update the file
                         config.set("inventory", migratedYaml);
-                        config.save(characterFile);
+                        AtomicFiles.writeUtf8(characterFile.toPath(), config.saveToString());
                         
                         sender.sendMessage(ChatUtility.convertToComponent("&a" + playerName + " - " + characterUUID + " (migrated)"));
                         result.successful++;

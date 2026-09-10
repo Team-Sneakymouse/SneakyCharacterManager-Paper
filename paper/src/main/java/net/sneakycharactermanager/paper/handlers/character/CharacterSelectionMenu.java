@@ -1,5 +1,7 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
+import net.sneakycharactermanager.common.io.AtomicFiles;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -378,7 +380,7 @@ public class CharacterSelectionMenu implements Listener {
             config.set("inventory", encoded);
 
             try {
-                config.save(characterFile);
+                AtomicFiles.writeUtf8(characterFile.toPath(), config.saveToString());
                 this.opener.sendMessage(ChatUtility.convertToComponent("&eSaved character inventory!"));
             } catch (IOException e) {
                 e.printStackTrace();

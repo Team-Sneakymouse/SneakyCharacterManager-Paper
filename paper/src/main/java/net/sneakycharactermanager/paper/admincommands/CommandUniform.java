@@ -40,6 +40,7 @@ import org.json.simple.parser.ParseException;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
+import net.sneakycharactermanager.common.io.AtomicFiles;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
@@ -232,7 +233,11 @@ public class CommandUniform extends CommandBaseAdmin {
                                 File outputFile = new File(WEBSERVER_PATH, randomFileName);
 
                                 try {
-                                    ImageIO.write(combined, "PNG", outputFile);
+                                    ByteArrayOutputStream encodedImage = new ByteArrayOutputStream();
+                                    if (!ImageIO.write(combined, "PNG", encodedImage)) {
+                                        throw new IOException("No PNG image writer is available");
+                                    }
+                                    AtomicFiles.write(outputFile.toPath(), encodedImage.toByteArray());
                                     succes = true;
                                     url = WEBSERVER_URL_PREFIX + randomFileName;
 

@@ -16,6 +16,7 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":common"))
     paperweight.paperDevBundle("26.2.build.+")
     implementation("org.apache.httpcomponents:httpclient:4.5.14")
     compileOnly("me.clip:placeholderapi:2.11.5")

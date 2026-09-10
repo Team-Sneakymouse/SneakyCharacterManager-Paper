@@ -1,5 +1,7 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
+import net.sneakycharactermanager.common.io.AtomicFiles;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -116,7 +118,7 @@ public class Character {
 				}
 
 				try {
-					config.save(characterFile);
+					AtomicFiles.writeUtf8(characterFile.toPath(), config.saveToString());
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -487,7 +489,7 @@ public class Character {
 		}
 
 		try {
-			config.save(characterFile);
+			AtomicFiles.writeUtf8(characterFile.toPath(), config.saveToString());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
