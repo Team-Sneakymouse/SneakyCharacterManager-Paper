@@ -488,11 +488,7 @@ public class Character {
 			config.set("attributes", serializeAttributes());
 		}
 
-		try {
-			AtomicFiles.writeUtf8(characterFile.toPath(), config.saveToString());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		SneakyCharacterManager.getInstance().writeFile(characterFile.toPath(), config.saveToString());
 	}
 
 	@Nullable

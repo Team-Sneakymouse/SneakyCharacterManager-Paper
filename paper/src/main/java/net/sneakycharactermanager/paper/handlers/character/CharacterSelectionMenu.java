@@ -1,9 +1,7 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
-import net.sneakycharactermanager.common.io.AtomicFiles;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
 
 import net.sneakycharactermanager.paper.util.InventoryUtility;
@@ -376,15 +374,15 @@ public class CharacterSelectionMenu implements Listener {
 
             File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), this.target.getUniqueId().toString());
             File characterFile = new File(playerDir, this.characterUUID + ".yml");
-            YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
-            config.set("inventory", encoded);
-
-            try {
-                AtomicFiles.writeUtf8(characterFile.toPath(), config.saveToString());
-                this.opener.sendMessage(ChatUtility.convertToComponent("&eSaved character inventory!"));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            SneakyCharacterManager.getInstance().updateFile(characterFile.toPath(), current -> {
+                YamlConfiguration config = new YamlConfiguration();
+                config.loadFromString(current);
+                config.set("inventory", encoded);
+                return config.saveToString();
+            }).thenRun(() -> Bukkit.getScheduler().runTask(
+                    SneakyCharacterManager.getInstance(),
+                    () -> this.opener.sendMessage(ChatUtility.convertToComponent("&eSaved character inventory!"))
+            ));
         }
 
         @Override

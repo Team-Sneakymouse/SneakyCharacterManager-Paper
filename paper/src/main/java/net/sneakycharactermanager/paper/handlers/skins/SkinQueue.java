@@ -1,6 +1,5 @@
 package net.sneakycharactermanager.paper.handlers.skins;
 
-import net.sneakycharactermanager.common.io.AtomicFiles;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -14,7 +13,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.bukkit.OfflinePlayer;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -344,11 +342,7 @@ public class SkinQueue extends BukkitRunnable {
 
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         File file = new File(SneakyCharacterManager.getInstance().getDataFolder(), "mineskin_queue.json");
-        try {
-            AtomicFiles.writeUtf8(file.toPath(), gson.toJson(export));
-        } catch (IOException e) {
-            SneakyCharacterManager.getInstance().getLogger().warning("Failed to save mineskin_queue.json: " + e.getMessage());
-        }
+        SneakyCharacterManager.getInstance().writeFile(file.toPath(), gson.toJson(export));
     }
 
 }

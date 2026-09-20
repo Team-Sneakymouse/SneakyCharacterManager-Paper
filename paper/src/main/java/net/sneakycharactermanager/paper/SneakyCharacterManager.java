@@ -1,5 +1,9 @@
 package net.sneakycharactermanager.paper;
 
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 import java.util.HashMap;
 import java.util.Map;
 import java.io.File;
@@ -30,6 +34,7 @@ import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
+import net.sneakycharactermanager.common.io.AsyncAtomicFileWriter;
 public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 	public static final String IDENTIFIER = "sneakycharacters";
@@ -39,6 +44,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 	private static SneakyCharacterManager instance = null;
 	private PrivateKey privateKey;
 	private PublicKey publicKey;
+	private final AsyncAtomicFileWriter fileWriter = new AsyncAtomicFileWriter("sneakycharacters-file-writer");
 
 	private static Map<Player, Integer> taskIdMap = new HashMap<>();
 	public boolean papiActive = false;
@@ -169,7 +175,27 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 			Bukkit.getScheduler().cancelTasks(this);
 			Bukkit.getAsyncScheduler().cancelTasks(this);
 			teardownVoiceChatIntegration();
+			if (!fileWriter.shutdown(Duration.ofSeconds(30))) {
+				getLogger().severe("Timed out while waiting for pending character data writes");
+			}
 		}
+	}
+
+	public CompletableFuture<Void> writeFile(Path target, String content) {
+		return reportWriteFailure(target, fileWriter.writeUtf8(target, content));
+	}
+
+	public CompletableFuture<Void> updateFile(Path target, AsyncAtomicFileWriter.Utf8Update update) {
+		return reportWriteFailure(target, fileWriter.updateUtf8(target, update));
+	}
+
+	private CompletableFuture<Void> reportWriteFailure(Path target, CompletableFuture<Void> write) {
+		write.whenComplete((ignored, failure) -> {
+			if (failure != null) {
+				getLogger().log(Level.SEVERE, "Failed to save " + target.toAbsolutePath(), failure);
+			}
+		});
+		return write;
 	}
 
 	private void initVoiceChatIntegration() {
