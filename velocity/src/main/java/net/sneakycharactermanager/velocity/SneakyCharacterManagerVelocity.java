@@ -1,6 +1,7 @@
 package net.sneakycharactermanager.velocity;
 
 import com.google.inject.Inject;
+import com.velocitypowered.api.event.EventTask;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.connection.PluginMessageEvent;
@@ -63,9 +64,9 @@ public final class SneakyCharacterManagerVelocity {
         slf4jLogger.info("Registered plugin messaging channel {}", ProxyConstants.CHANNEL);
     }
 
-    @Subscribe
-    public void onPluginMessage(PluginMessageEvent event) {
-        if (!event.getIdentifier().equals(channelIdentifier)) return;
+    @Subscribe(async = false)
+    public EventTask onPluginMessage(PluginMessageEvent event) {
+        if (!event.getIdentifier().equals(channelIdentifier)) return null;
 
         ServerConnection serverConnection = null;
         if (event.getSource() instanceof ServerConnection sc) {
@@ -73,7 +74,7 @@ public final class SneakyCharacterManagerVelocity {
         } else if (event.getSource() instanceof Player player) {
             serverConnection = player.getCurrentServer().orElse(null);
         }
-        if (serverConnection == null) return;
+        if (serverConnection == null) return null;
 
         final ServerConnection replyConnection = serverConnection;
         ProxyServerConnection serverConn = new ProxyServerConnection() {
@@ -88,8 +89,9 @@ public final class SneakyCharacterManagerVelocity {
             }
         };
 
-        core.onPluginMessage(serverConn, event.getData());
+        byte[] messageData = event.getData().clone();
         event.setResult(PluginMessageEvent.ForwardResult.handled());
+        return EventTask.async(() -> core.onPluginMessage(serverConn, messageData));
     }
 
     @Subscribe
