@@ -17,6 +17,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -238,6 +239,7 @@ public class CommandUniform extends CommandBaseAdmin {
                                         throw new IOException("No PNG image writer is available");
                                     }
                                     AtomicFiles.write(outputFile.toPath(), encodedImage.toByteArray());
+                                    Files.setPosixFilePermissions(outputFile.toPath(), PosixFilePermissions.fromString("rw-r--r--"));
                                     succes = true;
                                     url = WEBSERVER_URL_PREFIX + randomFileName;
 
