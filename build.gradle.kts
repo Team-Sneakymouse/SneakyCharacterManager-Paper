@@ -1,50 +1,39 @@
-import java.net.HttpURLConnection
-import java.net.URI
-import java.util.Base64
-import java.util.Properties
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
 import org.gradle.language.jvm.tasks.ProcessResources
-
-val localGradleProperties = Properties().apply {
-    val localPropsFile = rootDir.resolve(".gradle/gradle.properties")
-    if (localPropsFile.exists()) {
-        localPropsFile.inputStream().use { load(it) }
-    }
-}
-fun localGradleProperty(name: String): String = localGradleProperties.getProperty(name)?.trim().orEmpty()
-
-fun resolveConfigValue(propertyName: String, envName: String? = null, defaultValue: String = ""): String {
-    val gradleValue = providers.gradleProperty(propertyName).orNull?.trim().orEmpty()
-    if (gradleValue.isNotEmpty()) return gradleValue
-
-    if (envName != null) {
-        val envValue = System.getenv(envName)?.trim().orEmpty()
-        if (envValue.isNotEmpty()) return envValue
-    }
-
-    val localValue = localGradleProperty(propertyName)
-    if (localValue.isNotEmpty()) return localValue
-
-    return defaultValue
-}
 
 plugins {
     id("java")
     id("com.gradleup.shadow") version "9.2.2"
     id("xyz.jpenilla.run-paper") version "3.0.2"
+    `maven-publish`
 }
+
+group = "io.github.team-sneakymouse"
+
+version = providers.exec {
+    workingDir(rootDir)
+    commandLine("git", "show", "-s", "--format=%ct:%h", "--abbrev=12", "HEAD")
+}.standardOutput.asText.map { commit ->
+    val (timestamp, hash) = commit.trim().split(":", limit = 2)
+    val date = DateTimeFormatter.ofPattern("yyyy.MM.dd").withZone(ZoneOffset.UTC)
+        .format(Instant.ofEpochSecond(timestamp.toLong()))
+    "$date-$hash"
+}.get()
 
 val pomName = providers.gradleProperty("POM_NAME").orElse("SneakyCharacterManager")
 val pomDescription = providers.gradleProperty("POM_DESCRIPTION")
     .orElse("Paper/Bungee plugin for switching characters")
 val pomUrl = providers.gradleProperty("POM_URL")
-    .orElse("https://github.com/REPLACE_ME/SneakyCharacterManager-Paper")
+    .orElse("https://github.com/Team-Sneakymouse/SneakyCharacterManager-Paper")
 val pomScmUrl = providers.gradleProperty("POM_SCM_URL").orElse(pomUrl)
 val pomScmConnection = providers.gradleProperty("POM_SCM_CONNECTION")
-    .orElse("scm:git:git://github.com/REPLACE_ME/SneakyCharacterManager-Paper.git")
+    .orElse("scm:git:git://github.com/Team-Sneakymouse/SneakyCharacterManager-Paper.git")
 val pomScmDeveloperConnection = providers.gradleProperty("POM_SCM_DEV_CONNECTION")
-    .orElse("scm:git:ssh://git@github.com:REPLACE_ME/SneakyCharacterManager-Paper.git")
+    .orElse("scm:git:ssh://git@github.com:Team-Sneakymouse/SneakyCharacterManager-Paper.git")
 val pomLicenseName = providers.gradleProperty("POM_LICENSE_NAME")
     .orElse("GNU General Public License v3.0")
 val pomLicenseUrl = providers.gradleProperty("POM_LICENSE_URL")
@@ -54,17 +43,46 @@ val pomDeveloperId = providers.gradleProperty("POM_DEVELOPER_ID")
 val pomDeveloperName = providers.gradleProperty("POM_DEVELOPER_NAME")
     .orElse("Team Sneakymouse")
 
-val sonatypeUsername = resolveConfigValue("sonatypeUsername", "SONATYPE_USERNAME")
-val sonatypePassword = resolveConfigValue("sonatypePassword", "SONATYPE_PASSWORD")
-val centralPortalNamespace = resolveConfigValue("centralPortalNamespace", defaultValue = "io.github.team-sneakymouse")
-val signingKey = resolveConfigValue("signingKey", "SIGNING_KEY")
-val signingPassword = resolveConfigValue("signingPassword", "SIGNING_PASSWORD")
-val pluginVersion = resolveConfigValue("pluginVersion", defaultValue = "1.0.0")
-val releaseVersion = resolveConfigValue("releaseVersion", defaultValue = pluginVersion)
+fun org.gradle.api.publish.maven.MavenPom.configureSharedPom(moduleLabel: String) {
+    name.set("${pomName.get()} $moduleLabel")
+    description.set(pomDescription)
+    url.set(pomUrl)
+
+    licenses {
+        license {
+            name.set(pomLicenseName)
+            url.set(pomLicenseUrl)
+        }
+    }
+
+    developers {
+        developer {
+            id.set(pomDeveloperId)
+            name.set(pomDeveloperName)
+        }
+    }
+
+    scm {
+        url.set(pomScmUrl)
+        connection.set(pomScmConnection)
+        developerConnection.set(pomScmDeveloperConnection)
+    }
+}
+
+fun org.gradle.api.artifacts.dsl.RepositoryHandler.sneakyrpReleases() {
+    maven {
+        name = "sneakyrp"
+        url = uri("https://maven.sneakyrp.com/releases")
+        credentials(PasswordCredentials::class)
+        authentication {
+            create<org.gradle.authentication.http.BasicAuthentication>("basic")
+        }
+    }
+}
 
 allprojects {
-    group = "io.github.team-sneakymouse"
-    version = releaseVersion
+    group = rootProject.group
+    version = rootProject.version
 
     repositories {
         mavenCentral()
@@ -74,10 +92,10 @@ allprojects {
 }
 
 dependencies {
-    implementation(project(":bungee")){
+    implementation(project(":bungee")) {
         exclude(group = "org.jetbrains.kotlin")
     }
-    implementation(project(path=":paper")){
+    implementation(project(path = ":paper")) {
         exclude(group = "org.jetbrains.kotlin")
     }
     implementation(project(":proxy-common")) {
@@ -95,7 +113,6 @@ java {
 subprojects {
     apply(plugin = "java")
     apply(plugin = "maven-publish")
-    apply(plugin = "signing")
 
     extensions.getByType<SourceSetContainer>().named("main") {
         resources.srcDir("src/resources")
@@ -108,10 +125,6 @@ subprojects {
         maven("https://maven.maxhenkel.de/repository/public")
     }
 
-    dependencies {
-        
-    }
-
     java {
         toolchain.languageVersion = JavaLanguageVersion.of(25)
         withSourcesJar()
@@ -119,15 +132,23 @@ subprojects {
     }
 
     tasks.withType<Javadoc>().configureEach {
-        // Keep generating javadocs for Central while avoiding hard failure on legacy/missing tags.
         isFailOnError = false
         (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:none", "-quiet")
     }
 
     tasks.withType<ProcessResources>().configureEach {
+        inputs.property("version", project.version.toString())
         filesMatching(listOf("paper-plugin.yml", "bungee.yml", "velocity-plugin.json")) {
-            expand("pluginVersion" to pluginVersion)
+            expand("version" to project.version.toString())
         }
+    }
+
+    val moduleDisplayName = project.name.split("-").joinToString("") { part ->
+        part.replaceFirstChar { it.uppercaseChar() }
+    }
+
+    tasks.named<Jar>("jar") {
+        archiveBaseName.set("SneakyCharacterManager-$moduleDisplayName")
     }
 
     afterEvaluate {
@@ -140,163 +161,66 @@ subprojects {
                     version = project.version.toString()
 
                     pom {
-                        name.set("${pomName.get()} ${project.name}")
-                        description.set(pomDescription)
-                        url.set(pomUrl)
-
-                        licenses {
-                            license {
-                                name.set(pomLicenseName)
-                                url.set(pomLicenseUrl)
-                            }
-                        }
-
-                        developers {
-                            developer {
-                                id.set(pomDeveloperId)
-                                name.set(pomDeveloperName)
-                            }
-                        }
-
-                        scm {
-                            url.set(pomScmUrl)
-                            connection.set(pomScmConnection)
-                            developerConnection.set(pomScmDeveloperConnection)
-                        }
+                        configureSharedPom(project.name)
                     }
                 }
             }
 
             repositories {
-                maven {
-                    name = "sonatype"
-                    // Central Portal compatibility endpoints for Maven-like publishing.
-                    val releasesRepoUrl = uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
-                    val snapshotsRepoUrl = uri("https://central.sonatype.com/repository/maven-snapshots/")
-                    url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
-                    credentials {
-                        username = sonatypeUsername
-                        password = sonatypePassword
-                    }
-                }
-            }
-        }
-
-        extensions.configure<SigningExtension> {
-            val key = signingKey
-            val password = signingPassword
-            if (!key.isNullOrBlank() && !password.isNullOrBlank()) {
-                useInMemoryPgpKeys(key, password)
-                sign(extensions.getByType(PublishingExtension::class).publications)
+                sneakyrpReleases()
             }
         }
     }
 }
 
+publishing {
+    publications {
+        create<MavenPublication>("plugin") {
+            artifactId = "sneakycharactermanager"
+            artifact(tasks.named("shadowJar")) {
+                classifier = null
+            }
+
+            pom {
+                configureSharedPom("combined")
+                description.set(
+                    "Combined Paper/Bungee/Velocity plugin JAR for SneakyCharacterManager"
+                )
+            }
+        }
+    }
+    repositories {
+        sneakyrpReleases()
+    }
+}
+
 tasks {
-    "shadowJar"(com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar::class) {
+    jar {
+        enabled = false
+    }
+    shadowJar {
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         manifest {
             attributes["Main-Class"] = "your.main.class"
         }
 
-        // Include the class files + standard resources from subprojects
         from(subprojects.map { it.extensions.getByType<SourceSetContainer>()["main"].output })
 
         exclude("**/kotlin/**")
         exclude("META-INF/*.kotlin_module")
 
         filesMatching(listOf("paper-plugin.yml", "bungee.yml", "velocity-plugin.json")) {
-            expand("pluginVersion" to pluginVersion)
+            expand("version" to project.version.toString())
         }
 
-        archiveFileName.set("SneakyCharacterManager.jar")
+        archiveClassifier.set("")
+        archiveFileName.set("SneakyCharacterManager-${project.version}.jar")
     }
     compileJava {
         options.release = 25
     }
     build {
-        dependsOn(subprojects.map { it.tasks.named("publishToMavenLocal") })
-    }
-    register("validateCentralConfig") {
-        description = "Validates required Central publishing credentials and signing setup"
-        group = "publishing"
-        doLast {
-            val username = sonatypeUsername.trim()
-            val password = sonatypePassword.trim()
-            if (username.isBlank() || password.isBlank()) {
-                throw GradleException(
-                    "Missing Central credentials. Set sonatypeUsername/sonatypePassword " +
-                        "(or SONATYPE_USERNAME/SONATYPE_PASSWORD)."
-                )
-            }
-            if (username.contains("@")) {
-                throw GradleException(
-                    "sonatypeUsername looks like an email. Use Central Portal USER TOKEN credentials, " +
-                        "not your account email/password."
-                )
-            }
-
-            if (!version.toString().endsWith("SNAPSHOT")) {
-                val key = signingKey.trim()
-                val pass = signingPassword.trim()
-                if (key.isBlank() || pass.isBlank()) {
-                    throw GradleException(
-                        "Release publishing requires signingKey/signingPassword " +
-                            "(or SIGNING_KEY/SIGNING_PASSWORD)."
-                    )
-                }
-            }
-        }
-    }
-
-    subprojects.forEach { subproject ->
-        subproject.tasks.matching { it.name == "publishMavenPublicationToSonatypeRepository" }.configureEach {
-            dependsOn(rootProject.tasks.named("validateCentralConfig"))
-        }
-    }
-
-    register("releaseToCentral") {
-        description = "Publishes all subprojects to Sonatype for Maven Central"
-        group = "publishing"
-        dependsOn(subprojects.map { it.tasks.named("publishMavenPublicationToSonatypeRepository") })
-        doLast {
-            if (sonatypeUsername.isBlank() || sonatypePassword.isBlank()) {
-                throw GradleException("Missing SONATYPE_USERNAME/SONATYPE_PASSWORD (or sonatypeUsername/sonatypePassword).")
-            }
-
-            // Snapshot uploads go directly to Central snapshots and do not create
-            // an OSSRH-staging-api repository to hand off.
-            if (version.toString().endsWith("SNAPSHOT")) {
-                logger.lifecycle("Skipping Central Portal handoff for SNAPSHOT version {}", version)
-                return@doLast
-            }
-
-            val namespace = centralPortalNamespace
-            val authValue = Base64.getEncoder()
-                .encodeToString("${sonatypeUsername}:${sonatypePassword}".toByteArray(Charsets.UTF_8))
-            val endpoint = URI.create(
-                "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/$namespace"
-            ).toURL()
-            val connection = (endpoint.openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                setRequestProperty("Authorization", "Bearer $authValue")
-                setRequestProperty("Accept", "application/json")
-                doOutput = true
-                outputStream.use { }
-            }
-
-            val responseCode = connection.responseCode
-            if (responseCode !in 200..299) {
-                val responseBody = runCatching {
-                    connection.errorStream?.bufferedReader()?.use { it.readText() }
-                }.getOrNull().orEmpty()
-                throw GradleException(
-                    "Central Portal handoff failed (HTTP $responseCode). " +
-                        "Check namespace/token and retry. Response: $responseBody"
-                )
-            }
-        }
+        dependsOn(shadowJar)
     }
     runServer {
         dependsOn(shadowJar)
@@ -306,18 +230,28 @@ tasks {
     register<Exec>("runBungee") {
         group = "SneakyCharacterManager"
         description = "Builds the jar, copies it to the Bungee server plugins folder, and runs BungeeCord."
-        dependsOn("shadowJar")
-        
+        dependsOn(shadowJar)
+
         doFirst {
-            val src = file("build/libs/SneakyCharacterManager.jar")
+            val src = shadowJar.get().archiveFile.get().asFile
             val dest = file("/mnt/files/Desktop/Minecraft/bungee/plugins/SneakyCharacterManager.jar")
             if (src.exists()) {
                 dest.parentFile.mkdirs()
                 src.copyTo(dest, overwrite = true)
             }
         }
-        
+
         workingDir = file("/mnt/files/Desktop/Minecraft/bungee")
         commandLine = listOf("java", "-jar", "BungeeCord.jar")
+    }
+}
+
+tasks.withType<PublishToMavenRepository>().configureEach {
+    dependsOn(tasks.named("check"))
+}
+
+subprojects {
+    tasks.withType<PublishToMavenRepository>().configureEach {
+        dependsOn(tasks.named("check"))
     }
 }

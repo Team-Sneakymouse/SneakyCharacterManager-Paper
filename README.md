@@ -11,7 +11,7 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 - `proxy-common/`: shared proxy core (platform-agnostic logic, YAML persistence, RSA signing, character data, skin caching).
 - `bungee/`: BungeeCord adapter (thin wrapper that delegates to `proxy-common`).
 - `velocity/`: Velocity adapter (thin wrapper that delegates to `proxy-common`).
-- root project: build, publish, signing, and release tasks. Produces a single JAR containing all modules.
+- root project: build and Maven publish tasks. Produces a single JAR containing all modules.
 
 ## Runtime requirements
 
@@ -170,162 +170,46 @@ When `/skin state` changes the skin to one with different proxy-side values (URL
 
 - Build all: `./gradlew build`
 - Local publish: `./gradlew publishToMavenLocal`
-- Central preflight: `./gradlew validateCentralConfig`
-- Central publish task: `./gradlew releaseToCentral`
+- Remote publish: `./gradlew publishAllPublicationsToSneakyrpRepository`
+
+Versions are derived from git as `yyyy.MM.dd-<12-char-hash>` (UTC commit date + abbreviated SHA).
+
+The combined plugin JAR is `SneakyCharacterManager-<version>.jar` and can be installed on Paper, BungeeCord, or Velocity.
 
 ---
 
-## Publishing to Maven Central
+## Publishing to sneakyrp Maven
 
-This repository is configured to publish:
+Pushes to `main` run [`.github/workflows/publish.yml`](.github/workflows/publish.yml), which builds and publishes to `https://maven.sneakyrp.com/releases`.
 
-- `io.github.team-sneakymouse:sneakycharactermanager-common:<version>`
-- `io.github.team-sneakymouse:sneakycharactermanager-paper:<version>`
-- `io.github.team-sneakymouse:sneakycharactermanager-proxy-common:<version>`
-- `io.github.team-sneakymouse:sneakycharactermanager-bungee:<version>`
-- `io.github.team-sneakymouse:sneakycharactermanager-velocity:<version>`
+Published coordinates (`io.github.team-sneakymouse`):
 
-The single JAR produced by `./gradlew build` bundles all modules together and can be installed on any supported platform.
+- `sneakycharactermanager` — combined plugin JAR
+- `sneakycharactermanager-common`
+- `sneakycharactermanager-paper`
+- `sneakycharactermanager-proxy-common`
+- `sneakycharactermanager-bungee`
+- `sneakycharactermanager-velocity`
 
-### 1) Credentials and signing setup
-
-Add credentials in either:
-
-- user-level `~/.gradle/gradle.properties` (recommended), or
-- project-local `./.gradle/gradle.properties` (gitignored local file)
-
-Example:
+Local publish credentials (`~/.gradle/gradle.properties` or env via `ORG_GRADLE_PROJECT_*`):
 
 ```properties
-sonatypeUsername=<CENTRAL_PORTAL_TOKEN_USERNAME>
-sonatypePassword=<CENTRAL_PORTAL_TOKEN_PASSWORD>
-
-# Required for non-SNAPSHOT releases
-signingKey=-----BEGIN PGP PRIVATE KEY BLOCK-----\n...\n-----END PGP PRIVATE KEY BLOCK-----
-signingPassword=<GPG_PASSPHRASE>
+sneakyrpUsername=<username>
+sneakyrpPassword=<password>
 ```
-
-Notes:
-
-- Use **Central Portal user token** credentials, not your account email/password.
-- For release versions, your signing public key must be published to supported keyservers.
-
-### 2) Snapshot publish
-
-The plugin version is defined once in `gradle.properties` as `pluginVersion`.
-The default project publication version is also `<pluginVersion>`; use
-`-PreleaseVersion=...` only when an explicit publishing override is needed.
-
-```bash
-./gradlew releaseToCentral
-```
-
-### 3) Release publish (example: tag `v1.6.1`)
-
-```bash
-./gradlew releaseToCentral -PreleaseVersion=1.6.1 --rerun-tasks
-```
-
-`--rerun-tasks` is recommended for release retries to ensure fresh signature artifacts.
-
-### 4) Common release troubleshooting
-
-- `401 Unauthorized`: wrong token username/password.
-- `403 Forbidden` on snapshots: snapshot publishing not enabled for namespace.
-- `Could not find a public key by the key fingerprint`: upload signing public key to keyservers, wait for propagation, then rerun release.
 
 ---
 
 ## Consuming published artifacts
 
-### Gradle Kotlin DSL (`build.gradle.kts`)
-
-Release:
-
 ```kotlin
 repositories {
     mavenCentral()
+    maven("https://maven.sneakyrp.com/releases")
 }
 
 dependencies {
-    compileOnly("io.github.team-sneakymouse:sneakycharactermanager-paper:1.6.1")
-    // or bungee module:
-    // compileOnly("io.github.team-sneakymouse:sneakycharactermanager-bungee:1.6.1")
+    compileOnly("io.github.team-sneakymouse:sneakycharactermanager-paper:<version>")
+    // or: sneakycharactermanager-velocity / sneakycharactermanager-bungee
 }
-```
-
-Snapshot:
-
-```kotlin
-repositories {
-    mavenCentral()
-    maven("https://central.sonatype.com/repository/maven-snapshots/")
-}
-
-dependencies {
-    compileOnly("io.github.team-sneakymouse:sneakycharactermanager-paper:1.0-SNAPSHOT")
-}
-```
-
-### Gradle Groovy DSL (`build.gradle`)
-
-Release:
-
-```groovy
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    compileOnly "io.github.team-sneakymouse:sneakycharactermanager-paper:1.6.1"
-    // compileOnly "io.github.team-sneakymouse:sneakycharactermanager-bungee:1.6.1"
-}
-```
-
-Snapshot:
-
-```groovy
-repositories {
-    mavenCentral()
-    maven { url "https://central.sonatype.com/repository/maven-snapshots/" }
-}
-
-dependencies {
-    compileOnly "io.github.team-sneakymouse:sneakycharactermanager-paper:1.0-SNAPSHOT"
-}
-```
-
-### Maven (`pom.xml`)
-
-Release:
-
-```xml
-<dependencies>
-  <dependency>
-    <groupId>io.github.team-sneakymouse</groupId>
-    <artifactId>sneakycharactermanager-paper</artifactId>
-    <version>1.6.1</version>
-    <scope>provided</scope>
-  </dependency>
-</dependencies>
-```
-
-Snapshot:
-
-```xml
-<repositories>
-  <repository>
-    <id>sonatype-central-snapshots</id>
-    <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-  </repository>
-</repositories>
-
-<dependencies>
-  <dependency>
-    <groupId>io.github.team-sneakymouse</groupId>
-    <artifactId>sneakycharactermanager-paper</artifactId>
-    <version>1.0-SNAPSHOT</version>
-    <scope>provided</scope>
-  </dependency>
-</dependencies>
 ```

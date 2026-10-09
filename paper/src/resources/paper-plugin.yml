@@ -1,5 +1,5 @@
 name: SneakyCharacterManager
-version: ${pluginVersion}
+version: ${version}
 main: net.sneakycharactermanager.paper.SneakyCharacterManager
 description: Paper/Bungee/Velocity plugin for switching characters in DvZ and LoM
 author: Team Sneakymouse

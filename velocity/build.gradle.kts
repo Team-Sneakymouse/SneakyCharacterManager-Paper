@@ -9,10 +9,9 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
 }
 
-val pluginVersion = rootProject.providers.gradleProperty("pluginVersion").orElse("1.0.0")
 val generatedVersionDir = layout.buildDirectory.dir("generated/sources/version/main")
 val generateVersionSource by tasks.registering {
-    inputs.property("pluginVersion", pluginVersion)
+    inputs.property("version", project.version.toString())
     outputs.dir(generatedVersionDir)
     doLast {
         val output = generatedVersionDir.get().file(
@@ -22,7 +21,7 @@ val generateVersionSource by tasks.registering {
         output.writeText(
             "package net.sneakycharactermanager.velocity;\n\n" +
                 "final class BuildVersion {\n" +
-                "    static final String VALUE = \"${pluginVersion.get()}\";\n" +
+                "    static final String VALUE = \"${project.version}\";\n" +
                 "    private BuildVersion() {}\n" +
                 "}\n"
         )
