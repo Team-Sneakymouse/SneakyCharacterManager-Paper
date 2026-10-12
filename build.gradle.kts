@@ -162,6 +162,9 @@ subprojects {
 
                     pom {
                         configureSharedPom(project.name)
+                        if (project.name == "paper") {
+                            properties.put("sneakyrp.deployment.type", "paper-plugin")
+                        }
                     }
                 }
             }
@@ -186,6 +189,7 @@ publishing {
                 description.set(
                     "Combined Paper/Bungee/Velocity plugin JAR for SneakyCharacterManager"
                 )
+                properties.put("sneakyrp.deployment.type", "paper-plugin")
             }
         }
     }
