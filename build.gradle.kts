@@ -162,9 +162,6 @@ subprojects {
 
                     pom {
                         configureSharedPom(project.name)
-                        if (project.name == "paper") {
-                            properties.put("sneakyrp.deployment.type", "paper-plugin")
-                        }
                     }
                 }
             }
