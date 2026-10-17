@@ -9,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 public class CommandUserify extends CommandBaseAdmin {
     public CommandUserify() {
         super("userify");
+        this.setAliases(java.util.List.of("whois"));
         this.usageMessage = this.getName() + " <Character Name>";
     }
 

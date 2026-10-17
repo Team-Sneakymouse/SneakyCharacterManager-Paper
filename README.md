@@ -92,7 +92,7 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 - `/charscan`
 - `/uniform`
 - `/savetemplatechar`
-- `/userify`
+- `/userify` (alias: `/whois`)
 - `/migrateinventories`
 - `/skinqueue <status|flush|detail <priority>>`
 
