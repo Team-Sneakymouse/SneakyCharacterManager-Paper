@@ -4,7 +4,7 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import com.sneakyutils.util.TextUtility;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -46,7 +46,7 @@ public final class SkinApplyService {
         if (result.status == SkinCache.ResolveStatus.HIT) {
             ProfileProperty property = result.toProfileProperty();
             if (property == null) {
-                player.sendMessage(ChatUtility.convertToComponent(
+                player.sendMessage(TextUtility.INSTANCE.convertToComponent(
                         "&4Skin cache returned no texture data for that URL."));
                 SneakyCharacterManager.getInstance().getLogger().warning(
                         "Skin cache HIT with empty texture for " + player.getName() + ": " + resolveUrl);

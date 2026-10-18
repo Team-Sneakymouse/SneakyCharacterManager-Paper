@@ -49,7 +49,7 @@ import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.handlers.skins.SkinState;
 import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import com.sneakyutils.util.TextUtility;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
 public class CommandUniform extends CommandBaseAdmin {
@@ -73,28 +73,28 @@ public class CommandUniform extends CommandBaseAdmin {
     @Override
     public boolean execute(CommandSender sender, String commandLabel, String[] args) {
         if ((IMGUR_CLIENT_ID == null || IMGUR_CLIENT_ID.isEmpty()) && (WEBSERVER_URL_PREFIX == null || WEBSERVER_URL_PREFIX.isEmpty() || WEBSERVER_PATH == null || WEBSERVER_PATH.isEmpty())) {
-            sender.sendMessage(ChatUtility.convertToComponent("&4You must set an imgur API client id or a webserver prefix and path in the config.yml file to use this command."));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4You must set an imgur API client id or a webserver prefix and path in the config.yml file to use this command."));
             return false;
         }
 
         this.updateUniforms();
 
         if (args.length < 1) {
-            sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid Usage: " + this.getUsage()));
             return false;
         }
         
         Player player = Bukkit.getPlayer(args[0]);
 
         if (player == null) {
-            sender.sendMessage(ChatUtility.convertToComponent("&aUnknown player: &b" + args[0]));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aUnknown player: &b" + args[0]));
             return false;
         }
 
         Character character = Character.get(player);
 
         if (character == null) {
-            sender.sendMessage(ChatUtility.convertToComponent("&aThe player is not on a character: &b" + player.getName()));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aThe player is not on a character: &b" + player.getName()));
             return false;
         }
 
@@ -102,7 +102,7 @@ public class CommandUniform extends CommandBaseAdmin {
             SkinData.getOrCreate(character.getSkin(), character.getSkinUUID(), character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getCharacterUUID(), character.getName());
             return true;
         } else if (args.length > 2) {
-            sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid Usage: " + this.getUsage()));
             return false;
         }
 
@@ -119,7 +119,7 @@ public class CommandUniform extends CommandBaseAdmin {
         }
 
         if (uniformFile == null) {
-            sender.sendMessage(ChatUtility.convertToComponent("&aInvalid uniform file: &b" + args[1]));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aInvalid uniform file: &b" + args[1]));
             return false;
         }
 
@@ -128,7 +128,7 @@ public class CommandUniform extends CommandBaseAdmin {
         URL skinURL = textures.getSkin();
 
         if(skinURL == null){
-            sender.sendMessage(ChatUtility.convertToComponent("&cPlayer doesn't not have a valid Skin URL!"));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&cPlayer doesn't not have a valid Skin URL!"));
             return false;
         }
 
@@ -141,7 +141,7 @@ public class CommandUniform extends CommandBaseAdmin {
             String uniformHash = SkinUtil.getFileHash(uniformFinal);
             if (uniformHash == null) {
                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                    sender.sendMessage(ChatUtility.convertToComponent("&aFailed to calculate uniform hash."));
+                    sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aFailed to calculate uniform hash."));
                 });
                 return;
             }
@@ -312,18 +312,18 @@ public class CommandUniform extends CommandBaseAdmin {
                     } catch (ParseException e) {
                         e.printStackTrace();
                         Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                            sender.sendMessage(ChatUtility.convertToComponent("&aSomething went very wrong while applying this uniform."));
+                            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aSomething went very wrong while applying this uniform."));
                         });
                     }
                 } else {
                     Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                        sender.sendMessage(ChatUtility.convertToComponent("&aThe webserver that hosts the original skin could not be reached."));
+                        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aThe webserver that hosts the original skin could not be reached."));
                     });
                 }
             } catch (IOException | InterruptedException | URISyntaxException e) {
                 e.printStackTrace();
                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                    sender.sendMessage(ChatUtility.convertToComponent("&aSomething went very wrong while applying this uniform."));
+                    sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aSomething went very wrong while applying this uniform."));
                 });
             }
         });

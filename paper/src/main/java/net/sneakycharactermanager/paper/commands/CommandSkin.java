@@ -43,7 +43,7 @@ import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterLoader;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSkinChangeEvent;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import com.sneakyutils.util.TextUtility;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
 public class CommandSkin extends CommandBase {
@@ -58,12 +58,12 @@ public class CommandSkin extends CommandBase {
 	public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 
 		if (!(sender instanceof Player player)) {
-			sender.sendMessage(ChatUtility.convertToComponent("&4Must be a player to run this command"));
+			sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Must be a player to run this command"));
 			return false;
 		}
 
 		if (args.length < 1) {
-			player.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.getUsage()));
+			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid Usage: " + this.getUsage()));
 			return true;
 		}
 
@@ -72,7 +72,7 @@ public class CommandSkin extends CommandBase {
 			if (args.length > 1 && sender.hasPermission(SneakyCharacterManager.IDENTIFIER + ".skinfetch.others")) {
 				target = Bukkit.getPlayer(args[1]);
 				if (target == null) {
-					player.sendMessage(ChatUtility.convertToComponent("&cCould not find requested player!"));
+					player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cCould not find requested player!"));
 					return false;
 				}
 			}
@@ -81,20 +81,20 @@ public class CommandSkin extends CommandBase {
 			PlayerTextures textures = profile.getTextures();
 			URL skinURL = textures.getSkin();
 			if (skinURL == null) {
-				player.sendMessage(ChatUtility.convertToComponent("&cPlayer doesn't not have a valid Skin URL!"));
+				player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cPlayer doesn't not have a valid Skin URL!"));
 				return false;
 			}
 
 			player.sendMessage(
-					ChatUtility.convertToComponent("&eHere is " + target.getName() + "'s skin url! Click to Copy!"));
-			player.sendMessage(ChatUtility.convertToComponent("&6" + skinURL)
+					TextUtility.INSTANCE.convertToComponent("&eHere is " + target.getName() + "'s skin url! Click to Copy!"));
+			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&6" + skinURL)
 					.clickEvent(ClickEvent.copyToClipboard(skinURL.toString()))
-					.hoverEvent(HoverEvent.showText(ChatUtility.convertToComponent("&aClick to Copy!"))));
+					.hoverEvent(HoverEvent.showText(TextUtility.INSTANCE.convertToComponent("&aClick to Copy!"))));
 			return true;
 		}
 
 		if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
-			player.sendMessage(ChatUtility.convertToComponent(
+			player.sendMessage(TextUtility.INSTANCE.convertToComponent(
 					"&4You are currently on a template character, which do not support /nick and /skin."));
 			return false;
 		}
@@ -104,36 +104,36 @@ public class CommandSkin extends CommandBase {
 
 		if (character == null) {
 			player.sendMessage(
-					ChatUtility.convertToComponent("&4You aren't on a character right now, so you cannot use /skin."));
+					TextUtility.INSTANCE.convertToComponent("&4You aren't on a character right now, so you cannot use /skin."));
 			return false;
 		}
 		;
 
 		if (args[0].equalsIgnoreCase("state")) {
 			if (args.length < 2) {
-				player.sendMessage(ChatUtility.convertToComponent("&4Usage: /skin state <id>"));
+				player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Usage: /skin state <id>"));
 				return true;
 			}
 			int stateId;
 			try {
 				stateId = Integer.parseInt(args[1]);
 			} catch (NumberFormatException e) {
-				player.sendMessage(ChatUtility.convertToComponent("&4Invalid state ID."));
+				player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid state ID."));
 				return true;
 			}
 			SkinStateManager mgr = SneakyCharacterManager.getInstance().skinStateManager;
 			SkinState state = mgr.get(player.getUniqueId(), stateId);
 			if (state == null) {
-				player.sendMessage(ChatUtility.convertToComponent("&4Skin state not found."));
+				player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Skin state not found."));
 				return true;
 			}
 			if (!state.characterUUID().equals(character.getCharacterUUID())) {
-				player.sendMessage(ChatUtility.convertToComponent("&4That skin state belongs to a different character."));
+				player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4That skin state belongs to a different character."));
 				return true;
 			}
 			SkinState current = mgr.current(player.getUniqueId());
 			if (current != null && current.id() == stateId) {
-				player.sendMessage(ChatUtility.convertToComponent("&4You are already on that skin state."));
+				player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4You are already on that skin state."));
 				return true;
 			}
 			ProfileProperty stateProperty = new ProfileProperty("textures", state.texture(), state.signature());
@@ -159,7 +159,7 @@ public class CommandSkin extends CommandBase {
 			Bukkit.getPluginManager().callEvent(event);
 			if (event.isCancelled()) return false;
 
-			player.sendMessage(ChatUtility.convertToComponent("&eFetching skin.. Please wait..!"));
+			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&eFetching skin.. Please wait..!"));
 			resetPlayerSkin(player);
 			return true;
 		}
@@ -167,7 +167,7 @@ public class CommandSkin extends CommandBase {
 		String url = args[0];
 		if (!url.startsWith("http")) {
 			player.sendMessage(
-					ChatUtility.convertToComponent("&4Invalid URL.. Please make sure it starts with HTTP(s)"));
+					TextUtility.INSTANCE.convertToComponent("&4Invalid URL.. Please make sure it starts with HTTP(s)"));
 			return true;
 		}
 
@@ -184,7 +184,7 @@ public class CommandSkin extends CommandBase {
 		Bukkit.getPluginManager().callEvent(event);
 		if (event.isCancelled()) return false;
 
-		player.sendMessage(ChatUtility.convertToComponent("&aUpdating your skin!"));
+		player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aUpdating your skin!"));
 
 		CharacterLoader.updateSkin(player, character.getCharacterUUID(), url, slim);
 
@@ -242,7 +242,7 @@ public class CommandSkin extends CommandBase {
 						Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
 							PlayerProfile profile = player.getPlayerProfile();
 							profile.setProperty(property);
-							player.sendMessage(ChatUtility.convertToComponent("&aUpdating your skin!"));
+							player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aUpdating your skin!"));
 
 							String textureURL = profile.getTextures().getSkin().toString();
 							boolean isSlim = profile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM);

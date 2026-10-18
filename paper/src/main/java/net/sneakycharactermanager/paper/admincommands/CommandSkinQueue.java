@@ -8,7 +8,7 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import com.sneakyutils.util.TextUtility;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
@@ -30,7 +30,7 @@ public class CommandSkinQueue extends CommandBaseAdmin {
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
         if (args.length < 1) {
-            sender.sendMessage(ChatUtility.convertToComponent("&cUsage: " + this.usageMessage));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&cUsage: " + this.usageMessage));
             return false;
         }
 
@@ -38,18 +38,18 @@ public class CommandSkinQueue extends CommandBaseAdmin {
             case "status" -> handleStatus(sender);
             case "detail" -> {
                 if (args.length < 2) {
-                    sender.sendMessage(ChatUtility.convertToComponent("&cUsage: /skinqueue detail <0-4>"));
+                    sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&cUsage: /skinqueue detail <0-4>"));
                     return false;
                 }
                 try {
                     int p = Integer.parseInt(args[1]);
                     handleDetail(sender, p);
                 } catch (NumberFormatException e) {
-                    sender.sendMessage(ChatUtility.convertToComponent("&cInvalid priority. Specify 0-4."));
+                    sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&cInvalid priority. Specify 0-4."));
                 }
             }
             case "flush" -> handleFlush(sender);
-            default -> sender.sendMessage(ChatUtility.convertToComponent("&cUnknown subcommand. Usage: " + this.usageMessage));
+            default -> sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&cUnknown subcommand. Usage: " + this.usageMessage));
         }
         return true;
     }
@@ -63,14 +63,14 @@ public class CommandSkinQueue extends CommandBaseAdmin {
         String resetStr = (nextReset > 0 && nextReset > now) ? ((nextReset - now) / 1000) + "s" : "Ready";
         String delayStr = (q.getDelayMillis() / 1000.0f) + "s";
 
-        sender.sendMessage(ChatUtility.convertToComponent("&8&m                                        "));
-        sender.sendMessage(ChatUtility.convertToComponent("&b&lSkin Queue"));
-        sender.sendMessage(ChatUtility.convertToComponent(
+        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&8&m                                        "));
+        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&b&lSkin Queue"));
+        sender.sendMessage(TextUtility.INSTANCE.convertToComponent(
             "&7Capacity: &f" + q.getRemaining() + "/" + q.getLimit() +
             "  &7Reset: &f" + resetStr +
             "  &7Delay: &f" + delayStr
         ));
-        sender.sendMessage(ChatUtility.convertToComponent("&7Click a tier to see details:"));
+        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&7Click a tier to see details:"));
 
         // One line per P-tier, each clickable
         for (int p = SkinQueue.PRIO_UNIFORM; p >= SkinQueue.PRIO_OFFLINE; p--) {
@@ -92,12 +92,12 @@ public class CommandSkinQueue extends CommandBaseAdmin {
                 ));
             sender.sendMessage(tier);
         }
-        sender.sendMessage(ChatUtility.convertToComponent("&8&m                                        "));
+        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&8&m                                        "));
     }
 
     private void handleDetail(CommandSender sender, int p) {
         if (p < SkinQueue.PRIO_OFFLINE || p > SkinQueue.PRIO_UNIFORM) {
-            sender.sendMessage(ChatUtility.convertToComponent("&cPriority must be 0-" + SkinQueue.PRIO_UNIFORM + "."));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&cPriority must be 0-" + SkinQueue.PRIO_UNIFORM + "."));
             return;
         }
 
@@ -105,12 +105,12 @@ public class CommandSkinQueue extends CommandBaseAdmin {
         List<SkinData> list = q.getQueue().getOrDefault(p, Collections.emptyList());
         String label = PRIO_LABELS[p];
 
-        sender.sendMessage(ChatUtility.convertToComponent("&8&m                                        "));
-        sender.sendMessage(ChatUtility.convertToComponent("&b&lP" + p + " &e" + label + " &7(" + list.size() + " entries)"));
-        sender.sendMessage(ChatUtility.convertToComponent("&8&m                                        "));
+        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&8&m                                        "));
+        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&b&lP" + p + " &e" + label + " &7(" + list.size() + " entries)"));
+        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&8&m                                        "));
 
         if (list.isEmpty()) {
-            sender.sendMessage(ChatUtility.convertToComponent("&7(empty)"));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&7(empty)"));
         } else {
             for (SkinData data : list) {
                 String state    = data.isProcessing() ? "&aprocessing" : "&7waiting";
@@ -120,13 +120,13 @@ public class CommandSkinQueue extends CommandBaseAdmin {
                 String shortUrl = url.length() > 40 ? "..." + url.substring(url.length() - 40) : url;
                 String charName = data.getCharacterName() != null ? data.getCharacterName() : "?";
 
-                sender.sendMessage(ChatUtility.convertToComponent(
+                sender.sendMessage(TextUtility.INSTANCE.convertToComponent(
                     "&f" + data.getPlayer().getName() + " &8| &7" + charName + " &8| " + state + jobPart + menuPart
                 ));
-                sender.sendMessage(ChatUtility.convertToComponent("  &8└ &7" + shortUrl));
+                sender.sendMessage(TextUtility.INSTANCE.convertToComponent("  &8└ &7" + shortUrl));
             }
         }
-        sender.sendMessage(ChatUtility.convertToComponent("&8&m                                        "));
+        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&8&m                                        "));
     }
 
     private void handleFlush(CommandSender sender) {
@@ -136,7 +136,7 @@ public class CommandSkinQueue extends CommandBaseAdmin {
         int total = queue.values().stream().mapToInt(List::size).sum();
         queue.values().forEach(List::clear);
 
-        sender.sendMessage(ChatUtility.convertToComponent(
+        sender.sendMessage(TextUtility.INSTANCE.convertToComponent(
             "&aFlushed &f" + total + " &aentr" + (total == 1 ? "y" : "ies") + " from the skin queue."
         ));
     }

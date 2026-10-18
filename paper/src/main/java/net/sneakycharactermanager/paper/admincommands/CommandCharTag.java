@@ -14,7 +14,7 @@ import com.google.gson.JsonPrimitive;
 
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import com.sneakyutils.util.TextUtility;
 
 public class CommandCharTag extends CommandBaseAdmin {
 
@@ -27,14 +27,14 @@ public class CommandCharTag extends CommandBaseAdmin {
 	@Override
 	public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 		if (args.length < 3) {
-			sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.usageMessage));
+			sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid Usage: " + this.usageMessage));
 			return false;
 		}
 
 		Player player = Bukkit.getPlayer(args[0]);
 
 		if (player == null) {
-			sender.sendMessage(ChatUtility.convertToComponent("&aUnknown player: &b" + args[0]));
+			sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aUnknown player: &b" + args[0]));
 			return false;
 		}
 
@@ -42,7 +42,7 @@ public class CommandCharTag extends CommandBaseAdmin {
 
 		if (character == null) {
 			sender.sendMessage(
-					ChatUtility.convertToComponent("&aThis player is not currently on a character: &b" + args[0]));
+					TextUtility.INSTANCE.convertToComponent("&aThis player is not currently on a character: &b" + args[0]));
 			return false;
 		}
 
@@ -51,7 +51,7 @@ public class CommandCharTag extends CommandBaseAdmin {
 		String key = args[2].toLowerCase();
 
 		if (!key.matches("^[a-z0-9_]+$")) {
-			sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.usageMessage));
+			sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid Usage: " + this.usageMessage));
 			return false;
 		}
 
@@ -59,20 +59,20 @@ public class CommandCharTag extends CommandBaseAdmin {
 			String value = (args.length > 3) ? args[3] : "true";
 
 			tags.add(key, new JsonPrimitive(value));
-			sender.sendMessage(ChatUtility.convertToComponent("&aThe tag &b'" + key + ":" + value
+			sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aThe tag &b'" + key + ":" + value
 					+ "'&a has been added to the character &b'" + character.getNameUnformatted() + "'&a."));
 		} else if (args[1].equalsIgnoreCase("remove")) {
 			if (tags.keySet().contains(key)) {
 				tags.remove(key);
-				sender.sendMessage(ChatUtility.convertToComponent("&aThe tag &b'" + key
+				sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aThe tag &b'" + key
 						+ "'&a has been removed from the character &b'" + character.getNameUnformatted() + "'&a."));
 			} else {
-				sender.sendMessage(ChatUtility.convertToComponent("&aThe character &b'" + character.getNameUnformatted()
+				sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aThe character &b'" + character.getNameUnformatted()
 						+ "'&a does not have the tag &b'" + key + "'&a so nothing was changed."));
 				return false;
 			}
 		} else {
-			sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.usageMessage));
+			sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid Usage: " + this.usageMessage));
 			return false;
 		}
 

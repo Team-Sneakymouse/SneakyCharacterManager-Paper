@@ -3,7 +3,7 @@ package net.sneakycharactermanager.paper.handlers.skins;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import com.sneakyutils.util.TextUtility;
 
 import org.bukkit.entity.Player;
 
@@ -151,18 +151,18 @@ public final class SkinStateManager {
      * Builds the clickable "Your skin has been updated: [Undo] [Re-apply]" message.
      */
     public static void sendSkinUpdatedMessage(Player player, SkinState current) {
-        Component msg = ChatUtility.convertToComponent("&aYour skin has been updated: ");
+        Component msg = TextUtility.INSTANCE.convertToComponent("&aYour skin has been updated: ");
 
         if (current.previousId() != null) {
-            Component undo = ChatUtility.convertToComponent("&c[Undo]")
+            Component undo = TextUtility.INSTANCE.convertToComponent("&c[Undo]")
                     .clickEvent(ClickEvent.runCommand("/skin state " + current.previousId()))
-                    .hoverEvent(HoverEvent.showText(ChatUtility.convertToComponent("&eRevert to: &b" + getPreviousName(player, current))));
+                    .hoverEvent(HoverEvent.showText(TextUtility.INSTANCE.convertToComponent("&eRevert to: &b" + getPreviousName(player, current))));
             msg = msg.append(undo).append(Component.text(" "));
         }
 
-        Component reapply = ChatUtility.convertToComponent("&b[Re-apply]")
+        Component reapply = TextUtility.INSTANCE.convertToComponent("&b[Re-apply]")
                 .clickEvent(ClickEvent.runCommand("/skin state " + current.id()))
-                .hoverEvent(HoverEvent.showText(ChatUtility.convertToComponent("&eRe-apply: &b" + current.name())));
+                .hoverEvent(HoverEvent.showText(TextUtility.INSTANCE.convertToComponent("&eRe-apply: &b" + current.name())));
         msg = msg.append(reapply);
 
         player.sendMessage(msg);

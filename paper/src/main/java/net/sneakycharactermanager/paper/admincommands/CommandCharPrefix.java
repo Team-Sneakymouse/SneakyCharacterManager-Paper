@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import com.sneakyutils.util.TextUtility;
 
 public class CommandCharPrefix extends CommandBaseAdmin {
 
@@ -25,14 +25,14 @@ public class CommandCharPrefix extends CommandBaseAdmin {
 	@Override
 	public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 		if (args.length < 2) {
-			sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.usageMessage));
+			sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid Usage: " + this.usageMessage));
 			return false;
 		}
 
 		Player target = Bukkit.getPlayer(args[0]);
 
 		if (target == null) {
-			sender.sendMessage(ChatUtility.convertToComponent("&aUnknown player: &b" + args[0]));
+			sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aUnknown player: &b" + args[0]));
 			return false;
 		}
 
@@ -40,7 +40,7 @@ public class CommandCharPrefix extends CommandBaseAdmin {
 
 		if (character == null) {
 			sender.sendMessage(
-					ChatUtility.convertToComponent("&aThis player is not currently on a character: &b" + args[0]));
+					TextUtility.INSTANCE.convertToComponent("&aThis player is not currently on a character: &b" + args[0]));
 			return false;
 		}
 
@@ -48,11 +48,11 @@ public class CommandCharPrefix extends CommandBaseAdmin {
 			character.setNamePrefix("");
 			SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(target, character.getDisplayName());
 
-			sender.sendMessage(ChatUtility
+			sender.sendMessage(TextUtility.INSTANCE
 					.convertToComponent("&aCleared name prefix for &b'" + character.getNameUnformatted() + "'&a."));
 
 			if (!sender.equals(target))
-				target.sendMessage(ChatUtility.convertToComponent("&eYour name prefix was cleared."));
+				target.sendMessage(TextUtility.INSTANCE.convertToComponent("&eYour name prefix was cleared."));
 
 			return true;
 		}
@@ -60,7 +60,7 @@ public class CommandCharPrefix extends CommandBaseAdmin {
 		String rawInput = String.join(" ", Arrays.copyOfRange(args, 1, args.length)).trim();
 
 		if (rawInput.length() < 2 || !rawInput.startsWith("\"") || !rawInput.endsWith("\"")) {
-			sender.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.usageMessage + " &7(Remember the quotes)"));
+			sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid Usage: " + this.usageMessage + " &7(Remember the quotes)"));
 			return false;
 		}
 
@@ -69,12 +69,12 @@ public class CommandCharPrefix extends CommandBaseAdmin {
 		character.setNamePrefix(prefix);
 		SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(target, character.getDisplayName());
 
-		sender.sendMessage(ChatUtility.convertToComponent(
+		sender.sendMessage(TextUtility.INSTANCE.convertToComponent(
 				"&aSet name prefix for &b'" + character.getNameUnformatted() + "'&a to: &r" + prefix));
 
 		if (!sender.equals(target))
 			target.sendMessage(
-					ChatUtility.convertToComponent("&eYour name prefix was set to: &r" + prefix));
+					TextUtility.INSTANCE.convertToComponent("&eYour name prefix was set to: &r" + prefix));
 
 		return true;
 	}

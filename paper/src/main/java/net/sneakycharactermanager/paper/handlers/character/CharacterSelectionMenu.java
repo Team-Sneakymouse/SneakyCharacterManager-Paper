@@ -2,9 +2,10 @@ package net.sneakycharactermanager.paper.handlers.character;
 
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 
-import net.sneakycharactermanager.paper.util.InventoryUtility;
+import com.sneakyutils.util.InventoryUtility;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -37,7 +38,7 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import com.sneakyutils.util.TextUtility;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
 public class CharacterSelectionMenu implements Listener {
@@ -47,12 +48,12 @@ public class CharacterSelectionMenu implements Listener {
     protected NamespacedKey characterKey;
 
     public static final String CHARACTER_SLOTS_PERMISSION_NODE = SneakyCharacterManager.IDENTIFIER + ".characterslots.";
-    private static final Component CREATE_CHARACTER = ChatUtility.convertToComponent("&2Create Character");
+    private static final Component CREATE_CHARACTER = TextUtility.INSTANCE.convertToComponent("&2Create Character");
     private static final int CHARS_PER_PAGE = 50;
     private static final int PREV_BUTTON_SLOT = 52;
     private static final int NEXT_BUTTON_SLOT = 53;
-    private static final Component NEXT_PAGE = ChatUtility.convertToComponent("&aNext Page >");
-    private static final Component PREV_PAGE = ChatUtility.convertToComponent("&a< Previous Page");
+    private static final Component NEXT_PAGE = TextUtility.INSTANCE.convertToComponent("&aNext Page >");
+    private static final Component PREV_PAGE = TextUtility.INSTANCE.convertToComponent("&a< Previous Page");
 
     public class CharacterMenuHolder implements InventoryHolder {
 
@@ -94,12 +95,12 @@ public class CharacterSelectionMenu implements Listener {
             if (this.player == null){
                 this.playerUUID = this.offlinePlayer.getUniqueId() == null ? "" : this.offlinePlayer.getUniqueId().toString();
                 inventory = Bukkit.createInventory(this, size,
-                        ChatUtility.convertToComponent("&e" + this.offlinePlayer.getName() == null ? "" : this.offlinePlayer.getName() + "'s Characters")
+                        TextUtility.INSTANCE.convertToComponent("&e" + this.offlinePlayer.getName() == null ? "" : this.offlinePlayer.getName() + "'s Characters")
                 );
             }else{
                 this.playerUUID = this.player.getUniqueId().toString();
                 inventory = Bukkit.createInventory(this, size,
-                        ChatUtility.convertToComponent("&e" + this.player.getName() + "'s Characters")
+                        TextUtility.INSTANCE.convertToComponent("&e" + this.player.getName() + "'s Characters")
                 );
             }
 
@@ -199,9 +200,9 @@ public class CharacterSelectionMenu implements Listener {
                 ItemStack skeletonHead = new ItemStack(Material.SKELETON_SKULL);
                 ItemMeta meta = skeletonHead.getItemMeta();
 
-                meta.displayName(ChatUtility.convertToComponent("&4" + character.getNameUnformatted()));
+                meta.displayName(TextUtility.INSTANCE.convertToComponent("&4" + character.getNameUnformatted()));
                 List<Component> lore = new ArrayList<>();
-                lore.add(ChatUtility.convertToComponent("&eYou cannot access this character right now."));
+                lore.add(TextUtility.INSTANCE.convertToComponent("&eYou cannot access this character right now."));
 
                 meta.lore(lore);
                 skeletonHead.setItemMeta(meta);
@@ -213,10 +214,10 @@ public class CharacterSelectionMenu implements Listener {
             ItemStack characterHead = new ItemStack(Material.PLAYER_HEAD);
             SkullMeta skullMeta = (SkullMeta) characterHead.getItemMeta();
 
-            skullMeta.displayName(ChatUtility.convertToComponent("&e" + character.getName()));
+            skullMeta.displayName(TextUtility.INSTANCE.convertToComponent("&e" + character.getName()));
             List<Component> lore = new ArrayList<>();
-            lore.add(ChatUtility.convertToComponent(LEFT));
-            lore.add(ChatUtility.convertToComponent(SWAP_OFFHAND));
+            lore.add(TextUtility.INSTANCE.convertToComponent(LEFT));
+            lore.add(TextUtility.INSTANCE.convertToComponent(SWAP_OFFHAND));
             skullMeta.lore(lore);
 
             skullMeta.getPersistentDataContainer().set(characterKey, PersistentDataType.STRING, character.getCharacterUUID());
@@ -269,8 +270,8 @@ public class CharacterSelectionMenu implements Listener {
 
             if (clickedItem.getType().equals(Material.LIME_STAINED_GLASS_PANE)) {
                 ProxyMessagingUtil.sendByteArray(this.opener, "createNewCharacter", playerUUID);
-                this.player.sendMessage(ChatUtility.convertToComponent("&aCreating a new character... Please Wait..."));
-                this.player.sendMessage(ChatUtility.convertToComponent("&aOnce the character is created, use the /nick and /skin command to customize it!"));
+                this.player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aCreating a new character... Please Wait..."));
+                this.player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aOnce the character is created, use the /nick and /skin command to customize it!"));
                 this.player.closeInventory();
                 return;
             }
@@ -285,11 +286,11 @@ public class CharacterSelectionMenu implements Listener {
 
             if (characterUUID == null) return;
             if (currentChar != null && characterUUID.equals(currentChar.getCharacterUUID())) {
-                this.player.sendMessage(ChatUtility.convertToComponent("&aYou are already playing that character."));
+                this.player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aYou are already playing that character."));
                 return;
             }
 
-            this.player.sendMessage(ChatUtility.convertToComponent("&aLoading your character... Please Wait..."));
+            this.player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aLoading your character... Please Wait..."));
             this.player.closeInventory();
             ProxyMessagingUtil.sendByteArray(this.opener, "selectCharacter", playerUUID, characterUUID);
         }
@@ -308,11 +309,11 @@ public class CharacterSelectionMenu implements Listener {
 
             if (characterUUID == null) return;
             if (currentChar != null && characterUUID.equals(currentChar.getCharacterUUID())) {
-                this.player.sendMessage(ChatUtility.convertToComponent("&aYou cannot delete the character that you are currently playing."));
+                this.player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aYou cannot delete the character that you are currently playing."));
                 return;
             }
 
-            this.player.sendMessage(ChatUtility.convertToComponent("&aDeleting character &b'" + ((TextComponent) meta.displayName()).content() + "'&a. Type '/char confirm' within 10 seconds to confirm deletion."));
+            this.player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aDeleting character &b'" + ((TextComponent) meta.displayName()).content() + "'&a. Type '/char confirm' within 10 seconds to confirm deletion."));
             Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
                 this.player.closeInventory();
             }, 1);
@@ -349,7 +350,7 @@ public class CharacterSelectionMenu implements Listener {
         }
 
         private void createInventory(){
-            this.inventory = Bukkit.createInventory(this, 45, ChatUtility.convertToComponent("&eEditing Inventory"));
+            this.inventory = Bukkit.createInventory(this, 45, TextUtility.INSTANCE.convertToComponent("&eEditing Inventory"));
             this.inventory.setContents(contents);
         }
 
@@ -361,7 +362,7 @@ public class CharacterSelectionMenu implements Listener {
             }
 
             if(currentChar != null && currentChar.getCharacterUUID().equals(this.characterUUID)){
-                this.opener.sendMessage(ChatUtility.convertToComponent("&4Inventory not saved! &ePlayer swapped character while you were editing!"));
+                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Inventory not saved! &ePlayer swapped character while you were editing!"));
                 return;
             }
 
@@ -370,7 +371,7 @@ public class CharacterSelectionMenu implements Listener {
                 dummyItems[i] = this.inventory.getContents()[i];
             }
 
-            String encoded = InventoryUtility.inventoryToBase64(41, dummyItems);
+            String encoded = InventoryUtility.inventoryToPaperYaml(dummyItems);
 
             File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), this.target.getUniqueId().toString());
             File characterFile = new File(playerDir, this.characterUUID + ".yml");
@@ -381,7 +382,7 @@ public class CharacterSelectionMenu implements Listener {
                 return config.saveToString();
             }).thenRun(() -> Bukkit.getScheduler().runTask(
                     SneakyCharacterManager.getInstance(),
-                    () -> this.opener.sendMessage(ChatUtility.convertToComponent("&eSaved character inventory!"))
+                    () -> this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&eSaved character inventory!"))
             ));
         }
 
@@ -413,7 +414,7 @@ public class CharacterSelectionMenu implements Listener {
             if (!clickedItem.getType().equals(Material.PLAYER_HEAD)) return;
 
             if (!SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
-                this.opener.sendMessage(ChatUtility.convertToComponent("&cmanageInventories is currently set to false in the config. Use direct inventory editing instead."));
+                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&cmanageInventories is currently set to false in the config. Use direct inventory editing instead."));
                 return;
             }
 
@@ -428,11 +429,11 @@ public class CharacterSelectionMenu implements Listener {
             }
 
             if (currentChar != null && characterUUID.equals(currentChar.getCharacterUUID())) {
-                this.opener.sendMessage(ChatUtility.convertToComponent("&aThe player is currently on this character. Use direct inventory editing instead."));
+                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&aThe player is currently on this character. Use direct inventory editing instead."));
                 return;
             }
 
-            this.opener.sendMessage(ChatUtility.convertToComponent("&aEditing inventory for character &b'" + ((TextComponent) meta.displayName()).content() + "'&a."));
+            this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&aEditing inventory for character &b'" + ((TextComponent) meta.displayName()).content() + "'&a."));
             
             Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
                 String playerUUID;
@@ -445,7 +446,14 @@ public class CharacterSelectionMenu implements Listener {
                 File characterFile = new File(playerDir, characterUUID + ".yml");
                 YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
 
-                ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
+                ItemStack[] inventoryContents;
+                try {
+                    inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
+                } catch (IOException e) {
+                    SneakyCharacterManager.getInstance().getLogger().warning(
+                            "Failed to load inventory for character " + characterUUID + ": " + e.getMessage());
+                    inventoryContents = new ItemStack[0];
+                }
 
                 AdminInventoryHolder holder = new AdminInventoryHolder(this.opener, (this.player == null ? this.offlinePlayer : this.player), characterUUID, inventoryContents);
                 this.opener.openInventory(holder.getInventory());

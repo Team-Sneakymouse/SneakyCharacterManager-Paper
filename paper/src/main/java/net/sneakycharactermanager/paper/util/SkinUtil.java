@@ -1,5 +1,7 @@
 package net.sneakycharactermanager.paper.util;
 
+import com.sneakyutils.util.TextUtility;
+
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Entity;
@@ -42,7 +44,7 @@ public class SkinUtil {
     
         if (profileProperty == null) {
             if(player.isOnline()){
-                ((Player)player).sendMessage(ChatUtility.convertToComponent("&4Failed to load skin! Something went wrong!"));
+                ((Player)player).sendMessage(TextUtility.INSTANCE.convertToComponent("&4Failed to load skin! Something went wrong!"));
             }
             return null;
         } else {

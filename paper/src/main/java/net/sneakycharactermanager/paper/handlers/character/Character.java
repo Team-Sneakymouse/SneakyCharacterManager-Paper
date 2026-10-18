@@ -37,8 +37,9 @@ import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
+import com.sneakyutils.util.TextUtility;
 import net.sneakycharactermanager.paper.util.ChatUtility;
-import net.sneakycharactermanager.paper.util.InventoryUtility;
+import com.sneakyutils.util.InventoryUtility;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -174,8 +175,13 @@ public class Character {
 
 			if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
 				if (config.getString("inventory") != null) {
-					ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
-					this.player.getInventory().setContents(inventoryContents);
+					try {
+						ItemStack[] inventoryContents = InventoryUtility.getSavedInventory(config.getString("inventory"));
+						this.player.getInventory().setContents(inventoryContents);
+					} catch (IOException e) {
+						SneakyCharacterManager.getInstance().getLogger().warning(
+								"Failed to load inventory for character " + this.characterUUID + ": " + e.getMessage());
+					}
 				}
 			}
 
@@ -480,8 +486,8 @@ public class Character {
 		config.set("location", playerLocation);
 
 		if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
-			String inventoryB64 = InventoryUtility.inventoryToBase64(this.player.getInventory());
-			config.set("inventory", inventoryB64);
+			String inventoryYaml = InventoryUtility.inventoryToPaperYaml(this.player.getInventory());
+			config.set("inventory", inventoryYaml);
 		}
 
 		if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageAttributes", false)) {

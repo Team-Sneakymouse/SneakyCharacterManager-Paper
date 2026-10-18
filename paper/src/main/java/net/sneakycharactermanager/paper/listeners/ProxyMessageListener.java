@@ -28,7 +28,7 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import com.sneakyutils.util.TextUtility;
 
 public class ProxyMessageListener implements PluginMessageListener {
 	
@@ -116,7 +116,7 @@ public class ProxyMessageListener implements PluginMessageListener {
 				pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
 
 				if (!forced && !Character.canPlayerLoadCharacter(pl, character.getCharacterUUID())) {
-					pl.sendMessage(ChatUtility.convertToComponent("&4You cannot access this character right now."));
+					pl.sendMessage(TextUtility.INSTANCE.convertToComponent("&4You cannot access this character right now."));
 					break;
 				}
 
@@ -128,7 +128,7 @@ public class ProxyMessageListener implements PluginMessageListener {
 				if (pl == null)
 					return;
 
-				pl.sendMessage(ChatUtility.convertToComponent("&aNo character found. Loading character menu..."));
+				pl.sendMessage(TextUtility.INSTANCE.convertToComponent("&aNo character found. Loading character menu..."));
 				SneakyCharacterManager.getInstance().selectionMenu.openMenu(pl);
 				break;
 			case "loadTempCharacter":
@@ -196,7 +196,7 @@ public class ProxyMessageListener implements PluginMessageListener {
 			case "deleteConfirmed":
 				playerUUID = messageIn.readUTF();
 				pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-				pl.sendMessage(ChatUtility.convertToComponent("&aThe following character has been deleted: &b`"
+				pl.sendMessage(TextUtility.INSTANCE.convertToComponent("&aThe following character has been deleted: &b`"
 						+ messageIn.readUTF() + "`&a (" + messageIn.readUTF() + ")"));
 				break;
 			case "getAllCharacters":
@@ -216,7 +216,7 @@ public class ProxyMessageListener implements PluginMessageListener {
 		if (requester == null)
 			return;
 
-		requester.sendMessage(ChatUtility.convertToComponent("&eFound the following usernames: "));
+		requester.sendMessage(TextUtility.INSTANCE.convertToComponent("&eFound the following usernames: "));
 		Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (_s) -> {
 
 			for (String information : characterData) {
@@ -229,11 +229,11 @@ public class ProxyMessageListener implements PluginMessageListener {
 					continue; // This shouldn't happen but just in case
 
 				Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> requester.sendMessage(
-						ChatUtility
+						TextUtility.INSTANCE
 								.convertToComponent(
 										"&eUser: " + offlinePlayer.getName() + " &7| &aCharacter: " + characterName)
 								.hoverEvent(HoverEvent
-										.showText(ChatUtility.convertToComponent("&6Player UUID: " + playerUUID)))
+										.showText(TextUtility.INSTANCE.convertToComponent("&6Player UUID: " + playerUUID)))
 								.clickEvent(ClickEvent.copyToClipboard(playerUUID))));
 
 			}

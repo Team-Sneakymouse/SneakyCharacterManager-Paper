@@ -13,6 +13,7 @@ repositories {
     maven {
         url = uri("https://maven.maxhenkel.de/repository/public")
     }
+    maven("https://maven.sneakyrp.com/releases")
 }
 
 dependencies {
@@ -22,6 +23,7 @@ dependencies {
     compileOnly("me.clip:placeholderapi:2.11.5")
     compileOnly("net.luckperms:api:5.4")
     compileOnly("de.maxhenkel.voicechat:voicechat-api:2.5.27")
+    compileOnly("io.github.team-sneakymouse:sneakyutils:2026.10.18-4b5831b0b997")
     implementation("com.google.code.gson:gson:2.10.1")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

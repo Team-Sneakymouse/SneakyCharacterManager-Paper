@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import com.sneakyutils.util.TextUtility;
 
 public class CommandNick extends CommandBase {
 
@@ -28,17 +28,17 @@ public class CommandNick extends CommandBase {
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatUtility.convertToComponent("&4Must be a player to run this command"));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Must be a player to run this command"));
             return false;
         }
 
         if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
-            player.sendMessage(ChatUtility.convertToComponent("&4You are currently on a template character, which do not support /nick and /skin."));
+            player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4You are currently on a template character, which do not support /nick and /skin."));
             return false;
         };
 
         if (args.length == 0) {
-            player.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.usageMessage));
+            player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid Usage: " + this.usageMessage));
             return false;
         }
 
@@ -49,7 +49,7 @@ public class CommandNick extends CommandBase {
         String nickname = builder.substring(0, builder.length()-1);
 
         if (nickname.length() > 32 && !player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".formatnames")) {
-            player.sendMessage(ChatUtility.convertToComponent("&4That name is too long! No more than 32 characters."));
+            player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4That name is too long! No more than 32 characters."));
             return false;
         }
 
@@ -66,20 +66,20 @@ public class CommandNick extends CommandBase {
         }
 
         if(containsBannedWord){
-            player.sendMessage(ChatUtility.convertToComponent("&4Your name contains a banned word! *Insert Ban Message Here*"));
+            player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Your name contains a banned word! *Insert Ban Message Here*"));
             return false;
         }
 
         //Name Filtering:
         String pattern = "^.*[^áéíóúýÁÉÍÓÚÝàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛäëïöüÿÄËÏÖÜŸãñõÃÑÕçÇåÅčďěňřšťžČĎĚŇŘŠŤŽąęĄĘÆØæø\\w\\-\\'\\\"\\`<>&\\. ].*$";
         if(nickname.matches(pattern) || (!player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".formatnames") && nickname.matches("^.*[<>&].*$"))){
-            player.sendMessage(ChatUtility.convertToComponent("&4Invalid name! It cannot contain special characters! Quotes, Spaces, and Diacritics are okay."));
+            player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid name! It cannot contain special characters! Quotes, Spaces, and Diacritics are okay."));
             return false;
         }
 
         Character character = Character.get(player);
         if(character == null) {
-            player.sendMessage(ChatUtility.convertToComponent("&cSorry! Failed to retrieve character!"));
+            player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cSorry! Failed to retrieve character!"));
             return false;
         }
 
@@ -90,7 +90,7 @@ public class CommandNick extends CommandBase {
         character.setName(nickname);
         SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
         ProxyMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), character.getCharacterUUID(), 2, nickname);
-        player.sendMessage(ChatUtility.convertToComponent("&eName updated to: " + nickname));
+        player.sendMessage(TextUtility.INSTANCE.convertToComponent("&eName updated to: " + nickname));
         return true;
     }
 

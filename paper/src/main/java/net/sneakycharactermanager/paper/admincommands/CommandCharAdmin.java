@@ -13,7 +13,7 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import com.sneakyutils.util.TextUtility;
 
 public class CommandCharAdmin extends CommandBaseAdmin {
 
@@ -26,12 +26,12 @@ public class CommandCharAdmin extends CommandBaseAdmin {
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (!(sender instanceof Player opener)) {
-            sender.sendMessage(ChatUtility.convertToComponent("&4Must be a player to run this command"));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Must be a player to run this command"));
             return false;
         }
 
         if (args.length != 1) {
-            opener.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.usageMessage));
+            opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid Usage: " + this.usageMessage));
             return false;
         }
 
@@ -41,10 +41,10 @@ public class CommandCharAdmin extends CommandBaseAdmin {
                 String playerUUID = player.getUniqueId().toString();
                 File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID);
                 if (playerDir.exists()) {
-                    opener.sendMessage(ChatUtility.convertToComponent("&aLoading character admin menu for player: &b" + args[0]));
+                    opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&aLoading character admin menu for player: &b" + args[0]));
                     SneakyCharacterManager.getInstance().selectionMenu.openAdminMenu(player, opener);
                 } else {
-                    opener.sendMessage(ChatUtility.convertToComponent("&aUnknown player: &b" + args[0]));
+                    opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&aUnknown player: &b" + args[0]));
                 }
             });
         });

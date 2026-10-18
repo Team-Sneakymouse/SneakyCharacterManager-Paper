@@ -3,8 +3,8 @@ package net.sneakycharactermanager.paper.admincommands;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.util.ChatUtility;
-import net.sneakycharactermanager.paper.util.InventoryUtility;
+import com.sneakyutils.util.TextUtility;
+import com.sneakyutils.util.InventoryUtility;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -12,6 +12,7 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -30,16 +31,16 @@ public class CommandCharScan extends CommandBaseAdmin {
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         if (!SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true)) {
-            sender.sendMessage(ChatUtility.convertToComponent("&cmanageInventories is currently set to false in the config, so you probably don't want this command."));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&cmanageInventories is currently set to false in the config, so you probably don't want this command."));
             return false;
         }
 
         if(args.length < 2) {
-            sender.sendMessage(ChatUtility.convertToComponent("&cInvalid Usage: " + this.usageMessage));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&cInvalid Usage: " + this.usageMessage));
             return false;
         }
 
-        sender.sendMessage(ChatUtility.convertToComponent("&eSearching for item..."));
+        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&eSearching for item..."));
         String type = args[0];
         StringBuilder builder = new StringBuilder();
 
@@ -50,19 +51,19 @@ public class CommandCharScan extends CommandBaseAdmin {
 
         if(type.equalsIgnoreCase("id")){
             for(String result : getById(itemData)){
-                sender.sendMessage(ChatUtility.convertToComponent(result));
+                sender.sendMessage(TextUtility.INSTANCE.convertToComponent(result));
             }
         }
         else if(type.equalsIgnoreCase("name")){
             for(String result : getByName(itemData)){
-                sender.sendMessage(ChatUtility.convertToComponent(result));
+                sender.sendMessage(TextUtility.INSTANCE.convertToComponent(result));
             }
         }
         else {
-            sender.sendMessage(ChatUtility.convertToComponent("&cInvalid Usage: " + this.usageMessage));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&cInvalid Usage: " + this.usageMessage));
             return false;
         }
-        sender.sendMessage(ChatUtility.convertToComponent("&eFinished"));
+        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&eFinished"));
         return false;
     }
 
@@ -94,7 +95,12 @@ public class CommandCharScan extends CommandBaseAdmin {
                 String inventoryB64 = config.getString("inventory");
                 if(inventoryB64 == null) continue;
 
-                ItemStack[] items = InventoryUtility.getSavedInventory(inventoryB64);
+                ItemStack[] items;
+                try {
+                    items = InventoryUtility.getSavedInventory(inventoryB64);
+                } catch (IOException e) {
+                    continue;
+                }
                 for(ItemStack item : items){
                     if(item == null) continue;
                     String key = item.getType().getKey().toString();
@@ -129,7 +135,12 @@ public class CommandCharScan extends CommandBaseAdmin {
                 String inventoryB64 = config.getString("inventory");
                 if(inventoryB64 == null) continue;
 
-                ItemStack[] items = InventoryUtility.getSavedInventory(inventoryB64);
+                ItemStack[] items;
+                try {
+                    items = InventoryUtility.getSavedInventory(inventoryB64);
+                } catch (IOException e) {
+                    continue;
+                }
                 for(ItemStack item : items){
                     if(item == null) continue;
                     String key;

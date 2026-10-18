@@ -7,6 +7,7 @@ import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu.CharacterMenuHolder;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.util.SkinUtil;
+import com.sneakyutils.util.TextUtility;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -273,7 +274,7 @@ public class SkinData extends BukkitRunnable {
                              SneakyCharacterManager.getInstance().getLogger().warning("MineSkin API rate limit hit (429) during queue request.");
                         } else {
                              SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + statusCode + " during queue request.");
-                             player.sendMessage(ChatUtility.convertToComponent("&cFailed to generate skin (MineSkin error " + statusCode + "). The URL may be invalid or unsupported."));
+                             player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cFailed to generate skin (MineSkin error " + statusCode + "). The URL may be invalid or unsupported."));
                              SneakyCharacterManager.getInstance().skinQueue.remove(this);
                         }
                     }

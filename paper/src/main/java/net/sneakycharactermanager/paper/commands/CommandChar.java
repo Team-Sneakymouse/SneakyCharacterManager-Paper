@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import com.sneakyutils.util.TextUtility;
 
 public class CommandChar extends CommandBase {
 
@@ -25,7 +25,7 @@ public class CommandChar extends CommandBase {
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(ChatUtility.convertToComponent("&4Must be a player to run this command"));
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Must be a player to run this command"));
             return false;
         }
 
@@ -35,27 +35,27 @@ public class CommandChar extends CommandBase {
                     String[] s = deleteConfirmationMap.get(player).split(";");
                     if (System.currentTimeMillis() < Long.valueOf(s[0]) + 10000) {
                         ProxyMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), s[1], 3, false);
-                        sender.sendMessage(ChatUtility.convertToComponent("&aDeleting character..."));
+                        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aDeleting character..."));
                         deleteConfirmationMap.remove(player);
                         return true;
                     } else {
-                        sender.sendMessage(ChatUtility.convertToComponent("&aYou tried to confirm a character deletion but it appears that you took more than 10 seconds to confirm. Please start over."));
+                        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aYou tried to confirm a character deletion but it appears that you took more than 10 seconds to confirm. Please start over."));
                         deleteConfirmationMap.remove(player);
                         return false;
                     }
                 } else {
-                    sender.sendMessage(ChatUtility.convertToComponent("&aYou tried to confirm a character deletion but you aren't deleting a character right now."));
+                    sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aYou tried to confirm a character deletion but you aren't deleting a character right now."));
                     return false;
                 }
             } else {
                 String name = String.join(" ", args);
-                player.sendMessage(ChatUtility.convertToComponent("&aLoading character &b`" + name + "`&r&a... Please Wait..."));
+                player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aLoading character &b`" + name + "`&r&a... Please Wait..."));
                 ProxyMessagingUtil.sendByteArray(player, "selectCharacterByName", player.getUniqueId().toString(), name);
                 return true;
             }
         }
 
-        player.sendMessage(ChatUtility.convertToComponent("&aLoading character menu..."));
+        player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aLoading character menu..."));
 
         SneakyCharacterManager.getInstance().selectionMenu.openMenu(player);
         return true;

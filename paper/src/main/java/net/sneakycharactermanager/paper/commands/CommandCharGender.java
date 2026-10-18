@@ -14,7 +14,7 @@ import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.Gender;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import com.sneakyutils.util.TextUtility;
 
 public class CommandCharGender extends CommandBase {
 
@@ -31,29 +31,29 @@ public class CommandCharGender extends CommandBase {
 	public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 
 		if (!(sender instanceof Player player)) {
-			sender.sendMessage(ChatUtility.convertToComponent("&4Must be a player to run this command"));
+			sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Must be a player to run this command"));
 			return false;
 		}
 
 		if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
-			player.sendMessage(ChatUtility.convertToComponent("&4Template characters do not support /chargender."));
+			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Template characters do not support /chargender."));
 			return false;
 		}
 
 		if (args.length != 1) {
-			player.sendMessage(ChatUtility.convertToComponent("&4Invalid Usage: " + this.usageMessage));
+			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid Usage: " + this.usageMessage));
 			return false;
 		}
 
 		String input = args[0].toLowerCase();
 		if (!OPTIONS.contains(input)) {
-			player.sendMessage(ChatUtility.convertToComponent("&4Supported options are: masculine, feminine, nonbinary, or clear."));
+			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Supported options are: masculine, feminine, nonbinary, or clear."));
 			return false;
 		}
 
 		Character character = Character.get(player);
 		if (character == null) {
-			player.sendMessage(ChatUtility.convertToComponent("&cFailed to retrieve character."));
+			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cFailed to retrieve character."));
 			return false;
 		}
 
@@ -65,9 +65,9 @@ public class CommandCharGender extends CommandBase {
 				character.getCharacterUUID(), 5, Gender.toConfigKeyNullable(gender));
 
 		if (gender == null) {
-			player.sendMessage(ChatUtility.convertToComponent("&aCleared gender for this character."));
+			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aCleared gender for this character."));
 		} else {
-			player.sendMessage(ChatUtility.convertToComponent("&aSet gender to &b" + Gender.toConfigKeyNullable(gender) + "&a."));
+			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aSet gender to &b" + Gender.toConfigKeyNullable(gender) + "&a."));
 		}
 		return true;
 	}

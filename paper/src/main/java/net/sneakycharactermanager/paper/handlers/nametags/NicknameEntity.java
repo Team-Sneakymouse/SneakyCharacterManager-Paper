@@ -21,7 +21,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.network.syncher.SynchedEntityData.DataValue;
 import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.EntityTypes;
-import net.sneakycharactermanager.paper.util.ChatUtility;
+import com.sneakyutils.util.TextUtility;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 
 public class NicknameEntity {
@@ -59,33 +59,33 @@ public class NicknameEntity {
         packetOff = makePacket(Component.text(" "), 0.01F, 0);
 
         packetHiddenOn = makePacket(
-            ChatUtility.convertToComponent("<gray>[ Hidden ]<newline><gray>[" + player.getName() + "]"),
+            TextUtility.INSTANCE.convertToComponent("<gray>[ Hidden ]<newline><gray>[" + player.getName() + "]"),
             0.2F,
             COLOR_DEFAULT_BACKGROUND);
         packetHiddenOnTalking = makePacket(
-            ChatUtility.convertToComponent("<gray>[ Hidden ] \uD83D\uDD0A<newline><gold>[" + player.getName() + "]"),
+            TextUtility.INSTANCE.convertToComponent("<gray>[ Hidden ] \uD83D\uDD0A<newline><gold>[" + player.getName() + "]"),
             0.2F,
             COLOR_TALKING);
     }
 
     public void updatePackets(String name) {
         packetCharacter = makePacket(
-            ChatUtility.convertToComponent(name),
+            TextUtility.INSTANCE.convertToComponent(name),
             0.4F,
             COLOR_DEFAULT_BACKGROUND);
         packetOn = makePacket(
-            ChatUtility.convertToComponent("<white>" + name + "<newline><gray>[" + player.getName() + "]"),
+            TextUtility.INSTANCE.convertToComponent("<white>" + name + "<newline><gray>[" + player.getName() + "]"),
             0.2F,
             COLOR_DEFAULT_BACKGROUND);
 
         // Talking variants: glow + warm background + speaker icon
         String talkingName = name + " \uD83D\uDD0A";
         packetCharacterTalking = makePacket(
-            ChatUtility.convertToComponent(talkingName),
+            TextUtility.INSTANCE.convertToComponent(talkingName),
             0.4F,
             COLOR_TALKING);
         packetOnTalking = makePacket(
-            ChatUtility.convertToComponent("<white>" + talkingName + "<newline><gold>[" + player.getName() + "]"),
+            TextUtility.INSTANCE.convertToComponent("<white>" + talkingName + "<newline><gold>[" + player.getName() + "]"),
             0.2F,
             COLOR_TALKING);
     }
