@@ -3,6 +3,7 @@ package net.sneakycharactermanager.paper.handlers.nametags;
 import java.util.*;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.handlers.character.Character;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
@@ -40,10 +41,12 @@ public class NametagManager {
             )
         ) return;
 
+        String titleDisplay = resolveTitleDisplay(player);
+
         if (!nicknames.containsKey(player.getUniqueId().toString())) {
-            nicknames.put(player.getUniqueId().toString(), new Nickname(player, nickname));
+            nicknames.put(player.getUniqueId().toString(), new Nickname(player, nickname, titleDisplay));
         }else{
-            nicknames.get(player.getUniqueId().toString()).setNickname(nickname);
+            nicknames.get(player.getUniqueId().toString()).setNickname(nickname, titleDisplay);
         }
 
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), ()->{
@@ -53,6 +56,22 @@ public class NametagManager {
             refreshNicknames(player, name, null);
         }, 5);
 
+    }
+
+    private static String resolveTitleDisplay(Player player) {
+        Character character = Character.get(player);
+        if (character == null) {
+            return null;
+        }
+        String titleKey = character.getTitle();
+        if (titleKey == null || titleKey.isBlank()) {
+            return null;
+        }
+        var registry = SneakyCharacterManager.getInstance().titleRegistry;
+        if (registry == null) {
+            return null;
+        }
+        return registry.getDisplay(titleKey);
     }
 
     public List<Player> refreshNicknames(Player player, Nickname name, List<Player> trackingPlayersPrev) {

@@ -15,6 +15,7 @@ public final class CharacterData {
     private String signature;
     private String tags;
     private Gender gender;
+    private String title;
 
     public CharacterData(
             String uuid,
@@ -27,7 +28,8 @@ public final class CharacterData {
             String signature,
             boolean slim,
             String tags,
-            String gender
+            String gender,
+            String title
     ) {
         this.uuid = uuid;
         this.enabled = enabled;
@@ -40,6 +42,7 @@ public final class CharacterData {
         this.slim = slim;
         this.tags = tags == null ? "" : tags;
         this.gender = Gender.fromString(gender);
+        this.title = title == null ? "" : title;
     }
 
     public String uuid() { return uuid; }
@@ -64,6 +67,8 @@ public final class CharacterData {
     public void tags(String tags) { this.tags = tags == null ? "" : tags; }
     public Gender gender() { return gender; }
     public void gender(Gender gender) { this.gender = gender; }
+    public String title() { return title; }
+    public void title(String title) { this.title = title == null ? "" : title; }
 
     public String nameUnformatted() {
         Pattern pattern = Pattern.compile("<[^>]*>|&[0-9A-FK-ORa-fk-or]");

@@ -33,6 +33,8 @@ import net.sneakycharactermanager.paper.handlers.nametags.NameTagRefresher;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
+import net.sneakycharactermanager.paper.handlers.titles.TitleRegistry;
+import net.sneakycharactermanager.paper.handlers.titles.TitleSelectionMenu;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.common.io.AsyncAtomicFileWriter;
 public class SneakyCharacterManager extends JavaPlugin implements Listener {
@@ -55,6 +57,8 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 	public SkinQueue skinQueue;
 	public SkinStateManager skinStateManager;
 	public NameTagRefresher nameTagRefresher;
+	public TitleRegistry titleRegistry;
+	public TitleSelectionMenu titleSelectionMenu;
 	private Object svcIntegration;
 
 	@Override
@@ -65,8 +69,11 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		skinQueue = new SkinQueue();
 		skinStateManager = new SkinStateManager();
 		nameTagRefresher = new NameTagRefresher();
+		titleRegistry = new TitleRegistry();
+		titleSelectionMenu = new TitleSelectionMenu();
 
 		saveDefaultConfig();
+		titleRegistry.load(this);
 		loadKeys();
 
 		if (getConfig().getBoolean("deleteCharacterDataOnServerStart", false)) {
@@ -79,6 +86,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		getServer().getCommandMap().register(IDENTIFIER, new CommandNames());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandNick());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandHideName());
+		getServer().getCommandMap().register(IDENTIFIER, new CommandTitle());
 
 		getServer().getCommandMap().register(IDENTIFIER, new CommandCharAdmin());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandCharScan());
@@ -89,6 +97,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		getServer().getCommandMap().register(IDENTIFIER, new CommandUserify());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandMigrateInventories());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandSkinQueue());
+		getServer().getCommandMap().register(IDENTIFIER, new CommandTitleGrant());
 
 		getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharDisable());
 		getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharEnable());
@@ -101,6 +110,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		getServer().getPluginManager().registerEvents(this, this);
 		getServer().getPluginManager().registerEvents(new ConnectionEventListeners(), this);
 		getServer().getPluginManager().registerEvents(selectionMenu, this);
+		getServer().getPluginManager().registerEvents(titleSelectionMenu, this);
 		getServer().getPluginManager().registerEvents(new DeathListener(), this);
 		getServer().getPluginManager().registerEvents(new GamemodeEvents(), this);
 		getServer().getPluginManager().registerEvents(new VanishEvents(), this);
@@ -118,6 +128,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".names.on"));
 		getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".names.off"));
 		getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".names.character"));
+		getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".title.*"));
 
 		if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
 			papiActive = true;

@@ -275,8 +275,9 @@ public class ProxyMessageListener implements PluginMessageListener {
 		boolean slim = in.readBoolean();
 		String tags = in.readUTF();
 		String gender = in.readUTF();
+		String title = in.readUTF();
 		
-		Character character = new Character(playerUUID, uuid, name, skin, skinUUID, texture, signature, slim, tags, gender);
+		Character character = new Character(playerUUID, uuid, name, skin, skinUUID, texture, signature, slim, tags, gender, title);
 		
 		// Read uniform variants
 		int variantCount = in.readInt();

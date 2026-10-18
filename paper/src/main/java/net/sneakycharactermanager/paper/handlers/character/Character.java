@@ -62,12 +62,13 @@ public class Character {
 	private boolean slim;
 	private JsonObject tags = null;
 	private Gender gender = null;
+	private String title = "";
 	private final Map<String, String[]> uniformVariants = new HashMap<>();
 
 	private boolean firstLoad = false;
 
 	public Character(String playerUUID, String characterUUID, String characterName, String skin, String skinUUID, String texture, String signature, boolean slim,
-			String tags, String gender) {
+			String tags, String gender, String title) {
 		this.player = Bukkit.getPlayer(UUID.fromString(playerUUID));
 		this.name = characterName;
 		this.characterUUID = characterUUID;
@@ -78,6 +79,7 @@ public class Character {
 		this.slim = slim;
 		this.tags = tags.isEmpty() ? new JsonObject() : JsonParser.parseString(tags).getAsJsonObject();
 		this.gender = Gender.fromString(gender);
+		this.title = title == null ? "" : title;
 
 		File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID);
 		boolean firstLogin = false;
@@ -285,6 +287,14 @@ public class Character {
 
 	public void setGender(Gender gender) {
 		this.gender = gender;
+	}
+
+	public String getTitle() {
+		return this.title == null ? "" : this.title;
+	}
+
+	public void setTitle(String title) {
+		this.title = title == null ? "" : title;
 	}
 
 	public void addUniformVariant(String hash, String uuid, String url, String texture, String signature) {

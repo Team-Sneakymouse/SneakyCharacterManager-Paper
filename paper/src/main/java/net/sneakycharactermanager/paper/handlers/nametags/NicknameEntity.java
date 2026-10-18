@@ -69,10 +69,22 @@ public class NicknameEntity {
     }
 
     public void updatePackets(String name) {
-        packetCharacter = makePacket(
-            TextUtility.INSTANCE.convertToComponent(name),
-            0.4F,
-            COLOR_DEFAULT_BACKGROUND);
+        updatePackets(name, null);
+    }
+
+    public void updatePackets(String name, String title) {
+        boolean hasTitle = title != null && !title.isBlank();
+        if (hasTitle) {
+            packetCharacter = makePacket(
+                TextUtility.INSTANCE.convertToComponent("<white>" + name + "<newline><gray>" + title),
+                0.2F,
+                COLOR_DEFAULT_BACKGROUND);
+        } else {
+            packetCharacter = makePacket(
+                TextUtility.INSTANCE.convertToComponent(name),
+                0.4F,
+                COLOR_DEFAULT_BACKGROUND);
+        }
         packetOn = makePacket(
             TextUtility.INSTANCE.convertToComponent("<white>" + name + "<newline><gray>[" + player.getName() + "]"),
             0.2F,
@@ -80,10 +92,17 @@ public class NicknameEntity {
 
         // Talking variants: glow + warm background + speaker icon
         String talkingName = name + " \uD83D\uDD0A";
-        packetCharacterTalking = makePacket(
-            TextUtility.INSTANCE.convertToComponent(talkingName),
-            0.4F,
-            COLOR_TALKING);
+        if (hasTitle) {
+            packetCharacterTalking = makePacket(
+                TextUtility.INSTANCE.convertToComponent("<white>" + talkingName + "<newline><gray>" + title),
+                0.2F,
+                COLOR_TALKING);
+        } else {
+            packetCharacterTalking = makePacket(
+                TextUtility.INSTANCE.convertToComponent(talkingName),
+                0.4F,
+                COLOR_TALKING);
+        }
         packetOnTalking = makePacket(
             TextUtility.INSTANCE.convertToComponent("<white>" + talkingName + "<newline><gold>[" + player.getName() + "]"),
             0.2F,

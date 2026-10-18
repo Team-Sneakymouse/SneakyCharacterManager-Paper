@@ -73,6 +73,7 @@ public final class PlayerData {
             section.put("slim", false);
             section.put("tags", "");
             section.put("gender", "");
+            section.put("title", "");
 
             root.put(firstCharacterUUID, section);
             YamlFiles.save(playerFile, root, platform.logger());
@@ -102,8 +103,9 @@ public final class PlayerData {
             boolean slim = boolOrDefault(section.get("slim"), false);
             String tags = normalizeTags(section.get("tags"));
             String gender = stringOrEmpty(section.get("gender"));
+            String title = stringOrEmpty(section.get("title"));
 
-            characterMap.put(key, new CharacterData(key, enabled, name, skinId, skin, skinUUID, texture, signature, slim, tags, gender));
+            characterMap.put(key, new CharacterData(key, enabled, name, skinId, skin, skinUUID, texture, signature, slim, tags, gender, title));
         }
     }
 
@@ -127,6 +129,7 @@ public final class PlayerData {
         section.put("slim", character.slim());
         section.put("tags", character.tags());
         section.put("gender", Gender.toConfigKeyNullable(character.gender()));
+        section.put("title", character.title() == null ? "" : character.title());
 
         if (character.usesSkinIdFormat()) {
             section.put("skinId", character.skinId());
@@ -204,7 +207,7 @@ public final class PlayerData {
 
     public synchronized String createNewCharacter(String uuid, String name, String skin, String skinUUID, boolean slim) {
         storeCharacters();
-        CharacterData character = new CharacterData(uuid, true, name, "", skin, skinUUID, "", "", slim, "", "");
+        CharacterData character = new CharacterData(uuid, true, name, "", skin, skinUUID, "", "", slim, "", "", "");
         characterMap.put(character.uuid(), character);
         saveCharacter(character);
         return character.uuid();
@@ -332,6 +335,17 @@ public final class PlayerData {
             return;
         }
         character.gender(Gender.fromString(gender));
+        saveCharacter(character);
+    }
+
+    public synchronized void setCharacterTitle(String characterUUID, String title) {
+        storeCharacters();
+        CharacterData character = characterMap.get(characterUUID);
+        if (character == null) {
+            platform.logger().severe("Attempted to set title on missing character [" + playerUUID + ", " + characterUUID + "]");
+            return;
+        }
+        character.title(title == null ? "" : title);
         saveCharacter(character);
     }
 

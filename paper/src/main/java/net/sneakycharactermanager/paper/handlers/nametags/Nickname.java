@@ -19,10 +19,14 @@ public class Nickname {
      * @param nickname Starter nickname for the player
      * */
     public Nickname(Player player, String nickname) {
+        this(player, nickname, null);
+    }
+
+    public Nickname(Player player, String nickname, String title) {
         this.nametag = new NicknameEntity(player);
         this.uuid = player.getUniqueId().toString();
         this.nickname = nickname;
-        this.setNickname(nickname);
+        this.setNickname(nickname, title);
     }
 
     /**
@@ -32,10 +36,14 @@ public class Nickname {
      * @param nickname New nickname to set.
      * */
     public void setNickname(String nickname) {
+        setNickname(nickname, null);
+    }
+
+    public void setNickname(String nickname, String title) {
         Player player = Bukkit.getPlayer(UUID.fromString(this.uuid));
         if (player == null) return;
         this.nickname = nickname;
-        nametag.updatePackets(nickname);
+        nametag.updatePackets(nickname, title);
     }
 
     /**

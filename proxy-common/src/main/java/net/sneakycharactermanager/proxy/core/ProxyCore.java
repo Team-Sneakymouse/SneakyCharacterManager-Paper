@@ -121,6 +121,10 @@ public final class ProxyCore {
                         pd.setCharacterGender(characterUUID, in.readUTF());
                         pd.syncCharactersToSelf(server, messenger);
                     }
+                    case 7 -> {
+                        pd.setCharacterTitle(characterUUID, in.readUTF());
+                        pd.syncCharactersToSelf(server, messenger);
+                    }
                     default -> { /* ignore */ }
                 }
             }

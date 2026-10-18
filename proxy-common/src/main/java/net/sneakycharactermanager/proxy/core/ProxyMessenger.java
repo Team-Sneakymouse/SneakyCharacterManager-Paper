@@ -100,6 +100,7 @@ public final class ProxyMessenger {
         out.writeBoolean(character.slim());
         out.writeUTF(character.tags());
         out.writeUTF(Gender.toConfigKeyNullable(character.gender()));
+        out.writeUTF(character.title() == null ? "" : character.title());
 
         List<UniformSkinCache.Variant> variants = uniformSkinCache.getVariants(baseUrl);
         out.writeInt(variants.size());

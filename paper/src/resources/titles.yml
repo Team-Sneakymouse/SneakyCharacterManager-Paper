@@ -1,0 +1,4 @@
+# Character titles: key -> display text shown on nameplates (characters-only mode).
+# Unlock with: sneakycharacters.title.<key>
+# Example:
+# master_fisherman: "Master Fisherman"

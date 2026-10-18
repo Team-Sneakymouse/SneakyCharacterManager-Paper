@@ -69,6 +69,10 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 - `webServerURLPrefix`
 - `gender-suffixes.*`
 
+Titles (separate file `titles.yml`, not `config.yml`):
+
+- `key: "Display Text"` — unlock with `sneakycharacters.title.<key>`; shown as the grey second nameplate line in characters-only mode
+
 ## Commands (Paper)
 
 ### Player commands
@@ -83,6 +87,7 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 - `/skin state <id>` (apply a previous skin state from this session)
 - `/names <on|off|character>`
 - `/chargender <masculine|feminine|nonbinary|clear>`
+- `/title` (open title selection menu for the current character)
 
 ### Admin commands
 
@@ -95,6 +100,7 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 - `/userify` (alias: `/whois`)
 - `/migrateinventories`
 - `/skinqueue <status|flush|detail <priority>>`
+- `/titlegrant <player>` (create a new title via dialog, grant it, and equip it)
 
 ### Console commands
 
@@ -117,6 +123,8 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 - Other notable nodes:
   - `sneakycharacters.formatnames`
   - `sneakycharacters.skinfetch.others`
+  - `sneakycharacters.title.<key>` (unlock a title from `titles.yml`)
+  - `sneakycharacters.title.*`
 - `sneakycharacters.character.<characterUUID>`
 - `sneakycharacters.preload`: Automatic inclusion in persistent preload cache
 
