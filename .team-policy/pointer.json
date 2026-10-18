@@ -1,0 +1,10 @@
+{
+  "schema_version": 2,
+  "mode": "sibling-checkout",
+  "source_repo": "Team-Sneakymouse/team-development-policy",
+  "remote": "git@github.com:Team-Sneakymouse/team-development-policy.git",
+  "track_branch": "main",
+  "local_candidates": [
+    "../team-development-policy"
+  ]
+}

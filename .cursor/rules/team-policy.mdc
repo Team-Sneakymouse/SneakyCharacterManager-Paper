@@ -3,4 +3,4 @@ description: Team development policy — follow AGENTS.md
 alwaysApply: true
 ---
 
-Follow [AGENTS.md](../../AGENTS.md). It includes the enrolled team-policy bootstrap and local facts. Read `.team-policy/` files as that bootstrap directs.
+Follow [AGENTS.md](../../AGENTS.md). It includes the enrolled team-policy bootstrap (sibling checkout via `.team-policy/pointer.json`) and local facts.
