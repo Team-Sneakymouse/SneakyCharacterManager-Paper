@@ -73,7 +73,6 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		titleSelectionMenu = new TitleSelectionMenu();
 
 		saveDefaultConfig();
-		titleRegistry.load(this);
 		loadKeys();
 
 		if (getConfig().getBoolean("deleteCharacterDataOnServerStart", false)) {

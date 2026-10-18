@@ -1,5 +1,6 @@
 package net.sneakycharactermanager.proxy.core;
 
+import net.sneakycharactermanager.common.titles.TitleKeys;
 import net.sneakycharactermanager.proxy.common.ProxyPlatform;
 import net.sneakycharactermanager.proxy.common.ProxyServerConnection;
 import net.sneakycharactermanager.proxy.common.SkinContentHash;
@@ -20,6 +21,7 @@ public final class ProxyCore {
     private final PlayerDataRepository playerDataRepository;
     private final UniformSkinCache uniformSkinCache;
     private final GlobalSkinCache globalSkinCache;
+    private final TitleCatalog titleCatalog;
     private final SkinResolveService skinResolveService;
     private final PrivateKey privateKey;
     private final PublicKey publicKey;
@@ -34,6 +36,7 @@ public final class ProxyCore {
 
         this.globalSkinCache = new GlobalSkinCache(platform.dataFolder(), platform.logger());
         this.uniformSkinCache = new UniformSkinCache(platform.dataFolder(), platform.logger());
+        this.titleCatalog = new TitleCatalog(platform.dataFolder(), platform.logger());
         this.playerDataRepository = new PlayerDataRepository(platform, globalSkinCache);
         this.skinResolveService = new SkinResolveService(globalSkinCache, SKIN_RESOLVE_TIMEOUT_SECONDS, SKIN_DOWNLOAD_MAX_BYTES, platform.logger());
         this.messenger = new ProxyMessenger(platform, privateKey, uniformSkinCache, globalSkinCache);
@@ -68,6 +71,33 @@ public final class ProxyCore {
                 String playerUUID = in.readUTF();
                 PlayerData pd = playerDataRepository.get(playerUUID);
                 pd.loadLastPlayedCharacter(server, messenger);
+                messenger.send(server, "syncTitles", playerUUID, titleCatalog.wirePairs());
+            }
+            case "requestTitles" -> {
+                String playerUUID = in.readUTF();
+                messenger.send(server, "syncTitles", playerUUID, titleCatalog.wirePairs());
+            }
+            case "createTitle" -> {
+                String adminUUID = in.readUTF();
+                String targetUUID = in.readUTF();
+                String rawCode = in.readUTF();
+                String display = in.readUTF();
+                String code = TitleKeys.normalize(rawCode);
+                String trimmedDisplay = display == null ? "" : display.trim();
+                if (code.isEmpty() || trimmedDisplay.isEmpty()) {
+                    messenger.send(server, "createTitleResult", adminUUID, targetUUID, false, code,
+                            trimmedDisplay, "invalid");
+                } else if (titleCatalog.contains(code)) {
+                    messenger.send(server, "createTitleResult", adminUUID, targetUUID, false, code,
+                            trimmedDisplay, "exists");
+                } else if (titleCatalog.insert(code, trimmedDisplay)) {
+                    messenger.send(server, "createTitleResult", adminUUID, targetUUID, true, code,
+                            trimmedDisplay, "");
+                    messenger.send(server, "syncTitles", adminUUID, titleCatalog.wirePairs());
+                } else {
+                    messenger.send(server, "createTitleResult", adminUUID, targetUUID, false, code,
+                            trimmedDisplay, "failed");
+                }
             }
             case "playerQuit" -> {
                 String playerUUID = in.readUTF();

@@ -36,6 +36,7 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 
 - Proxy stores identity metadata in:
   - `plugins/SneakyCharacterManager/characterdata/<playerUUID>.yml`
+  - `plugins/SneakyCharacterManager/titles.yml` (title key → display text catalog; synced to backends)
 - Paper stores per-character gameplay state in:
   - `plugins/SneakyCharacterManager/characterdata/<playerUUID>/<characterUUID>.yml`
 - Messaging channel between proxy and backend:
@@ -69,9 +70,11 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 - `webServerURLPrefix`
 - `gender-suffixes.*`
 
-Titles (separate file `titles.yml`, not `config.yml`):
+Titles (proxy file `titles.yml`, not Paper `config.yml`):
 
-- `key: "Display Text"` — unlock with `sneakycharacters.title.<key>`; shown as the grey second nameplate line in characters-only mode
+- Stored on the proxy and pushed to each Paper backend on player join / title create
+- `key: "Display Text"` — unlock with `sneakycharacters.title.<key>`; characters store the key; backends resolve display text for the grey second nameplate line in characters-only mode
+- If you previously kept `titles.yml` on Paper, copy it into the proxy plugin data folder once
 
 ## Commands (Paper)
 
@@ -123,7 +126,7 @@ Titles (separate file `titles.yml`, not `config.yml`):
 - Other notable nodes:
   - `sneakycharacters.formatnames`
   - `sneakycharacters.skinfetch.others`
-  - `sneakycharacters.title.<key>` (unlock a title from `titles.yml`)
+  - `sneakycharacters.title.<key>` (unlock a title from the proxy `titles.yml`)
   - `sneakycharacters.title.*`
 - `sneakycharacters.character.<characterUUID>`
 - `sneakycharacters.preload`: Automatic inclusion in persistent preload cache

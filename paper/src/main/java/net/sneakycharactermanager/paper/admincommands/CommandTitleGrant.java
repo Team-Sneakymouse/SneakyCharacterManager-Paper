@@ -27,6 +27,7 @@ import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.titles.TitlePermissionGranter;
 import net.sneakycharactermanager.paper.handlers.titles.TitleRegistry;
 import net.sneakycharactermanager.paper.handlers.titles.TitleSelectionMenu;
+import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 
 public class CommandTitleGrant extends CommandBaseAdmin {
 
@@ -149,8 +150,7 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 			return;
 		}
 
-		Character character = Character.get(target);
-		if (character == null) {
+		if (Character.get(target) == null) {
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
 					"&cThat player is no longer on a character."));
 			return;
@@ -161,10 +161,59 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 			return;
 		}
 
-		if (!registry.insert(code, display)) {
+		ProxyMessagingUtil.sendByteArray(admin, "createTitle",
+				admin.getUniqueId().toString(),
+				targetId.toString(),
+				code,
+				display);
+		admin.sendMessage(TextUtility.INSTANCE.convertToComponent("&7Creating title on proxy..."));
+	}
+
+	public static void handleCreateResult(
+			String adminUUID,
+			String targetUUID,
+			boolean created,
+			String code,
+			String display,
+			String error) {
+		Player admin = Bukkit.getPlayer(UUID.fromString(adminUUID));
+		if (admin == null) {
+			return;
+		}
+
+		UUID targetId = UUID.fromString(targetUUID);
+		if (!created) {
+			String reason = switch (error == null ? "" : error) {
+				case "exists" -> "&cTitle code &b" + code + "&c is already in use. Pick a different code.";
+				case "invalid" -> "&cCould not create title (invalid code or display).";
+				default -> "&cCould not create title &b" + code + "&c.";
+			};
+			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(reason));
+			CommandTitleGrant command = new CommandTitleGrant();
+			command.openForm(admin, targetId, code, display);
+			return;
+		}
+
+		Player target = Bukkit.getPlayer(targetId);
+		if (target == null) {
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
-					"&cCould not create title &b" + code + "&c (already exists or invalid)."));
-			openForm(admin, targetId, enteredCode, enteredDisplay);
+					"&aCreated title &b" + display + "&a (&b" + code
+							+ "&a), but the player is no longer online to grant it."));
+			return;
+		}
+
+		Character character = Character.get(target);
+		if (character == null) {
+			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
+					"&aCreated title &b" + display + "&a (&b" + code
+							+ "&a), but the player is no longer on a character."));
+			return;
+		}
+
+		if (!TitlePermissionGranter.isAvailable()) {
+			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
+					"&aCreated title &b" + display + "&a (&b" + code
+							+ "&a), but LuckPerms is unavailable to grant it."));
 			return;
 		}
 
@@ -172,7 +221,7 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 			TitlePermissionGranter.grant(target, code);
 		} catch (IllegalStateException e) {
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
-					"&cFailed to grant LuckPerms permission: " + e.getMessage()));
+					"&cTitle created, but failed to grant LuckPerms permission: " + e.getMessage()));
 			return;
 		}
 

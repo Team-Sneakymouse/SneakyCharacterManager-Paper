@@ -19,6 +19,7 @@ import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.admincommands.CommandTitleGrant;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
@@ -203,6 +204,30 @@ public class ProxyMessageListener implements PluginMessageListener {
 				playerUUID = messageIn.readUTF();
 				List<String> characterData = readStringList(messageIn);
 				handleCharacterOutput(playerUUID, characterData);
+				break;
+			case "syncTitles":
+				messageIn.readUTF(); // routing playerUUID
+				List<String> titlePairs = readStringList(messageIn);
+				Map<String, String> titles = new LinkedHashMap<>();
+				for (int i = 0; i + 1 < titlePairs.size(); i += 2) {
+					titles.put(titlePairs.get(i), titlePairs.get(i + 1));
+				}
+				SneakyCharacterManager.getInstance().titleRegistry.replaceAll(titles);
+				for (Player online : Bukkit.getOnlinePlayers()) {
+					Character titled = Character.get(online);
+					if (titled != null) {
+						SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(online, titled.getDisplayName());
+					}
+				}
+				break;
+			case "createTitleResult":
+				String adminUUID = messageIn.readUTF();
+				String targetUUID = messageIn.readUTF();
+				boolean created = messageIn.readBoolean();
+				String createdCode = messageIn.readUTF();
+				String createdDisplay = messageIn.readUTF();
+				String createError = messageIn.readUTF();
+				CommandTitleGrant.handleCreateResult(adminUUID, targetUUID, created, createdCode, createdDisplay, createError);
 				break;
 			default:
 				SneakyCharacterManager.getInstance().getLogger().severe(
