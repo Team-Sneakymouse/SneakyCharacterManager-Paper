@@ -23,7 +23,7 @@ dependencies {
     compileOnly("me.clip:placeholderapi:2.11.5")
     compileOnly("net.luckperms:api:5.4")
     compileOnly("de.maxhenkel.voicechat:voicechat-api:2.5.27")
-    compileOnly("io.github.team-sneakymouse:sneakyutils:2026.10.18-4b5831b0b997")
+    compileOnly("io.github.team-sneakymouse:sneakyutils:2026.10.18-657d452bd6f4")
     implementation("com.google.code.gson:gson:2.10.1")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
