@@ -70,11 +70,13 @@ public class CommandNick extends CommandBase {
             return false;
         }
 
-        //Name Filtering:
-        String pattern = "^.*[^áéíóúýÁÉÍÓÚÝàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛäëïöüÿÄËÏÖÜŸãñõÃÑÕçÇåÅčďěňřšťžČĎĚŇŘŠŤŽąęĄĘÆØæø\\w\\-\\'\\\"\\`<>&\\. ].*$";
-        if(nickname.matches(pattern) || (!player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".formatnames") && nickname.matches("^.*[<>&].*$"))){
-            player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid name! It cannot contain special characters! Quotes, Spaces, and Diacritics are okay."));
-            return false;
+        // Name Filtering (skipped when runner has formatnames)
+        if (!player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".formatnames")) {
+            String pattern = "^.*[^áéíóúýÁÉÍÓÚÝàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛäëïöüÿÄËÏÖÜŸãñõÃÑÕçÇåÅčďěňřšťžČĎĚŇŘŠŤŽąęĄĘÆØæø\\w\\-\\'\\\"\\`<>&\\. ].*$";
+            if (nickname.matches(pattern) || nickname.matches("^.*[<>&].*$")) {
+                player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Invalid name! It cannot contain special characters! Quotes, Spaces, and Diacritics are okay."));
+                return false;
+            }
         }
 
         Character character = Character.get(player);
