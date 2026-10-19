@@ -105,6 +105,7 @@ Titles (proxy file `titles.yml`, not Paper `config.yml`):
 - `/migrateinventories`
 - `/skinqueue <status|flush|detail <priority>>`
 - `/titlegrant <player>` (create a new title via dialog, grant it, and equip it)
+- `/charreload` (reload Paper `config.yml` and refresh online nameplates)
 
 ### Console commands
 
