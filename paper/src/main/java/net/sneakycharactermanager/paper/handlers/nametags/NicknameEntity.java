@@ -76,7 +76,7 @@ public class NicknameEntity {
         boolean hasTitle = title != null && !title.isBlank();
         if (hasTitle) {
             packetCharacter = makePacket(
-                TextUtility.INSTANCE.convertToComponent("<white>" + name + "<newline><gray>" + title),
+                TextUtility.INSTANCE.convertToComponent("<white>" + name + "<newline>" + titleLine(title)),
                 0.2F,
                 COLOR_DEFAULT_BACKGROUND);
         } else {
@@ -94,7 +94,7 @@ public class NicknameEntity {
         String talkingName = name + " \uD83D\uDD0A";
         if (hasTitle) {
             packetCharacterTalking = makePacket(
-                TextUtility.INSTANCE.convertToComponent("<white>" + talkingName + "<newline><gray>" + title),
+                TextUtility.INSTANCE.convertToComponent("<white>" + talkingName + "<newline>" + titleLine(title)),
                 0.2F,
                 COLOR_TALKING);
         } else {
@@ -107,6 +107,14 @@ public class NicknameEntity {
             TextUtility.INSTANCE.convertToComponent("<white>" + talkingName + "<newline><gold>[" + player.getName() + "]"),
             0.2F,
             COLOR_TALKING);
+    }
+
+    private static String titleLine(String title) {
+        String prefix = SneakyCharacterManager.getInstance().getConfig().getString("titlePrefix", "<gray>");
+        if (prefix == null || prefix.isEmpty()) {
+            prefix = "<gray>";
+        }
+        return prefix + title;
     }
 
     private ClientboundSetEntityDataPacket makePacket(Component name, float height, int backgroundColor) {

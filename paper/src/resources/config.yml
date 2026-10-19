@@ -5,6 +5,8 @@ manageAttributes: false
 respawnNameTags: false
 respawnTimerSeconds: 600
 see-own-nameplate: false
+# MiniMessage styling applied before title display text on the nameplate second line
+titlePrefix: '<gray>'
 mineskinQueueUrl: 'https://api.mineskin.org/v2/queue'
 mineskinSkinsUrl: 'https://api.mineskin.org/v2/skins'
 mineskinAuth: ''

@@ -53,6 +53,7 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 - `respawnNameTags`
 - `respawnTimerSeconds`
 - `see-own-nameplate`
+- `titlePrefix` (MiniMessage prefix for the title nameplate line; default `<gray>`)
 - `bannedWords`
 - `mineskinQueueUrl` (Mineskin v2 queue endpoint)
 - `mineskinSkinsUrl` (Mineskin v2 skins endpoint)
@@ -73,7 +74,7 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 Titles (proxy file `titles.yml`, not Paper `config.yml`):
 
 - Stored on the proxy and pushed to each Paper backend on player join / title create
-- `key: "Display Text"` — unlock with `sneakycharacters.title.<key>`; characters store the key; backends resolve display text for the grey second nameplate line in characters-only mode
+- `key: "Display Text"` — unlock with `sneakycharacters.title.<key>`; characters store the key; backends resolve display text for the second nameplate line in characters-only mode (styled via Paper `titlePrefix`)
 - If you previously kept `titles.yml` on Paper, copy it into the proxy plugin data folder once
 
 ## Commands (Paper)
