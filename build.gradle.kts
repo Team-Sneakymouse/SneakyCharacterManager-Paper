@@ -80,6 +80,13 @@ fun org.gradle.api.artifacts.dsl.RepositoryHandler.sneakyrpReleases() {
     }
 }
 
+/** Keep compileOnly and runServer pluginJars on the same published SneakyUtils. */
+val sneakyUtilsVersion = "2026.10.18-657d452bd6f4"
+extra["sneakyUtilsVersion"] = sneakyUtilsVersion
+
+/** Runtime plugin jar for ./gradlew runServer (resolved from maven.sneakyrp.com into the Gradle cache). */
+val sneakyUtilsPlugin by configurations.creating
+
 allprojects {
     group = rootProject.group
     version = rootProject.version
@@ -88,6 +95,7 @@ allprojects {
         mavenCentral()
         maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://maven.maxhenkel.de/repository/public")
+        maven("https://maven.sneakyrp.com/releases")
     }
 }
 
@@ -104,6 +112,8 @@ dependencies {
     implementation(project(":velocity")) {
         exclude(group = "org.jetbrains.kotlin")
     }
+    // Plugin jar only — do not stage transitive libs as Paper plugins.
+    sneakyUtilsPlugin("io.github.team-sneakymouse:sneakyutils:$sneakyUtilsVersion") { isTransitive = false }
 }
 
 java {
@@ -226,6 +236,41 @@ tasks {
     runServer {
         dependsOn(shadowJar)
         minecraftVersion("26.2")
+        // Resolved from Maven (Gradle cache); Paper still needs a jar on disk under run/plugins.
+        pluginJars.from(sneakyUtilsPlugin)
+        // Drop any hand-copied / stale SneakyUtils jar so only the pinned version from pluginJars is loaded.
+        doFirst {
+            val pluginsDir = runDirectory.get().asFile.resolve("plugins")
+            if (!pluginsDir.isDirectory) return@doFirst
+            pluginsDir.listFiles()
+                ?.filter {
+                    it.isFile &&
+                        it.name.endsWith(".jar", ignoreCase = true) &&
+                        it.name.contains("sneakyutils", ignoreCase = true)
+                }
+                ?.forEach { stale ->
+                    logger.lifecycle("runServer: removing stale {}", stale.name)
+                    stale.delete()
+                }
+        }
+    }
+
+    fun installProxyPluginJar(pluginsDir: File) {
+        val src = shadowJar.get().archiveFile.get().asFile
+        if (!src.exists()) return
+
+        pluginsDir.mkdirs()
+        // Naming has changed over time (…-1.0-SNAPSHOT.jar, dated hashes, plain .jar); clear all
+        // prior SCM jars so the proxy never loads two builds at once.
+        pluginsDir.listFiles()
+            ?.filter { file ->
+                file.isFile &&
+                    file.extension.equals("jar", ignoreCase = true) &&
+                    file.nameWithoutExtension.startsWith("SneakyCharacterManager", ignoreCase = true)
+            }
+            ?.forEach { it.delete() }
+
+        src.copyTo(File(pluginsDir, "SneakyCharacterManager.jar"), overwrite = true)
     }
 
     register<Exec>("runBungee") {
@@ -234,16 +279,24 @@ tasks {
         dependsOn(shadowJar)
 
         doFirst {
-            val src = shadowJar.get().archiveFile.get().asFile
-            val dest = file("/mnt/files/Desktop/Minecraft/bungee/plugins/SneakyCharacterManager.jar")
-            if (src.exists()) {
-                dest.parentFile.mkdirs()
-                src.copyTo(dest, overwrite = true)
-            }
+            installProxyPluginJar(file("/mnt/files/Desktop/Minecraft/bungee/plugins"))
         }
 
         workingDir = file("/mnt/files/Desktop/Minecraft/bungee")
         commandLine = listOf("java", "-jar", "BungeeCord.jar")
+    }
+
+    register<Exec>("runVelocity") {
+        group = "SneakyCharacterManager"
+        description = "Builds the jar, copies it to the Velocity server plugins folder, and runs Velocity."
+        dependsOn(shadowJar)
+
+        doFirst {
+            installProxyPluginJar(file("/mnt/files/Desktop/Minecraft/Velocity/plugins"))
+        }
+
+        workingDir = file("/mnt/files/Desktop/Minecraft/Velocity")
+        commandLine = listOf("java", "-jar", "velocity.jar")
     }
 }
 

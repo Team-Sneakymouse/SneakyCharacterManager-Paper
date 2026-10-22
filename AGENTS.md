@@ -33,7 +33,9 @@ None recorded. Shared proportional testing applies. Prefer extending existing JU
 |------|---------|
 | Build + checks | `./gradlew check` |
 | Unit tests | `./gradlew test` |
-| Local Paper server | `./gradlew runServer` |
+| Local Paper server | `./gradlew runServer` (stages pinned SneakyUtils into `run/plugins`) |
+| Local BungeeCord | `./gradlew runBungee` |
+| Local Velocity | `./gradlew runVelocity` |
 | Publish (CI) | root publish tasks / `publish.yml` (Maven credentials required) |
 
 ## Architecture

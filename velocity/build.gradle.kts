@@ -37,9 +37,9 @@ tasks.withType<org.gradle.jvm.tasks.Jar>().configureEach { dependsOn(generateVer
 dependencies {
     compileOnly(project(":proxy-common"))
 
-    compileOnly("com.velocitypowered:velocity-api:3.3.0-SNAPSHOT")
-    annotationProcessor("com.velocitypowered:velocity-api:3.3.0-SNAPSHOT")
-    testImplementation("com.velocitypowered:velocity-api:3.3.0-SNAPSHOT")
+    compileOnly("com.velocitypowered:velocity-api:4.3.0")
+    annotationProcessor("com.velocitypowered:velocity-api:4.3.0")
+    testImplementation("com.velocitypowered:velocity-api:4.3.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
