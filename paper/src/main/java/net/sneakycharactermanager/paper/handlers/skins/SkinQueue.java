@@ -276,25 +276,24 @@ public class SkinQueue extends BukkitRunnable {
         for (int p = PRIO_UNIFORM; p > PRIO_ONLINE; p--) {
             List<SkinData> list = queue.get(p);
             if (list.isEmpty()) continue;
-            for (SkinData data : list) {
-                if (!data.processing) return data;
-            }
+            SkinData ready = RateLimitBackoff.firstReady(list, SkinData::isReady);
+            if (ready != null) return ready;
         }
 
         // Low priority skins that have a UUID go first, and bypass the reservation (because they do not cost capacity)
         List<SkinData> p1 = queue.get(PRIO_ONLINE);
         // Menu-open pass
         for (SkinData data : p1) {
-            if (!data.processing && data.isMenuOpen() && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
+            if (data.isReady() && data.isMenuOpen() && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
         }
         // Normal P1 pass
         for (SkinData data : p1) {
-            if (!data.processing && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
+            if (data.isReady() && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
         }
 
         // P0: only when above reservation
         for (SkinData data : queue.get(PRIO_OFFLINE)) {
-            if (!data.processing && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
+            if (data.isReady() && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
         }
 
         // P1: first prefer entries whose menu is currently open (player has the UI open),
@@ -302,16 +301,16 @@ public class SkinQueue extends BukkitRunnable {
         if (remaining > minReservation) {
             // Menu-open pass
             for (SkinData data : p1) {
-                if (!data.processing && data.isMenuOpen()) return data;
+                if (data.isReady() && data.isMenuOpen()) return data;
             }
             // Normal P1 pass
             for (SkinData data : p1) {
-                if (!data.processing) return data;
+                if (data.isReady()) return data;
             }
 
             // P0: only when above reservation
             for (SkinData data : queue.get(PRIO_OFFLINE)) {
-                if (!data.processing) return data;
+                if (data.isReady()) return data;
             }
         }
 

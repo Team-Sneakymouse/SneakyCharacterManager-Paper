@@ -62,6 +62,8 @@ public class SkinData extends BukkitRunnable {
     boolean processing = false;
     private String jobid = null;
     private long lastPollTime = 0;
+    private long retryAt = 0;
+    private int rateLimitHits = 0;
     private String characterName = null;
 
     private String baseSkinUrl;
@@ -160,6 +162,20 @@ public class SkinData extends BukkitRunnable {
 
     public boolean isProcessing() {
         return processing;
+    }
+
+    /** Not running and not waiting out a rate-limit backoff. */
+    public boolean isReady() {
+        return !processing && System.currentTimeMillis() >= retryAt;
+    }
+
+    /** Puts this entry back in the queue, not to be picked again until MineSkin's rate limit allows. */
+    private void backOff(HttpResponse response) {
+        rateLimitHits++;
+        Header retryAfter = response.getFirstHeader("Retry-After");
+        retryAt = RateLimitBackoff.retryAt(retryAfter == null ? null : retryAfter.getValue(),
+                SneakyCharacterManager.getInstance().skinQueue.getNextReset(), rateLimitHits, System.currentTimeMillis());
+        processing = false;
     }
 
     /**
@@ -266,13 +282,14 @@ public class SkinData extends BukkitRunnable {
                                 processing = false;
                             } else {
                                 jobid = jobObject.get("id").toString();
+                                rateLimitHits = 0;
                                 if (debug) {
                                     SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Job Queued for " + player.getName() + ": " + jobid);
                                 }
                             }
                         } else if (statusCode == 429) {
                              SneakyCharacterManager.getInstance().getLogger().warning("MineSkin API rate limit hit (429) during queue request.");
-                             processing = false; // Back in the queue so it is retried once capacity returns.
+                             backOff(response);
                         } else {
                              SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + statusCode + " during queue request.");
                              player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cFailed to generate skin (MineSkin error " + statusCode + "). The URL may be invalid or unsupported."));
@@ -339,7 +356,7 @@ public class SkinData extends BukkitRunnable {
                         }
                     } else if (statusCode == 429) {
                         SneakyCharacterManager.getInstance().getLogger().warning("MineSkin API rate limit hit (429) during skin fetch.");
-                        processing = false; // Back in the queue so it is retried once capacity returns.
+                        backOff(response);
                     } else if (statusCode != 200) {
                         SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + statusCode + " during skin fetch.");
                         this.cancel();
