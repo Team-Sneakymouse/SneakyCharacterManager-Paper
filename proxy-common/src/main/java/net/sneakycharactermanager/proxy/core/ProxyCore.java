@@ -87,16 +87,20 @@ public final class ProxyCore {
                 if (code.isEmpty() || trimmedDisplay.isEmpty()) {
                     messenger.send(server, "createTitleResult", adminUUID, targetUUID, false, code,
                             trimmedDisplay, "invalid");
-                } else if (titleCatalog.contains(code)) {
-                    messenger.send(server, "createTitleResult", adminUUID, targetUUID, false, code,
-                            trimmedDisplay, "exists");
-                } else if (titleCatalog.insert(code, trimmedDisplay)) {
-                    messenger.send(server, "createTitleResult", adminUUID, targetUUID, true, code,
-                            trimmedDisplay, "");
-                    messenger.send(server, "syncTitles", adminUUID, titleCatalog.wirePairs());
                 } else {
-                    messenger.send(server, "createTitleResult", adminUUID, targetUUID, false, code,
-                            trimmedDisplay, "failed");
+                    // Resolve under the catalog lock so concurrent grants cannot replace the winner.
+                    synchronized (titleCatalog) {
+                        if (!titleCatalog.contains(code) && !titleCatalog.insert(code, trimmedDisplay)) {
+                            messenger.send(server, "createTitleResult", adminUUID, targetUUID, false, code,
+                                    trimmedDisplay, "failed");
+                        } else {
+                            String canonicalDisplay = titleCatalog.all().get(code);
+                            // Equip only after Paper has the authoritative title, even if its cache was stale.
+                            messenger.send(server, "syncTitles", adminUUID, titleCatalog.wirePairs());
+                            messenger.send(server, "createTitleResult", adminUUID, targetUUID, true, code,
+                                    canonicalDisplay, "");
+                        }
+                    }
                 }
             }
             case "playerQuit" -> {

@@ -33,7 +33,7 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 
 	public CommandTitleGrant() {
 		super("titlegrant");
-		this.description = "Create a new title, grant it to a player, and equip it on their current character.";
+		this.description = "Create or reuse a title, grant it to a player, and equip it on their current character.";
 		this.usageMessage = "/titlegrant <player>";
 	}
 
@@ -67,11 +67,11 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 			return false;
 		}
 
-		openForm(admin, target.getUniqueId(), "", "");
+		openForm(admin, target.getUniqueId(), "");
 		return true;
 	}
 
-	private void openForm(Player admin, UUID targetId, String initialCode, String initialDisplay) {
+	private void openForm(Player admin, UUID targetId, String initialDisplay) {
 		Player target = Bukkit.getPlayer(targetId);
 		String targetName = target == null ? "player" : target.getName();
 
@@ -80,24 +80,18 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 
 		ActionButton save = ActionButton.builder(Component.text("Grant title")).width(150)
 				.action(DialogAction.customClick((response, audience) -> {
-					String rawCode = response.getText("code");
 					String rawDisplay = response.getText("display");
 					Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
 						Player adminPlayer = Bukkit.getPlayer(adminId);
 						if (adminPlayer == null) {
 							return;
 						}
-						handleSubmit(adminPlayer, targetId, rawCode, rawDisplay);
+						handleSubmit(adminPlayer, targetId, rawDisplay);
 					});
 				}, once)).build();
 
 		ActionButton cancel = ActionButton.builder(Component.text("Cancel")).width(150).build();
 
-		DialogInput codeInput = DialogInput.text("code", Component.text("Title code"))
-				.width(260)
-				.maxLength(64)
-				.initial(initialCode == null ? "" : initialCode)
-				.build();
 		DialogInput displayInput = DialogInput.text("display", Component.text("Display text"))
 				.width(260)
 				.maxLength(64)
@@ -108,39 +102,34 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 				.base(DialogBase.builder(Component.text("Grant title to " + targetName))
 						.canCloseWithEscape(true)
 						.body(List.of(DialogBody.plainMessage(
-								Component.text("Create a new title, unlock it for this player, and equip it on their current character."),
+								Component.text("Enter a title to unlock and equip. Existing titles keep their original display text."),
 								280)))
-						.inputs(List.of(codeInput, displayInput))
+						.inputs(List.of(displayInput))
 						.build())
 				.type(DialogType.confirmation(save, cancel)));
 
 		admin.showDialog(dialog);
 	}
 
-	private void handleSubmit(Player admin, UUID targetId, String rawCode, String rawDisplay) {
-		String code = TitleRegistry.normalizeTitleKey(rawCode);
+	static String titleKeyFromDisplay(String display) {
+		return TitleRegistry.normalizeTitleKey(display);
+	}
+
+	private void handleSubmit(Player admin, UUID targetId, String rawDisplay) {
+		String code = titleKeyFromDisplay(rawDisplay);
 		String display = rawDisplay == null ? "" : rawDisplay.trim();
-		String enteredCode = rawCode == null ? "" : rawCode;
 		String enteredDisplay = rawDisplay == null ? "" : rawDisplay;
 
 		if (code.isEmpty()) {
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
-					"&cTitle code is empty after cleanup. Use letters, numbers, spaces, or underscores."));
-			openForm(admin, targetId, enteredCode, enteredDisplay);
+					"&cDisplay text must contain letters or numbers to generate a title key."));
+			openForm(admin, targetId, enteredDisplay);
 			return;
 		}
 
 		if (display.isEmpty()) {
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent("&cDisplay text cannot be empty."));
-			openForm(admin, targetId, enteredCode, enteredDisplay);
-			return;
-		}
-
-		TitleRegistry registry = SneakyCharacterManager.getInstance().titleRegistry;
-		if (registry.contains(code)) {
-			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
-					"&cTitle code &b" + code + "&c is already in use. Pick a different code."));
-			openForm(admin, targetId, enteredCode, enteredDisplay);
+			openForm(admin, targetId, enteredDisplay);
 			return;
 		}
 
@@ -166,7 +155,7 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 				targetId.toString(),
 				code,
 				display);
-		admin.sendMessage(TextUtility.INSTANCE.convertToComponent("&7Creating title on proxy..."));
+		admin.sendMessage(TextUtility.INSTANCE.convertToComponent("&7Resolving title on proxy..."));
 	}
 
 	public static void handleCreateResult(
@@ -184,20 +173,19 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 		UUID targetId = UUID.fromString(targetUUID);
 		if (!created) {
 			String reason = switch (error == null ? "" : error) {
-				case "exists" -> "&cTitle code &b" + code + "&c is already in use. Pick a different code.";
 				case "invalid" -> "&cCould not create title (invalid code or display).";
 				default -> "&cCould not create title &b" + code + "&c.";
 			};
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(reason));
 			CommandTitleGrant command = new CommandTitleGrant();
-			command.openForm(admin, targetId, code, display);
+			command.openForm(admin, targetId, display);
 			return;
 		}
 
 		Player target = Bukkit.getPlayer(targetId);
 		if (target == null) {
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
-					"&aCreated title &b" + display + "&a (&b" + code
+					"&aResolved title &b" + display + "&a (&b" + code
 							+ "&a), but the player is no longer online to grant it."));
 			return;
 		}
@@ -205,14 +193,14 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 		Character character = Character.get(target);
 		if (character == null) {
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
-					"&aCreated title &b" + display + "&a (&b" + code
+					"&aResolved title &b" + display + "&a (&b" + code
 							+ "&a), but the player is no longer on a character."));
 			return;
 		}
 
 		if (!TitlePermissionGranter.isAvailable()) {
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
-					"&aCreated title &b" + display + "&a (&b" + code
+					"&aResolved title &b" + display + "&a (&b" + code
 							+ "&a), but LuckPerms is unavailable to grant it."));
 			return;
 		}
@@ -221,14 +209,14 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 			TitlePermissionGranter.grant(target, code);
 		} catch (IllegalStateException e) {
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
-					"&cTitle created, but failed to grant LuckPerms permission: " + e.getMessage()));
+					"&cTitle resolved, but failed to grant LuckPerms permission: " + e.getMessage()));
 			return;
 		}
 
 		TitleSelectionMenu.applyTitle(target, character, code);
 
 		admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
-				"&aCreated title &b" + display + "&a (&b" + code + "&a), granted to &b"
+				"&aResolved title &b" + display + "&a (&b" + code + "&a), granted to &b"
 						+ target.getName() + "&a, and equipped on their current character."));
 		target.sendMessage(TextUtility.INSTANCE.convertToComponent(
 				"&aYou were granted the title &b" + display + "&a."));
