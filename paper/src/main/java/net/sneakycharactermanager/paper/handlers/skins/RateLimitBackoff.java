@@ -17,23 +17,33 @@ final class RateLimitBackoff {
     }
 
     /**
-     * @param retryAfterHeader value of the Retry-After header in seconds, or null
+     * @param retryAfterHeader value of Retry-After (delta seconds or HTTP date), or null
      * @param resetAtMillis    epoch millis when MineSkin's rate limit window resets, or 0 if unknown
      * @param hits             consecutive 429s for this entry, starting at 1
      * @return epoch millis before which the entry must not be retried
      */
     static long retryAt(String retryAfterHeader, long resetAtMillis, int hits, long now) {
-        long delay;
-        Long retryAfter = parseSeconds(retryAfterHeader);
-        if (retryAfter != null) {
-            delay = retryAfter * 1000L;
-        } else if (resetAtMillis > now) {
-            delay = resetAtMillis - now;
-        } else {
-            int doublings = Math.min(Math.max(hits, 1) - 1, 10);
-            delay = BASE_DELAY_MS << doublings;
+        Long seconds = parseSeconds(retryAfterHeader);
+        if (seconds != null) {
+            long delay = seconds > Long.MAX_VALUE / 1000L ? Long.MAX_VALUE : seconds * 1000L;
+            return addDelay(now, Math.max(MIN_DELAY_MS, delay));
         }
-        return now + Math.max(MIN_DELAY_MS, Math.min(MAX_DELAY_MS, delay));
+        if (retryAfterHeader != null) {
+            try {
+                long deadline = java.time.ZonedDateTime.parse(retryAfterHeader.trim(),
+                        java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli();
+                return Math.max(addDelay(now, MIN_DELAY_MS), deadline);
+            } catch (java.time.DateTimeException | ArithmeticException ignored) {
+                // Invalid metadata falls back to the known reset or bounded exponential wait.
+            }
+        }
+        if (resetAtMillis > now) return Math.max(addDelay(now, MIN_DELAY_MS), resetAtMillis);
+        int doublings = Math.min(Math.max(hits, 1) - 1, 10);
+        return addDelay(now, Math.min(MAX_DELAY_MS, BASE_DELAY_MS << doublings));
+    }
+
+    private static long addDelay(long now, long delay) {
+        return now > Long.MAX_VALUE - delay ? Long.MAX_VALUE : now + delay;
     }
 
     /** First entry in queue order that is ready, so a backed-off entry never blocks the ones behind it. */

@@ -32,8 +32,10 @@ class RateLimitBackoffTest {
     }
 
     @Test
-    void delayIsBounded() {
-        assertEquals(NOW + RateLimitBackoff.MAX_DELAY_MS, RateLimitBackoff.retryAt("86400", 0, 1, NOW));
+    void serverDeadlinesAreNotShortenedByTheFallbackCap() {
+        assertEquals(NOW + 86_400_000L, RateLimitBackoff.retryAt("86400", 0, 1, NOW));
+        assertEquals(NOW + 86_400_000L, RateLimitBackoff.retryAt(null, NOW + 86_400_000L, 1, NOW));
+        assertEquals(1_080_000L, RateLimitBackoff.retryAt("Thu, 1 Jan 1970 00:18:00 GMT", 0, 1, NOW));
         assertEquals(NOW + RateLimitBackoff.MIN_DELAY_MS, RateLimitBackoff.retryAt("0", 0, 1, NOW));
     }
 
