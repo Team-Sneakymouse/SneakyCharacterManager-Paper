@@ -272,6 +272,7 @@ public class SkinData extends BukkitRunnable {
                             }
                         } else if (statusCode == 429) {
                              SneakyCharacterManager.getInstance().getLogger().warning("MineSkin API rate limit hit (429) during queue request.");
+                             processing = false; // Back in the queue so it is retried once capacity returns.
                         } else {
                              SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + statusCode + " during queue request.");
                              player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cFailed to generate skin (MineSkin error " + statusCode + "). The URL may be invalid or unsupported."));
@@ -338,6 +339,7 @@ public class SkinData extends BukkitRunnable {
                         }
                     } else if (statusCode == 429) {
                         SneakyCharacterManager.getInstance().getLogger().warning("MineSkin API rate limit hit (429) during skin fetch.");
+                        processing = false; // Back in the queue so it is retried once capacity returns.
                     } else if (statusCode != 200) {
                         SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + statusCode + " during skin fetch.");
                         this.cancel();
@@ -407,6 +409,10 @@ public class SkinData extends BukkitRunnable {
 
                             isValid = true;
                             this.apply();
+                        } else if (status.equals("failed")) {
+                            SneakyCharacterManager.getInstance().getLogger().warning("MineSkin job " + jobid + " failed for " + player.getName() + ".");
+                            player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cFailed to generate skin. The URL may be invalid or unsupported."));
+                            SneakyCharacterManager.getInstance().skinQueue.remove(this);
                         }
                     } else {
                         SneakyCharacterManager.getInstance().getLogger().severe("Mineskin API returned an Error: Job check failed or job does not exist.");

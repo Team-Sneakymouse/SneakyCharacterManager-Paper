@@ -28,6 +28,9 @@ public final class NamesPreferenceHandler {
     }
 
     public static @NotNull NamesPreference get(@NotNull Player player) {
+        if (!isAvailable()) {
+            return NamesPreference.CHARACTER;
+        }
         @Nullable User user = LuckPermsProvider.get().getUserManager().getUser(player.getUniqueId());
         if (user == null) {
             return NamesPreference.CHARACTER;
