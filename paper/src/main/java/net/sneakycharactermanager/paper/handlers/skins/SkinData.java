@@ -59,9 +59,9 @@ public class SkinData extends BukkitRunnable {
     private String texture;
     private String signature;
     private boolean isValid = false;
-    boolean processing = false;
-    private String jobid = null;
-    private long lastPollTime = 0;
+    volatile boolean processing = false;
+    private volatile String jobid = null;
+    private volatile long lastPollTime = 0;
     private String characterName = null;
 
     private String baseSkinUrl;
@@ -162,32 +162,38 @@ public class SkinData extends BukkitRunnable {
         return processing;
     }
 
+    /** Reports response metadata; the queue alone decides when this entry may run again. */
+    private void reportRateLimit(HttpResponse response, JSONObject body) {
+        parseAndUpdateRateLimit(body);
+        Header retryAfter = response.getFirstHeader("Retry-After");
+        SneakyCharacterManager.getInstance().skinQueue.rateLimited(this,
+                retryAfter == null ? null : retryAfter.getValue());
+    }
+
     /**
      * Parse the rateLimit section from a queue/job-poll API response and sync
      * our local capacity state with the values MineSkin reports.
      */
     private void parseAndUpdateRateLimit(JSONObject response) {
         if (response == null) return;
-        JSONObject rateLimit = (JSONObject) response.get("rateLimit");
-        if (rateLimit == null) return;
+        if (!(response.get("rateLimit") instanceof JSONObject rateLimit)) return;
 
         int limitValue = -1, remainingValue = -1, delayMillisValue = -1;
         long resetTime = 0;
 
-        JSONObject limitObj = (JSONObject) rateLimit.get("limit");
-        if (limitObj != null) {
-            if (limitObj.containsKey("limit"))     limitValue     = ((Number) limitObj.get("limit")).intValue();
-            if (limitObj.containsKey("remaining")) remainingValue = ((Number) limitObj.get("remaining")).intValue();
-            if (limitObj.containsKey("reset")) {
-                resetTime = ((Number) limitObj.get("reset")).longValue();
+        if (rateLimit.get("limit") instanceof JSONObject limitObj) {
+            if (limitObj.get("limit") instanceof Number value) limitValue = value.intValue();
+            if (limitObj.get("remaining") instanceof Number value) remainingValue = value.intValue();
+            if (limitObj.get("reset") instanceof Number value) {
+                resetTime = value.longValue();
                 // Convert Unix seconds → millis if needed
                 if (resetTime > 0 && resetTime < 10_000_000_000L) resetTime *= 1000L;
             }
         }
 
-        JSONObject delay = (JSONObject) rateLimit.get("delay");
-        if (delay != null && delay.containsKey("millis")) {
-            delayMillisValue = ((Number) delay.get("millis")).intValue();
+        if (rateLimit.get("delay") instanceof JSONObject delay
+                && delay.get("millis") instanceof Number value) {
+            delayMillisValue = value.intValue();
         }
 
         // Only track a future reset time — if it's past, the window already rolled over.
@@ -266,12 +272,14 @@ public class SkinData extends BukkitRunnable {
                                 processing = false;
                             } else {
                                 jobid = jobObject.get("id").toString();
+                                SneakyCharacterManager.getInstance().skinQueue.requestSucceeded(this);
                                 if (debug) {
                                     SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Job Queued for " + player.getName() + ": " + jobid);
                                 }
                             }
                         } else if (statusCode == 429) {
                              SneakyCharacterManager.getInstance().getLogger().warning("MineSkin API rate limit hit (429) during queue request.");
+                             reportRateLimit(response, result);
                         } else {
                              SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + statusCode + " during queue request.");
                              player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cFailed to generate skin (MineSkin error " + statusCode + "). The URL may be invalid or unsupported."));
@@ -338,6 +346,7 @@ public class SkinData extends BukkitRunnable {
                         }
                     } else if (statusCode == 429) {
                         SneakyCharacterManager.getInstance().getLogger().warning("MineSkin API rate limit hit (429) during skin fetch.");
+                        reportRateLimit(response, jsonResponse);
                     } else if (statusCode != 200) {
                         SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + statusCode + " during skin fetch.");
                         this.cancel();
@@ -390,6 +399,7 @@ public class SkinData extends BukkitRunnable {
 
 
                 if (statusCode == 200 && jsonResponse != null) {
+                    SneakyCharacterManager.getInstance().skinQueue.requestSucceeded(this);
                     parseAndUpdateRateLimit(jsonResponse);
                     Boolean success = (Boolean) jsonResponse.get("success");
                     if (success != null && success) {
@@ -407,6 +417,10 @@ public class SkinData extends BukkitRunnable {
 
                             isValid = true;
                             this.apply();
+                        } else if (status.equals("failed")) {
+                            SneakyCharacterManager.getInstance().getLogger().warning("MineSkin job " + jobid + " failed for " + player.getName() + ".");
+                            player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cFailed to generate skin. The URL may be invalid or unsupported."));
+                            SneakyCharacterManager.getInstance().skinQueue.remove(this);
                         }
                     } else {
                         SneakyCharacterManager.getInstance().getLogger().severe("Mineskin API returned an Error: Job check failed or job does not exist.");
@@ -414,6 +428,7 @@ public class SkinData extends BukkitRunnable {
                     }
                 } else if (statusCode == 429) {
                     SneakyCharacterManager.getInstance().getLogger().warning("MineSkin API rate limit hit (429) during job poll.");
+                    reportRateLimit(response, jsonResponse);
                 } else if (statusCode != 200) {
                     SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + statusCode + " during job poll.");
                     SneakyCharacterManager.getInstance().skinQueue.remove(this);

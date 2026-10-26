@@ -36,13 +36,80 @@ public class SkinQueue extends BukkitRunnable {
 
     private final ConcurrentMap<Integer, List<SkinData>> queue = new ConcurrentHashMap<>();
     private BukkitTask task = null;
+    private final Cooldowns<SkinData> cooldowns = new Cooldowns<>();
 
-    private int limit = 20;
-    private int remaining = 20;
-    private long nextReset = 0;
-    private int delayMillis = 2000;
+    /** Queue-owned per-entry scheduling state; never holds its lock during HTTP work. */
+    static final class Cooldowns<T> {
+        private static final class State {
+            long retryAt;
+            int hits;
+            boolean inFlight;
+        }
+        private final Map<T, State> entries = new HashMap<>();
+        synchronized void add(T entry) { entries.putIfAbsent(entry, new State()); }
+        synchronized void remove(T entry) { entries.remove(entry); }
+        synchronized int flush(Map<Integer, ? extends List<T>> queue) {
+            int total = queue.values().stream().mapToInt(List::size).sum();
+            queue.values().forEach(List::clear);
+            entries.clear();
+            return total;
+        }
+        synchronized boolean ready(T entry, long now) {
+            State state = entries.get(entry);
+            return state != null && !state.inFlight && now >= state.retryAt;
+        }
+        synchronized boolean claim(T entry, long now) {
+            if (!ready(entry, now)) return false;
+            entries.get(entry).inFlight = true;
+            return true;
+        }
+        synchronized void release(T entry) {
+            State state = entries.get(entry);
+            if (state != null) state.inFlight = false;
+        }
+        synchronized void rateLimited(T entry, String retryAfter, long resetAt, long now) {
+            State state = entries.get(entry);
+            if (state == null) return; // Removed entries must not be resurrected by late workers.
+            state.hits = Math.min(state.hits + 1, 50);
+            state.retryAt = Math.max(state.retryAt,
+                    RateLimitBackoff.retryAt(retryAfter, resetAt, state.hits, now));
+        }
+        synchronized void succeeded(T entry) {
+            State state = entries.get(entry);
+            if (state != null) { state.hits = 0; state.retryAt = 0; }
+        }
+    }
+
+    /** HTTP interpretation stays in SkinData; retry eligibility lives here. */
+    public void rateLimited(SkinData data, String retryAfter) {
+        cooldowns.rateLimited(data, retryAfter, nextReset, System.currentTimeMillis());
+        if (!data.hasJobId()) data.processing = false;
+    }
+
+    public void requestSucceeded(SkinData data) { cooldowns.succeeded(data); }
+
+    private boolean isReady(SkinData data) {
+        return !data.isProcessing() && cooldowns.ready(data, System.currentTimeMillis());
+    }
+
+    private void dispatch(SkinData data) {
+        try {
+            Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), t -> {
+                try { data.run(); }
+                finally { cooldowns.release(data); }
+            });
+        } catch (RuntimeException failure) {
+            cooldowns.release(data);
+            throw failure;
+        }
+    }
+
+    private volatile int limit = 20;
+    private volatile int remaining = 20;
+    private volatile long nextReset = 0;
+    private volatile int delayMillis = 2000;
     private long lastRequestTime = 0;
-    private long lastActionTime = 0; // Tracks when remaining last changed or nextReset was set
+    private volatile long lastActionTime = 0; // Tracks when remaining last changed or nextReset was set
     private long lastDebugLog = 0;
 
     public SkinQueue() {
@@ -57,16 +124,24 @@ public class SkinQueue extends BukkitRunnable {
         this.task = this.runTaskTimerAsynchronously(SneakyCharacterManager.getInstance(), 0, 5);
     }
 
-    public void add(SkinData skinData, int priority) {
+    public synchronized void add(SkinData skinData, int priority) {
+        cooldowns.add(skinData);
         queue.get(priority).add(skinData);
     }
 
-    public void remove(SkinData skinData) {
+    public synchronized void remove(SkinData skinData) {
+        cooldowns.remove(skinData);
         queue.values().forEach(list -> list.remove(skinData));
     }
 
+    /** Drops membership and scheduling references; late worker reports cannot recreate them. */
+    public synchronized int flush() {
+        return cooldowns.flush(queue);
+    }
+
     public void removeForPlayer(Player player) {
-        queue.values().forEach(list -> list.removeIf(data -> data.getPlayer().equals(player)));
+        queue.values().stream().flatMap(List::stream).filter(data -> data.getPlayer().equals(player))
+                .toList().forEach(this::remove);
     }
 
     /**
@@ -74,13 +149,13 @@ public class SkinQueue extends BukkitRunnable {
      */
     public void removePendingForCharacter(Player player, String characterUUID) {
         if (player == null || characterUUID == null || characterUUID.isEmpty()) return;
-        queue.values().forEach(list -> list.removeIf(data ->
+        queue.values().stream().flatMap(List::stream).filter(data ->
                 data.getPlayer().getUniqueId().equals(player.getUniqueId())
                         && Objects.equals(data.getCharacterUUID(), characterUUID)
-                        && data.getUniformHash() == null));
+                        && data.getUniformHash() == null).toList().forEach(this::remove);
     }
 
-    public void updatePriority(Player player, int newPriority) {
+    public synchronized void updatePriority(Player player, int newPriority) {
         boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
         List<SkinData> toMove = new ArrayList<>();
         queue.values().forEach(list -> {
@@ -106,7 +181,7 @@ public class SkinQueue extends BukkitRunnable {
         });
     }
 
-    public void updatePriority(Player player, String characterUUID, int newPriority) {
+    public synchronized void updatePriority(Player player, String characterUUID, int newPriority) {
         boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
         queue.values().forEach(list -> {
             Optional<SkinData> dataOpt = list.stream()
@@ -228,13 +303,14 @@ public class SkinQueue extends BukkitRunnable {
         // 1. Priority: Poll existing jobs as fast as capacity allows (ignoring delayMillis)
         for (SkinData data : inProgress) {
 
-            if (data.hasJobId() && now - data.getLastPollTime() > 10000) {
+            if (data.hasJobId() && now - data.getLastPollTime() > 10000
+                    && cooldowns.claim(data, now)) {
                 if (debug) {
                     SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Polling job " + data.getJobId() + " for " + data.getPlayer().getName());
                 }
                 // Polling an in-progress job (GET /v2/queue/:jobId) does not cost capacity
                 // Run in a separate thread to avoid blocking the queue timer
-                Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (t) -> data.run());
+                dispatch(data);
             }
         }
 
@@ -249,7 +325,8 @@ public class SkinQueue extends BukkitRunnable {
             boolean isInteraction = next.getPriority() >= PRIO_LOAD;
             long activeJobsCount = inProgress.stream().filter(d -> d.hasJobId()).count();
             
-            if (activeJobsCount < 3 || (isInteraction && activeJobsCount < 10)) {
+            if ((activeJobsCount < 3 || (isInteraction && activeJobsCount < 10))
+                    && cooldowns.claim(next, now)) {
                 if (debug) {
                     SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Starting new job for " + next.getPlayer().getName() + " (P" + next.getPriority() + ") | Active: " + activeJobsCount);
                 }
@@ -260,7 +337,7 @@ public class SkinQueue extends BukkitRunnable {
                 // Fetch requests (GET /v2/skins/:uuid) are free.
                 if (next.getSkinUUID().isEmpty()) remaining--;
                 // Run in a separate thread to avoid blocking the queue timer
-                Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (t) -> next.run());
+                dispatch(next);
             } else if (debug) {
                  if (now - lastDebugLog > 5000) { // Throttle debug log
                     SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Stalling next job (P" + next.getPriority() + ") - Max active jobs reached (" + activeJobsCount + ")");
@@ -276,25 +353,24 @@ public class SkinQueue extends BukkitRunnable {
         for (int p = PRIO_UNIFORM; p > PRIO_ONLINE; p--) {
             List<SkinData> list = queue.get(p);
             if (list.isEmpty()) continue;
-            for (SkinData data : list) {
-                if (!data.processing) return data;
-            }
+            SkinData ready = RateLimitBackoff.firstReady(list, this::isReady);
+            if (ready != null) return ready;
         }
 
         // Low priority skins that have a UUID go first, and bypass the reservation (because they do not cost capacity)
         List<SkinData> p1 = queue.get(PRIO_ONLINE);
         // Menu-open pass
         for (SkinData data : p1) {
-            if (!data.processing && data.isMenuOpen() && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
+            if (isReady(data) && data.isMenuOpen() && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
         }
         // Normal P1 pass
         for (SkinData data : p1) {
-            if (!data.processing && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
+            if (isReady(data) && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
         }
 
         // P0: only when above reservation
         for (SkinData data : queue.get(PRIO_OFFLINE)) {
-            if (!data.processing && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
+            if (isReady(data) && data.getSkinUUID() != null && !data.getSkinUUID().isEmpty()) return data;
         }
 
         // P1: first prefer entries whose menu is currently open (player has the UI open),
@@ -302,16 +378,16 @@ public class SkinQueue extends BukkitRunnable {
         if (remaining > minReservation) {
             // Menu-open pass
             for (SkinData data : p1) {
-                if (!data.processing && data.isMenuOpen()) return data;
+                if (isReady(data) && data.isMenuOpen()) return data;
             }
             // Normal P1 pass
             for (SkinData data : p1) {
-                if (!data.processing) return data;
+                if (isReady(data)) return data;
             }
 
             // P0: only when above reservation
             for (SkinData data : queue.get(PRIO_OFFLINE)) {
-                if (!data.processing) return data;
+                if (isReady(data)) return data;
             }
         }
 

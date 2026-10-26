@@ -131,10 +131,7 @@ public class CommandSkinQueue extends CommandBaseAdmin {
 
     private void handleFlush(CommandSender sender) {
         SkinQueue q = SneakyCharacterManager.getInstance().skinQueue;
-        Map<Integer, List<SkinData>> queue = q.getQueue();
-
-        int total = queue.values().stream().mapToInt(List::size).sum();
-        queue.values().forEach(List::clear);
+        int total = q.flush();
 
         sender.sendMessage(TextUtility.INSTANCE.convertToComponent(
             "&aFlushed &f" + total + " &aentr" + (total == 1 ? "y" : "ies") + " from the skin queue."

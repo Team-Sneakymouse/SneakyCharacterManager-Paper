@@ -530,7 +530,7 @@ public class Character {
 	}
 
 	public static void saveAll() {
-		for (Player player : characterMap.keySet()) {
+		for (Player player : new ArrayList<>(characterMap.keySet())) {
 			if (player.isOnline()) {
 				Character character = get(player);
 				if (character != null)
