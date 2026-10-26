@@ -196,7 +196,8 @@ publishing {
                 description.set(
                     "Combined Paper/Bungee/Velocity plugin JAR for SneakyCharacterManager"
                 )
-                properties.put("sneakyrp.deployment.type", "paper-plugin")
+                // Comma-separated platforms the combined JAR is deployed to.
+                properties.put("sneakyrp.deployment.type", "paper-plugin,velocity-plugin")
             }
         }
     }

@@ -204,6 +204,8 @@ Published coordinates (`io.github.team-sneakymouse`):
 - `sneakycharactermanager-bungee`
 - `sneakycharactermanager-velocity`
 
+The combined JAR's POM sets `sneakyrp.deployment.type` to `paper-plugin,velocity-plugin`, so Mother Mouse's `/plugins update` offers it for both Paper servers and the Velocity proxy. The module JARs have no deployment property and are not installed as plugins.
+
 Local publish credentials (`~/.gradle/gradle.properties` or env via `ORG_GRADLE_PROJECT_*`):
 
 ```properties
