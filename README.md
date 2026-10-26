@@ -104,7 +104,9 @@ Titles (proxy file `titles.yml`, not Paper `config.yml`):
 - `/userify` (alias: `/whois`)
 - `/migrateinventories`
 - `/skinqueue <status|flush|detail <priority>>`
-- `/titlegrant <player>` (create a new title via dialog, grant it, and equip it)
+- `/titlegrant <player>` (enter display text to create or reuse a title, grant it, and equip it)
+  - The key is generated automatically: lowercase, spaces/hyphens become underscores, and other characters outside `a-z`, `0-9`, and `_` are removed. Repeated underscores are collapsed and leading/trailing underscores removed.
+  - If that key already exists on the proxy, its original display text is reused without modification.
 - `/charreload` (reload Paper `config.yml` and refresh online nameplates)
 
 ### Console commands
