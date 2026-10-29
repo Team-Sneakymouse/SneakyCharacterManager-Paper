@@ -26,6 +26,8 @@ dependencies {
     compileOnly("io.github.team-sneakymouse:sneakyutils:${rootProject.extra["sneakyUtilsVersion"]}")
     implementation("com.google.code.gson:gson:2.10.1")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation("org.mockito:mockito-core:5.21.0")
+    testRuntimeOnly("io.github.team-sneakymouse:sneakyutils:${rootProject.extra["sneakyUtilsVersion"]}")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

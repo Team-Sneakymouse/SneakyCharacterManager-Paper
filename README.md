@@ -84,7 +84,9 @@ Titles (proxy file `titles.yml`, not Paper `config.yml`):
 - `/char` (opens menu)
 - `/char <name...>` (select by name)
 - `/char confirm` (confirm character deletion flow)
-- `/nick <name...>`
+- `/nick` (open a native name dialog for the current character; `/nick <name...>` still works)
+  - Names use the same banned-word and character checks in both paths. Without `sneakycharacters.formatnames`, names are limited to 32 characters; that permission bypasses length/format checks, never banned words.
+  - The native input enforces length while typing. Other validation runs on Save and reopens the form with an explanation and the exact draft. An oversized draft is retained if formatting permission changed, but must be shortened before saving. Changing characters requires reopening `/nick`.
 - `/skin <url> [slim|classic]` (set skin from URL)
 - `/skin revert` (revert to Mojang default skin)
 - `/skin fetch [player]` (get a player's skin URL)
