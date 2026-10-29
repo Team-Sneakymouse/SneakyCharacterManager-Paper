@@ -67,3 +67,12 @@ Guidelines:
 ## Human docs
 
 - `README.md` — network setup, commands, data model, config
+
+## Repo-specific rules
+
+- **Mind the module boundary.** Identity (character list, names, skins, titles.yml) is owned by the proxy (proxy-common); gameplay state (inventory, location, attributes) is owned by Paper (Character.java). A new field belongs on one side and must be synced through a new plugin-message subchannel, never by Paper reading proxy files or vice versa.
+- **Change the wire protocol on both sides together.** When adding or altering a subchannel or its payload (ProxyMessageListener.java cases, ProxyServerConnection on the proxy), change both ends in one commit and keep old payloads readable, because proxy and backends are upgraded at different times from the same jar.
+- **Config and plugin descriptor paths.** The Paper descriptor and default config are at paper/src/resources/paper-plugin.yml and config.yml (not src/main/resources). Edit them there, bump nothing else, and keep SneakyUtils as the required BEFORE dependency.
+- **Never enable deleteCharacterDataOnServerStart.** Do not set or suggest deleteCharacterDataOnServerStart: true outside a disposable test server; it deletes every character data file on startup.
+- **Character save goes through Character.save().** Use Character.save() for persistence of per-character state and keep file IO off the main thread where a path already uses the AsyncAtomicFileWriter/AtomicFiles helpers in common/; do not write character YAML with raw YamlConfiguration.save.
+- **Public events are an API.** Treat LoadCharacterEvent, CharacterNickChangeEvent, CharacterSkinChangeEvent and Character getters (Character.get(Player)) as a public API used by MagicSpells (CharacterTagCondition, LoadCharacterListener) and SneakyVehicles; keep signatures source and binary compatible or update those repos in the same effort.
