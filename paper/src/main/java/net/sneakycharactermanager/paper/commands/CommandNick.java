@@ -70,6 +70,9 @@ public class CommandNick extends CommandBase {
     }
 
     private String changeNickname(Player player, String nickname) {
+        if (nickname.isBlank()) {
+            return "Your name cannot be empty. Enter a character name.";
+        }
         if (nickname.length() > 32 && !player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".formatnames")) {
             return "That name is too long! No more than 32 characters.";
         }

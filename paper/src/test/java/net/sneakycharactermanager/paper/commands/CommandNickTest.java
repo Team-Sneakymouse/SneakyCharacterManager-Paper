@@ -79,6 +79,18 @@ class CommandNickTest {
         }
     }
 
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.NullAndEmptySource
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"   "})
+    void clearedFieldReopensWithoutSavingBlankName(String raw) {
+        try (Fixture f = new Fixture(false)) {
+            f.command.handleSubmit(f.player, "character-id", raw);
+            assertEquals(raw == null ? "" : raw, f.command.draft);
+            assertTrue(f.command.error.contains("empty"));
+            f.verifyMutation(raw, false);
+        }
+    }
+
     @Test
     void cancelledEventReopensWithoutMutation() {
         try (Fixture f = new Fixture(false)) {
