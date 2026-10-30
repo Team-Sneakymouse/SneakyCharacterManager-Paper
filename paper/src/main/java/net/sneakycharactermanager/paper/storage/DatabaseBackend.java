@@ -27,6 +27,7 @@ public final class DatabaseBackend implements CharacterBackend {
     private final Set<Player> failedTemporary = Collections.newSetFromMap(new IdentityHashMap<>());
     private final ThreadPoolExecutor http;
     private CompletableFuture<?> skinBarrier = CompletableFuture.completedFuture(null);
+    private long titleCompletion;
     private volatile boolean closed;
     private final int timeoutSeconds;
 
@@ -81,6 +82,9 @@ public final class DatabaseBackend implements CharacterBackend {
         Player effectPlayer = selection ? destinationPlayer : requester;
         String lane = selection ? "selection" : menuRequest ? "menu" : request instanceof CharacterRequest.ListCharacters ? "list:" + owner
                 : request instanceof CharacterRequest.ResolveSkin r ? "skin:" + r.requestId() : request.getClass().getSimpleName() + ":" + owner;
+        // Grants have non-replaceable permission/equip effects, unlike latest-wins UI requests.
+        // Each completion releases its own ticket; disconnect/disable still invalidate all tickets.
+        if (request instanceof CharacterRequest.CreateTitle) lane = "grant:" + ++titleCompletion;
         ResultFence.Ticket ticket = effectPlayer == null ? null : fence.capture(effectPlayer.getUniqueId().toString(), lane, effectPlayer);
         if (selection && requester != null) {
             // A delayed menu refresh must not repopulate a menu after its selection request.
@@ -88,7 +92,9 @@ public final class DatabaseBackend implements CharacterBackend {
             fence.capture(requester.getUniqueId().toString(), "menu", requester);
         }
         CompletableFuture<?> barrier = skinBarrier;
-        String queueKey = owner.isEmpty() ? "$global" : owner;
+        // An uncertain registration fences only that skin, not every ownerless operation.
+        String queueKey = request instanceof CharacterRequest.RegisterSkin r ? "$skin:" + r.id()
+                : owner.isEmpty() ? "$global" : owner;
         revisions.begin(owner);
         if (request instanceof CharacterRequest.Update || request instanceof CharacterRequest.DefaultSkin
                 || request instanceof CharacterRequest.Template) revisions.changed(owner);
@@ -100,7 +106,10 @@ public final class DatabaseBackend implements CharacterBackend {
             return operations.ready().thenCompose(unused -> barrier).thenCompose(unused -> operations.run(request, name, deadline))
                     .orTimeout(remaining, TimeUnit.NANOSECONDS);
         });
-        if (request instanceof CharacterRequest.RegisterSkin) skinBarrier = future;
+        // This is an ordering barrier, not authority to fail unrelated lanes. Keep the
+        // original future exceptional for its requester and OwnerQueue's no-retry fence.
+        if (request instanceof CharacterRequest.RegisterSkin)
+            skinBarrier = CompletableFuture.allOf(barrier, future.handle((unused, error) -> null));
         future.whenComplete((effects, error) -> {
             if (closed) return;
             Bukkit.getScheduler().runTask(plugin, () -> {
