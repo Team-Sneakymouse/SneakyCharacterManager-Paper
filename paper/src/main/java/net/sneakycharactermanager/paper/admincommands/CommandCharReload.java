@@ -22,6 +22,11 @@ public class CommandCharReload extends CommandBaseAdmin {
 	public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
 		SneakyCharacterManager plugin = SneakyCharacterManager.getInstance();
 		plugin.reloadConfig();
+        if (!plugin.validateStorageReload()) {
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&cStorage backend changes require a full server restart. The active backend has NOT changed."));
+            plugin.getLogger().warning("Configured storage backend differs from active mode; restart required. No hot swap performed.");
+        }
+        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&eStorage timeouts also take effect only after restart."));
 
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			Character character = Character.get(player);

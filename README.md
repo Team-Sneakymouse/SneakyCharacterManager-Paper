@@ -17,7 +17,8 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 
 - Java 25
 - Paper server(s) (paperweight/dev setup targets 26.2)
-- BungeeCord or Velocity proxy
+- BungeeCord or Velocity proxy for the default messaging backend; alternatively, SneakyDB on Paper for explicit database mode
+- SneakyDB mode requires the published API-compatible runtime `2026.10.26-fd4e29e90ad0` or a compatible newer release; no SneakyDB runtime is needed for legacy mode
 - Optional soft dependencies on Paper side:
   - PlaceholderAPI
   - LuckPerms
@@ -31,6 +32,26 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
    - Paper only loads keys; it does not generate them.
    - If keys do not match between proxy and backend, plugin messaging auth will fail.
    - Velocity note: the plugin overrides its data folder to `plugins/SneakyCharacterManager` (matching BungeeCord's casing) so data files are compatible when switching between proxy platforms.
+
+## Storage backends and migration safety
+
+The existing BungeeCord/Velocity deployment remains the default. Existing config files, proxy YAML data and matching `keys.ser` continue to be used; installing this version does not import data, change storage authority or require SneakyDB.
+
+The opt-in SneakyDB backend runs the identity/catalog/cache operations directly from Paper through asynchronous PostgreSQL queries. It does not require SCM on the network proxy. Paper gameplay snapshots (inventories, locations and attributes) remain local files in either mode. SneakyDB manages database credentials/connections; SCM uses its public consumer API and does not bundle the manager or its API classes.
+
+```yaml
+storage:
+  backend: legacy                # default, also used when the key is missing
+  requestTimeoutSeconds: 15      # 1..60; database readiness/request deadline
+```
+
+Keep `storage.backend: legacy` on the current network until final migration. Only after the offline import and validation, explicitly select `sneakydb` on the intended Paper instances. Backend selection and request timeout are fixed at enable; changes require a full restart, not `/charreload`. An uncertain database operation fences further work for that owner until restart rather than automatically retrying writes. Investigate and reconcile the durable database outcome before restarting; a timeout does not prove rollback.
+
+Database mode requires the operator-applied [schema contract](db/001_scm.sql). Importing legacy data is a separate, operator-run Python tool: see [offline migration and rollback](docs/migration.md). There is no automatic migration or YAML fallback on database failure. Do not enable SQL writers while legacy YAML writers remain authoritative for the same dataset.
+
+Database mode reads authoritative character snapshots for join, list/menu and selection operations. Titles refresh on join and title creation; already-observed title codes are retained against out-of-order snapshots. There is no push subscription, periodic cross-server broadcast, or automatic update to already-loaded player appearances. Changes made elsewhere become visible at those read boundaries; editing/removing existing title displays directly in SQL is not a supported live refresh workflow.
+
+See [backend verification and cutover gates](docs/backend-verification.md) for legacy no-SneakyDB smoke checks, database concurrency/failure checks and the manual cutover checklist. No production migration, backend switch or deployment is performed by building or opening the feature PR.
 
 ## Data model (high-level)
 

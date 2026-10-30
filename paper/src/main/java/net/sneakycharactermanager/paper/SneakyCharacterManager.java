@@ -36,6 +36,9 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import net.sneakycharactermanager.paper.handlers.titles.TitleRegistry;
 import net.sneakycharactermanager.paper.handlers.titles.TitleSelectionMenu;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
+import net.sneakycharactermanager.paper.storage.StorageMode;
+import net.sneakycharactermanager.paper.storage.CharacterBackend;
+import net.sneakycharactermanager.paper.storage.SneakyDbBootstrap;
 import net.sneakycharactermanager.common.io.AsyncAtomicFileWriter;
 public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
@@ -60,6 +63,16 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 	public TitleRegistry titleRegistry;
 	public TitleSelectionMenu titleSelectionMenu;
 	private Object svcIntegration;
+    private StorageMode storageMode = StorageMode.LEGACY;
+    private CharacterBackend characterBackend;
+    public CharacterBackend getCharacterBackend() { return characterBackend; }
+    public StorageMode getStorageMode() { return storageMode; }
+    public boolean validateStorageReload() {
+        try {
+            return StorageMode.parse(getConfig().getString("storage.backend")) == storageMode;
+        } catch (IllegalArgumentException error) { return false; }
+    }
+
 
 	@Override
 	public void onEnable() {
@@ -73,7 +86,21 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		titleSelectionMenu = new TitleSelectionMenu();
 
 		saveDefaultConfig();
-		loadKeys();
+        try {
+            storageMode = StorageMode.parse(getConfig().getString("storage.backend"));
+            if (storageMode == StorageMode.SNEAKYDB) {
+                Object configuredTimeout = getConfig().get("storage.requestTimeoutSeconds", 15);
+                if (!(configuredTimeout instanceof Integer))
+                    throw new IllegalArgumentException("storage.requestTimeoutSeconds must be an integer 1..60");
+                int timeout = (Integer) configuredTimeout;
+                if (timeout < 1 || timeout > 60) throw new IllegalArgumentException("storage.requestTimeoutSeconds must be 1..60");
+                characterBackend = SneakyDbBootstrap.open(this, timeout);
+            } else loadKeys();
+        } catch (Exception | LinkageError error) {
+            getLogger().severe("SCM storage initialization refused: " + error.getMessage());
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
 
 		if (getConfig().getBoolean("deleteCharacterDataOnServerStart", false)) {
 			deleteFolderContents(getCharacterDataFolder());
@@ -103,9 +130,10 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharEnable());
 		getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharTemp());
 
-		getServer().getMessenger().registerIncomingPluginChannel(this, "sneakymouse:" + IDENTIFIER,
-				new ProxyMessageListener());
-		getServer().getMessenger().registerOutgoingPluginChannel(this, "sneakymouse:" + IDENTIFIER);
+        if (storageMode == StorageMode.LEGACY) {
+            getServer().getMessenger().registerIncomingPluginChannel(this, "sneakymouse:" + IDENTIFIER, new ProxyMessageListener());
+            getServer().getMessenger().registerOutgoingPluginChannel(this, "sneakymouse:" + IDENTIFIER);
+        }
 
 		getServer().getPluginManager().registerEvents(this, this);
 		getServer().getPluginManager().registerEvents(new ConnectionEventListeners(), this);
@@ -180,6 +208,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 	@EventHandler
 	public void onPluginDisable(PluginDisableEvent event) {
 		if (event.getPlugin() == this) {
+            if (characterBackend != null) characterBackend.close();
 			Character.saveAll();
 			this.nametagManager.unnickAll();
 

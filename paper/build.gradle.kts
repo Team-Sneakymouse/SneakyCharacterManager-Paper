@@ -18,6 +18,10 @@ repositories {
 
 dependencies {
     implementation(project(":common"))
+    implementation(project(":proxy-common")) // shared SCM skin hashing/download policy, not YAML repositories
+    // Java/JDK API only: provided by the optional SneakyDB plugin, never shaded.
+    compileOnly("io.github.team-sneakymouse:sneakydb-api:2026.10.26-fd4e29e90ad0")
+    testImplementation("io.github.team-sneakymouse:sneakydb-api:2026.10.26-fd4e29e90ad0")
     paperweight.paperDevBundle("26.2.build.+")
     implementation("org.apache.httpcomponents:httpclient:4.5.14")
     compileOnly("me.clip:placeholderapi:2.11.5")
@@ -25,6 +29,7 @@ dependencies {
     compileOnly("de.maxhenkel.voicechat:voicechat-api:2.5.27")
     compileOnly("io.github.team-sneakymouse:sneakyutils:${rootProject.extra["sneakyUtilsVersion"]}")
     implementation("com.google.code.gson:gson:2.10.1")
+    testImplementation("org.postgresql:postgresql:42.7.7")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation("org.mockito:mockito-core:5.21.0")
     testRuntimeOnly("io.github.team-sneakymouse:sneakyutils:${rootProject.extra["sneakyUtilsVersion"]}")

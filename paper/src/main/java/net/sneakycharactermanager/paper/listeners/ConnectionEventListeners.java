@@ -52,6 +52,8 @@ public class ConnectionEventListeners implements Listener {
     @EventHandler
     public void onPlayerLeave(PlayerQuitEvent event) {
         Player player = event.getPlayer();
+        var backend = SneakyCharacterManager.getInstance().getCharacterBackend();
+        if (backend != null) backend.disconnect(player);
             
         //Un-Nick player who is disconnecting from the server
         SneakyCharacterManager.getInstance().nametagManager.clearHidingOwnName(player);
