@@ -31,6 +31,9 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinData;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import com.sneakyutils.util.TextUtility;
 
+// Proxy and backends are upgraded separately from the same jar: change a subchannel's payload on both sides in one
+// commit and keep old payloads readable. Identity lives on the proxy, gameplay state on Paper; sync across, never read
+// the other side's files.
 public class ProxyMessageListener implements PluginMessageListener {
 	
 	private final Map<String, List<Character>> guiCharacters = new HashMap<>();

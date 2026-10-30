@@ -6,6 +6,8 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerEvent;
 import org.jetbrains.annotations.NotNull;
 
+// Public API (with CharacterNickChangeEvent, CharacterSkinChangeEvent, Character.get): used by MagicSpells and
+// SneakyVehicles, so keep signatures compatible or update those repos together.
 public class LoadCharacterEvent extends PlayerEvent implements Cancellable {
 
 	protected static final HandlerList handlers = new HandlerList();
