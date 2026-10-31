@@ -18,7 +18,7 @@ Do not substitute remembered rules, a web mirror, or an unlisted path. Follow lo
 |--|--|
 | Project | SneakyCharacterManager-Paper |
 | Shared policy | sibling checkout via `.team-policy/pointer.json` → `team-development-policy` |
-| Runtime targets | Java 25; Paper 26.2 (paperweight); BungeeCord or Velocity proxy |
+| Runtime targets | Java 25; Paper 26.2 (paperweight); BungeeCord/Velocity by default, opt-in SneakyDB query backend |
 | Shared Paper utils | SneakyUtils `compileOnly` on Paper module + runtime plugin depend |
 | Soft deps (Paper) | PlaceholderAPI, LuckPerms, Simple Voice Chat (optional) |
 | Deployment | publish via `.github/workflows/publish.yml` on the configured branch |
@@ -48,11 +48,13 @@ bungee/         thin BungeeCord adapter → proxy-common
 velocity/       thin Velocity adapter → proxy-common
 ```
 
-Root build produces a single shaded JAR for proxy + Paper. Proxy owns `keys.ser` generation; Paper only loads matching keys. Messaging channel: `sneakymouse:sneakycharacters`.
+Root build produces a single shaded JAR for proxy + Paper. The default proxy backend retains `keys.ser` generation on the proxy and matching keys on Paper. Messaging channel: `sneakymouse:sneakycharacters`. SneakyDB mode is an explicit Paper opt-in; keep its API compile-only, authenticate through the manager, and preserve legacy startup without SneakyDB. Storage-authority changes require a restart; config reload must not silently change backends.
+
+Operator SQL lives in `db/001_scm.sql`; the standalone importer and its tests live under `scripts/`. Neither schema installation nor legacy import belongs in plugin startup. Read `docs/migration.md` and `docs/backend-verification.md` before storage/migration work. Preserve the default Velocity path until a separate manual cutover; never switch deployed config or import live data as part of building/testing.
 
 Guidelines:
 
-- Keep proxy vs Paper persistence boundaries intact (identity on proxy; gameplay state on Paper).
+- Keep identity persistence on the selected backend (legacy proxy or SneakyDB); inventories, locations and attributes remain Paper-local gameplay state.
 - Prefer existing tests next to changed modules; do not invent a second persistence stack.
 - Prefer SneakyUtils APIs over new shared util copies (see team policy `sneakyutils.md`).
 - Secrets (`mineskinAuth`, API keys, `keys.ser`) must never appear in commits or agent evidence.

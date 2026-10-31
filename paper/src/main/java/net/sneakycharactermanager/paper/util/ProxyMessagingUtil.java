@@ -12,6 +12,8 @@ import java.security.Signature;
 import org.bukkit.entity.Player;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.storage.CharacterRequest;
+import net.sneakycharactermanager.paper.storage.StorageMode;
 
 public class ProxyMessagingUtil {
 
@@ -24,6 +26,15 @@ public class ProxyMessagingUtil {
 	}
 
 	public static void sendByteArray(Player requester, String subChannelName, Object... objects) {
+        // Compatibility facade only. DB requests are typed domain operations, not fake packets.
+        var plugin = SneakyCharacterManager.getInstance();
+        var backend = plugin.getCharacterBackend();
+        if (backend != null) {
+            backend.submit(requester, CharacterRequest.decode(subChannelName, objects));
+            return;
+        }
+        // Never fall through to proxy messaging when explicit database startup failed.
+        if (plugin.getStorageMode() != StorageMode.LEGACY) return;
 		try (ByteArrayOutputStream byteArrayOutput = new ByteArrayOutputStream();
 			 DataOutputStream out = new DataOutputStream(byteArrayOutput)) {
 	

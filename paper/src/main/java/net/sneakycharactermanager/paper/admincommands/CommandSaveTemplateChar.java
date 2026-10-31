@@ -35,7 +35,7 @@ public class CommandSaveTemplateChar extends CommandBaseAdmin {
 
         if (character == null) return false;
 
-        ProxyMessagingUtil.sendByteArray(player, "saveTemplateChar", args[0], character.getName(), character.getSkin(), character.isSlim());
+        ProxyMessagingUtil.sendByteArray(player, "saveTemplateChar", args[0], character.getName(), character.getSkin(), character.getSkinUUID(), character.isSlim());
 
         return true;
     }

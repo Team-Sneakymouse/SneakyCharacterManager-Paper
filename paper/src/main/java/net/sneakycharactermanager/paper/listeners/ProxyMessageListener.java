@@ -19,6 +19,7 @@ import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.storage.CharacterResultEffects;
 import net.sneakycharactermanager.paper.admincommands.CommandTitleGrant;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
@@ -117,14 +118,7 @@ public class ProxyMessageListener implements PluginMessageListener {
 				character = readCharacter(playerUUID, messageIn);
 				boolean forced = messageIn.readBoolean();
 
-				pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-
-				if (!forced && !Character.canPlayerLoadCharacter(pl, character.getCharacterUUID())) {
-					pl.sendMessage(TextUtility.INSTANCE.convertToComponent("&4You cannot access this character right now."));
-					break;
-				}
-
-				character.load();
+				CharacterResultEffects.load(character, forced);
 				break;
 			case "selectCharacterByNameFailed":
 				playerUUID = messageIn.readUTF();
@@ -185,17 +179,7 @@ public class ProxyMessageListener implements PluginMessageListener {
 			case "defaultSkin":
 				playerUUID = messageIn.readUTF();
 				characterUUID = messageIn.readUTF();
-				pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-				if (pl == null)
-					return;
-				PlayerProfile profile = pl.getPlayerProfile();
-				PlayerTextures textures = profile.getTextures();
-				if (textures.getSkin() == null)
-					return;
-				String skinURL = textures.getSkin().toString();
-				boolean slim = textures.getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
-
-				ProxyMessagingUtil.sendByteArray(pl, "defaultSkin", playerUUID, characterUUID, skinURL, slim);
+				CharacterResultEffects.defaultSkin(playerUUID, characterUUID);
 				break;
 			case "deleteConfirmed":
 				playerUUID = messageIn.readUTF();
@@ -215,13 +199,7 @@ public class ProxyMessageListener implements PluginMessageListener {
 				for (int i = 0; i + 1 < titlePairs.size(); i += 2) {
 					titles.put(titlePairs.get(i), titlePairs.get(i + 1));
 				}
-				SneakyCharacterManager.getInstance().titleRegistry.replaceAll(titles);
-				for (Player online : Bukkit.getOnlinePlayers()) {
-					Character titled = Character.get(online);
-					if (titled != null) {
-						SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(online, titled.getDisplayName());
-					}
-				}
+				CharacterResultEffects.titles(titles);
 				break;
 			case "createTitleResult":
 				String adminUUID = messageIn.readUTF();
@@ -323,68 +301,7 @@ public class ProxyMessageListener implements PluginMessageListener {
 
 
 	private void handleListCompletion(String baseChannel, String playerUUID, String requesterUUID, List<Character> characters) {
-		if ("syncCharacters".equals(baseChannel)) {
-			Character.updatePlayerCharacters(UUID.fromString(playerUUID), characters);
-
-			boolean openGUI = false;
-			String actualRequester = requesterUUID;
-			if (requesterUUID.endsWith("|openGUI")) {
-				openGUI = true;
-				actualRequester = requesterUUID.substring(0, requesterUUID.length() - "|openGUI".length());
-			}
-
-			if (openGUI) {
-				SneakyCharacterManager.getInstance().selectionMenu.updateInventory(actualRequester, characters);
-				return;
-			}
-
-			Player pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
-			if (pl == null)
-				return;
-
-			// Online player loading their own skins → PRIO_ONLINE.
-			// Offline player being bulk-preloaded → PRIO_OFFLINE.
-			int skinPrio = actualRequester.equals(playerUUID) ? SkinQueue.PRIO_ONLINE : SkinQueue.PRIO_OFFLINE;
-
-			for (Character c : characters) {
-				// Base skin preloading
-				String skinUrl = c.getSkin();
-				if (skinUrl != null && !skinUrl.isEmpty()) {
-					if (net.sneakycharactermanager.paper.handlers.character.CharacterLoader.hasPersistedSkinProperty(c)) {
-						ProfileProperty p = new ProfileProperty("textures", c.getTexture(), c.getSignature());
-						String cacheKey = net.sneakycharactermanager.paper.util.SkinUtil.getTextureUrl(p);
-						if (cacheKey == null || cacheKey.isEmpty()) cacheKey = skinUrl;
-						SkinCache.put(playerUUID, cacheKey, p);
-						SkinCache.put(playerUUID, skinUrl, p);
-						SneakyCharacterManager.getInstance().skinQueue.removePendingForCharacter(pl, c.getCharacterUUID());
-					} else {
-						SkinApplyService.requestSkin(pl, c.getCharacterUUID(), skinUrl, c.isSlim(),
-								skinPrio, SkinApplyContext.preload());
-					}
-				}
-
-				// Uniform variant preloading
-				for (Map.Entry<String, String[]> entry : c.getUniformVariants().entrySet()) {
-					String[] vData = entry.getValue();
-					String vUUID = vData[0];
-					String vUrl = vData[1];
-					if (vUrl == null || vUrl.isEmpty()) continue;
-
-					ProfileProperty vp = SkinCache.get(playerUUID, vUrl);
-					
-					// If not in memory but we have raw data from proxy (Uniform variant data: 0:uuid, 1:url, 2:texture, 3:signature)
-					if (vp == null && vData.length > 2 && vData[2] != null && !vData[2].isEmpty()) {
-						vp = new ProfileProperty("textures", vData[2], vData[3]);
-						SkinCache.put(playerUUID, vUrl, vp);
-					}
-
-					if (vp == null) {
-						SkinData.getOrCreate(vUrl, vUUID, c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName())
-							.setUniformCacheInfo(c.getSkin(), entry.getKey(), entry.getKey());
-					}
-				}
-			}
-		}
-	}
+        CharacterResultEffects.handleListCompletion(baseChannel, playerUUID, requesterUUID, characters);
+    }
 
 }

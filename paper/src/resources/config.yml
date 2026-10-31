@@ -1,3 +1,14 @@
+# Identity storage is selected ONCE at enable. Changing this requires a full restart.
+# Missing key and legacy preserve the current Bungee/Velocity messaging setup and keys.ser.
+# sneakydb is opt-in: requires SneakyDB and operator-applied db/001_scm.sql + manual import.
+# No importer, schema creation, SQL access or SneakyDB runtime is used in legacy mode.
+# Locations/inventories/attributes/other gameplay state remain Paper file-backed in both modes.
+storage:
+  backend: legacy
+  # Bounds readiness and each request. 1..60; restart required to change.
+  # An uncertain database operation fences its owner until restart, never blindly retries.
+  requestTimeoutSeconds: 15
+
 deleteCharacterDataOnServerStart: false
 manageLocations: true
 manageInventories: true
