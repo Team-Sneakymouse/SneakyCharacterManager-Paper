@@ -143,7 +143,7 @@ public final class SkinStateManager {
 
     public void clearPlayer(UUID playerUUID) {
         statesByPlayer.remove(playerUUID);
-        nextIdByPlayer.remove(playerUUID);
+        // Retain the ID high-water mark so stale chat buttons cannot target new session states.
         currentIdByPlayer.remove(playerUUID);
     }
 

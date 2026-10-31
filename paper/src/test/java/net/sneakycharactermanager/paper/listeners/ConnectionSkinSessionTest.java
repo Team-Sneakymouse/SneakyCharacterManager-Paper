@@ -33,7 +33,7 @@ class ConnectionSkinSessionTest {
             new ConnectionEventListeners().onPlayerJoin(new PlayerJoinEvent(f.player, (net.kyori.adventure.text.Component) null));
             assertTrue(CharacterLoader.loadCharacter(f.character));
             f.skins.verify(() -> SkinUtil.applySkin(f.player, new ProfileProperty("textures", "database-texture", "database-signature")));
-            assertNotSame(old, f.plugin.skinStateManager.get(f.uuid, old.id()), "old undo/reapply history must not survive the backend session");
+            assertNull(f.plugin.skinStateManager.get(f.uuid, old.id()), "old undo/reapply buttons must not select a new session's state");
             assertNull(f.plugin.skinStateManager.current(f.uuid).previousId());
             assertNotNull(f.plugin.skinStateManager.current(other), "joining must not clear another player's history");
             assertEquals("database-texture", f.plugin.skinStateManager.current(f.uuid).texture());
