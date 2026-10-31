@@ -1,6 +1,6 @@
-# Agent instructions (SneakyCharacterManager)
+# Agent instructions (Team Sneakymouse / Lords of Minecraft)
 
-Paper + BungeeCord/Velocity character management for Lords of Minecraft / Team-Sneakymouse.
+This repo is **SneakyCharacterManager** (Paper + BungeeCord/Velocity character management). All coding agents (Cursor, Claude Code, Codex, Antigravity, Hermes, etc.) should follow this file.
 
 <!-- BEGIN TEAM-POLICY MANAGED BOOTSTRAP -->
 This project is enrolled in Team-Sneakymouse development policy via a sibling checkout (see `.team-policy/pointer.json`).
@@ -19,9 +19,11 @@ Do not substitute remembered rules, a web mirror, or an unlisted path. Follow lo
 | Project | SneakyCharacterManager-Paper |
 | Shared policy | sibling checkout via `.team-policy/pointer.json` → `team-development-policy` |
 | Runtime targets | Java 25; Paper 26.2 (paperweight); BungeeCord/Velocity by default, opt-in SneakyDB query backend |
-| Shared Paper utils | SneakyUtils `compileOnly` on Paper module + runtime plugin depend |
+| Shared Paper utils | SneakyUtils `compileOnly` on Paper module + runtime plugin depend (see team policy `sneakyutils.md`) |
 | Soft deps (Paper) | PlaceholderAPI, LuckPerms, Simple Voice Chat (optional) |
 | Deployment | publish via `.github/workflows/publish.yml` on the configured branch |
+
+Custom item look, CraftEngine/pack model id, server resource pack, or ItemDisplay place/orient → read `<policy-root>/policy/paper-items.md`.
 
 ### Local exceptions
 

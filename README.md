@@ -4,6 +4,8 @@ Character management system for Paper + BungeeCord/Velocity networks.
 
 This plugin lets players maintain multiple roleplay characters while syncing character identity over BungeeCord or Velocity and character gameplay state on Paper.
 
+- **[AGENTS.md](./AGENTS.md)** — shared instructions for LLM coding agents (Cursor, Claude Code, Codex, etc.)
+
 ## Project layout
 
 - `common/`: filesystem helpers shared by Paper and proxy persistence.
