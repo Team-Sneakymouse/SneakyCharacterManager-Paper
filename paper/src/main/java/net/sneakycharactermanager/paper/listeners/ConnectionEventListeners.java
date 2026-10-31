@@ -15,6 +15,7 @@ import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
+import net.sneakycharactermanager.paper.storage.DatabaseBackend;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 
 public class ConnectionEventListeners implements Listener {
@@ -22,6 +23,11 @@ public class ConnectionEventListeners implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        if (SneakyCharacterManager.getInstance().getCharacterBackend() instanceof DatabaseBackend) {
+            // A previous visit's local skin/undo history must not override SneakyDB on rejoin.
+            // Keep history within this backend session so uniforms and character reloads still work.
+            SneakyCharacterManager.getInstance().skinStateManager.clearPlayer(player.getUniqueId());
+        }
         //We need to load other players names when a person joins
         SneakyCharacterManager.getInstance().nametagManager.loadNames(player);
 
