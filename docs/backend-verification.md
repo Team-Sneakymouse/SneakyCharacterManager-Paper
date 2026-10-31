@@ -37,6 +37,7 @@ In addition, exercise:
 - Rapid character selections followed by a delayed earlier response; quit/rejoin while queries are pending; plugin shutdown while reads/writes are pending: stale completions must not affect the new session.
 - Database outage and recovery, worker saturation, and an uncertain write response: no blind retry of non-idempotent creation and no false persistence-success claim.
 - Title/skin/cache refresh across instances and subsequent rejoin/menu refresh; verify the documented freshness contract rather than assuming database persistence broadcasts gameplay changes.
+- Backend hopping (one active backend per player): visit B, leave, change the character skin on A, wait for its database write to complete, then return to B. B must use the persisted skin, not its previous visit's local skin history. Repeat B → A after another change. In SneakyDB mode skin undo/uniform history starts fresh on each backend join; old history buttons must not select newly recorded states. Within the current backend session, uniforms and character reloads still restore the selected session skin. Legacy proxy-mode history behavior is unchanged.
 - Reload: the selected storage authority must not silently change at runtime.
 - Verify the combined JAR retains Paper, Bungee and Velocity descriptors, while excluding SneakyDB API/implementation classes.
 
