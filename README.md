@@ -188,6 +188,17 @@ Prefix: `%sneakycharacters_<placeholder>%`
 - `skinqueue_total_queued`: Total pending jobs
 - `skinqueue_queued_p<0-4>`: Pending jobs per priority tier
 
+## Skin events (Paper API)
+
+Both events live in `net.sneakycharactermanager.paper.handlers.character`:
+
+- `CharacterSkinChangeEvent` remains the initial character-skin **request** hook, with a pending `SkinState` (requested URL/default and optional model, not resolved signed data).
+- `CharacterSkinAppliedEvent` is a cancellable `PlayerEvent` dispatched synchronously inside `SkinUtil.applySkin` on the server thread, **before** profile preparation/application despite its name. `getProfileProperty()` returns the actual resolved `ProfileProperty`, including `getValue()` and `getSignature()`; `getSkinUrl()` decodes its texture URL (null if undecodable). It does not expose a potentially stale/pending `SkinState` or promise a character identity for every path.
+
+The resolved hook covers every `applySkin` call: newly resolved/cached skins, character loads, uniforms, `/skin state` undo/re-apply, and default/Mojang restoration. Listeners still see the old player profile. Consume the event property directly, or schedule a next-tick read of the player's profile if the application was not cancelled/superseded; this is not a client-render acknowledgement. Keep listeners non-blocking.
+
+Cancelling prevents all work inside `applySkin`: profile preparation (including texture removal), `setPlayerProfile`, vehicle removal and teleport. It does **not** roll back caller-side history, caches, messages or backend updates; use the initial request hook to veto the character-skin request itself. Cancellation of the resolved hook is a local application veto, not a storage transaction.
+
 ## SkinState undo / re-apply
 
 The plugin tracks skin changes during a server session, allowing players to undo and re-apply skins via clickable chat buttons.

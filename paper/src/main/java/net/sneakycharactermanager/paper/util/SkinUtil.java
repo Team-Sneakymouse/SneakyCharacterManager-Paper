@@ -1,6 +1,7 @@
 package net.sneakycharactermanager.paper.util;
 
 import com.sneakyutils.util.TextUtility;
+import net.sneakycharactermanager.paper.handlers.character.CharacterSkinAppliedEvent;
 
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -54,6 +55,9 @@ public class SkinUtil {
     }
 
 	public static void applySkin(Player player, ProfileProperty profileProperty) {
+		CharacterSkinAppliedEvent event = new CharacterSkinAppliedEvent(player, profileProperty);
+		Bukkit.getPluginManager().callEvent(event);
+		if (event.isCancelled()) return;
 		player.setPlayerProfile(handleCachedSkin(player, profileProperty));
 
 		// Remove player from vehicle and teleport them up slightly to prevent them from getting stuck
