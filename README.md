@@ -199,6 +199,10 @@ The resolved hook covers every `applySkin` call: newly resolved/cached skins, ch
 
 Cancelling prevents all work inside `applySkin`: profile preparation (including texture removal), `setPlayerProfile`, vehicle removal and teleport. It does **not** roll back caller-side history, caches, messages or backend updates; use the initial request hook to veto the character-skin request itself. Cancellation of the resolved hook is a local application veto, not a storage transaction.
 
+## Keeping a hidden player's nameplate
+
+Hiding a player (`hidePlayer`) or teleporting them normally takes their nameplate off and rebuilds it (vanishing). A plugin that hides a player without vanishing them, and moves their plate onto something else meanwhile, sets the Bukkit metadata `sneakycharactermanager:keep-nameplate` (`VanishEvents.KEEP_NAMEPLATE`, any value) on them first: while it's there, hiding, showing and teleporting leave the plate alone, and that plugin sends its text itself (`NametagManager.refreshNickname`). SneakyRacials does this for a turtle in its shell.
+
 ## SkinState undo / re-apply
 
 The plugin tracks skin changes during a server session, allowing players to undo and re-apply skins via clickable chat buttons.

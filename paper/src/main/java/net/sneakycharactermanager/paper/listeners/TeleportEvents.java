@@ -15,7 +15,8 @@ public class TeleportEvents implements Listener {
     public void onGamemodeChange(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
 
-        if (!rebuildsNametag(event.getFrom().getWorld() == event.getTo().getWorld(), player.isInsideVehicle())) return;
+        if (!rebuildsNametag(event.getFrom().getWorld() == event.getTo().getWorld(), player.isInsideVehicle(),
+            player.hasMetadata(VanishEvents.KEEP_NAMEPLATE))) return;
 
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
 
@@ -31,10 +32,11 @@ public class TeleportEvents implements Listener {
     /**
      * Whether a teleport needs the nametag rebuilt. A rider carried along by a moving vehicle (a theme park ride
      * moves its seats every tick or two, and Paper reports each move as a teleport of the rider) keeps its passengers,
-     * nametag included, so rebuilding it then only makes the name flash.
+     * nametag included, so rebuilding it then only makes the name flash. A player whose plate another plugin keeps
+     * (VanishEvents.KEEP_NAMEPLATE) keeps it too.
      */
-    static boolean rebuildsNametag(boolean sameWorld, boolean insideVehicle) {
-        return !(sameWorld && insideVehicle);
+    static boolean rebuildsNametag(boolean sameWorld, boolean insideVehicle, boolean kept) {
+        return !kept && !(sameWorld && insideVehicle);
     }
 
 }

@@ -9,14 +9,20 @@ class TeleportEventsTest {
 
 	@Test
 	void ridersCarriedByAVehicleKeepTheirNametag() {
-		assertFalse(TeleportEvents.rebuildsNametag(true, true));
+		assertFalse(TeleportEvents.rebuildsNametag(true, true, false));
+	}
+
+	@Test
+	void aPlateAnotherPluginKeepsIsLeftAlone() {
+		assertFalse(TeleportEvents.rebuildsNametag(true, false, true));
+		assertFalse(TeleportEvents.rebuildsNametag(false, false, true));
 	}
 
 	@Test
 	void otherTeleportsRebuildIt() {
-		assertTrue(TeleportEvents.rebuildsNametag(true, false));
-		assertTrue(TeleportEvents.rebuildsNametag(false, false));
-		assertTrue(TeleportEvents.rebuildsNametag(false, true));
+		assertTrue(TeleportEvents.rebuildsNametag(true, false, false));
+		assertTrue(TeleportEvents.rebuildsNametag(false, false, false));
+		assertTrue(TeleportEvents.rebuildsNametag(false, true, false));
 	}
 
 }
