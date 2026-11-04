@@ -9,6 +9,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.nameplate.ReleaseReason;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
@@ -62,8 +63,11 @@ public class ConnectionEventListeners implements Listener {
         if (backend != null) backend.disconnect(player);
             
         //Un-Nick player who is disconnecting from the server
-        SneakyCharacterManager.getInstance().nametagManager.clearHidingOwnName(player);
-        SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
+        var nametags = SneakyCharacterManager.getInstance().nametagManager;
+        nametags.dropAttachment(player.getUniqueId(), ReleaseReason.OWNER_QUIT);
+        nametags.clearHidingOwnName(player);
+        nametags.unnicknamePlayer(player);
+        nametags.forgetPlayer(player.getUniqueId());
 
         //SkinCache.remove(player.getUniqueId().toString());
 

@@ -19,9 +19,11 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.permissions.Permission;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import net.sneakycharactermanager.paper.admincommands.*;
+import net.sneakycharactermanager.paper.api.nameplate.NameplateAttachments;
 import net.sneakycharactermanager.paper.commands.*;
 import net.sneakycharactermanager.paper.consolecommands.*;
 import net.sneakycharactermanager.paper.listeners.*;
@@ -30,6 +32,7 @@ import net.sneakycharactermanager.paper.handlers.Placeholders;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
 import net.sneakycharactermanager.paper.handlers.nametags.NameTagRefresher;
+import net.sneakycharactermanager.paper.handlers.nametags.NameplateAttachmentsImpl;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
@@ -77,11 +80,11 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 	@Override
 	public void onEnable() {
 		instance = this;
-		nametagManager = new NametagManager();
+		nametagManager = new NametagManager(this);
 		selectionMenu = new CharacterSelectionMenu();
 		skinQueue = new SkinQueue();
 		skinStateManager = new SkinStateManager();
-		nameTagRefresher = new NameTagRefresher();
+		nameTagRefresher = new NameTagRefresher(this, nametagManager);
 		titleRegistry = new TitleRegistry();
 		titleSelectionMenu = new TitleSelectionMenu();
 
@@ -143,6 +146,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		getServer().getPluginManager().registerEvents(new GamemodeEvents(), this);
 		getServer().getPluginManager().registerEvents(new VanishEvents(), this);
 		getServer().getPluginManager().registerEvents(new TeleportEvents(), this);
+		getServer().getPluginManager().registerEvents(new NameplateLifecycleListener(this), this);
 
 		getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".*"));
 		getServer().getPluginManager()
@@ -203,6 +207,10 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		Bukkit.getScheduler().scheduleSyncRepeatingTask(this, () -> {
 			Character.saveAll();
 		}, 0, 1200);
+
+		// Last: only expose the attachment API once everything it relies on is running.
+		getServer().getServicesManager().register(NameplateAttachments.class,
+				new NameplateAttachmentsImpl(nametagManager), this, ServicePriority.Normal);
 	}
 
 	@EventHandler
@@ -210,6 +218,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		if (event.getPlugin() == this) {
             if (characterBackend != null) characterBackend.close();
 			Character.saveAll();
+			// Releases every attachment (SCM_DISABLED) before removing the plates.
 			this.nametagManager.unnickAll();
 
 			Bukkit.getScheduler().cancelTasks(this);

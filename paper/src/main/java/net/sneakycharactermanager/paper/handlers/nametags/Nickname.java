@@ -1,9 +1,14 @@
 package net.sneakycharactermanager.paper.handlers.nametags;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TextDisplay;
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
@@ -11,7 +16,10 @@ public class Nickname {
 
     private String nickname;
     private final String uuid;
+    private final UUID ownerId;
     private final NicknameEntity nametag;
+    /** Viewers SCM has hidden this plate from with its own plugin key; reset with every new display. */
+    final Set<UUID> hiddenFrom = new HashSet<>();
 
     /**
      * Nickname type helper class. Handles most function calling and string formatting for Nicknames.
@@ -23,10 +31,24 @@ public class Nickname {
     }
 
     public Nickname(Player player, String nickname, String title) {
-        this.nametag = new NicknameEntity(player);
-        this.uuid = player.getUniqueId().toString();
+        this(player, nickname, title, NicknameEntity::new);
+    }
+
+    Nickname(Player player, String nickname, String title, Function<Player, NicknameEntity> entities) {
+        this.nametag = entities.apply(player);
+        this.ownerId = player.getUniqueId();
+        this.uuid = ownerId.toString();
         this.nickname = nickname;
-        this.setNickname(nickname, title);
+        try {
+            this.setNickname(nickname, title);
+        } catch (RuntimeException | Error failure) {
+            try {
+                nametag.destroy();
+            } catch (RuntimeException | Error cleanup) {
+                failure.addSuppressed(cleanup);
+            }
+            throw failure;
+        }
     }
 
     /**
@@ -83,6 +105,22 @@ public class Nickname {
 
     public String getOwnerUuid() {
         return uuid;
+    }
+
+    UUID ownerId() {
+        return ownerId;
+    }
+
+    TextDisplay display() {
+        return nametag.display();
+    }
+
+    boolean isValid() {
+        return nametag.isValid();
+    }
+
+    boolean mountOn(Entity vehicle) {
+        return nametag.mountOn(vehicle);
     }
 
     public void setTalking(boolean talking) {
