@@ -129,9 +129,13 @@ public class NametagManager implements PlateAttachment.Operations {
      * @param nickname Nickname to set onto the player
      * */
     public void nicknamePlayer(Player player, String nickname) {
-        if (isSuppressed(player)) return;
-
         UUID id = player.getUniqueId();
+        if (isSuppressed(player)) {
+            // No plate while suppressed, but remember it is wanted (e.g. a rebuild or respawn while vanished).
+            suppressedPlates.add(id);
+            return;
+        }
+
         String titleDisplay = resolveTitleDisplay(player);
 
         Nickname name = nicknames.get(id.toString());

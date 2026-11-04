@@ -98,6 +98,38 @@ class NameTagRefresherTest {
     }
 
     @Test
+    void periodicRespawnWhileVanishedStillRestoresOnUnvanish() {
+        f.nick(owner);
+        f.vanish(owner, "✦");
+        refresher.run();
+
+        // what the respawnNameTags task does for every online player
+        f.manager.unnicknamePlayer(owner);
+        f.nick(owner);
+        assertNull(f.manager.getNickname(owner), "still vanished");
+        assertTrue(f.manager.isAwaitingRestore(owner.getUniqueId()));
+
+        f.vanish(owner, "");
+        refresher.run();
+        assertNotNull(f.manager.getNickname(owner));
+    }
+
+    @Test
+    void rebuildWhileVanishedStillRestoresOnUnvanish() {
+        f.nick(owner);
+        f.vanish(owner, "✦");
+        refresher.run();
+
+        f.manager.rebuild(owner); // e.g. a teleport or gamemode change
+        f.ticks((int) NametagManager.RENICK_DELAY_TICKS);
+        assertTrue(f.manager.isAwaitingRestore(owner.getUniqueId()));
+
+        f.vanish(owner, "");
+        refresher.run();
+        assertNotNull(f.manager.getNickname(owner));
+    }
+
+    @Test
     void unresolvedVanishPlaceholderIsNotAVanish() {
         f.nick(owner);
         Plate plate = f.plate(owner);
