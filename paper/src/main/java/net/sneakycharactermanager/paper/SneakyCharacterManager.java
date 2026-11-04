@@ -37,6 +37,7 @@ import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import net.sneakycharactermanager.paper.handlers.titles.TitleRegistry;
+import net.sneakycharactermanager.paper.handlers.titles.TitlePermissionRefresh;
 import net.sneakycharactermanager.paper.handlers.titles.TitleSelectionMenu;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.storage.StorageMode;
@@ -66,6 +67,8 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 	public TitleRegistry titleRegistry;
 	public TitleSelectionMenu titleSelectionMenu;
 	private Object svcIntegration;
+	/** LuckPerms event subscription; typed loosely so this class loads without LuckPerms. */
+	private AutoCloseable titlePermissionRefresh;
     private StorageMode storageMode = StorageMode.LEGACY;
     private CharacterBackend characterBackend;
     public CharacterBackend getCharacterBackend() { return characterBackend; }
@@ -170,6 +173,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		if (Bukkit.getPluginManager().getPlugin("LuckPerms") != null) {
 			luckPermsActive = true;
 			new ContextCalculatorCharacterTag().register();
+			titlePermissionRefresh = TitlePermissionRefresh.register(this);
 		}
 
 		// Optional Simple Voice Chat integration (soft-depend)
@@ -217,6 +221,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 	public void onPluginDisable(PluginDisableEvent event) {
 		if (event.getPlugin() == this) {
             if (characterBackend != null) characterBackend.close();
+			closeTitlePermissionRefresh();
 			Character.saveAll();
 			// Releases every attachment (SCM_DISABLED) before removing the plates.
 			this.nametagManager.unnickAll();
@@ -232,6 +237,17 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 	public CompletableFuture<Void> writeFile(Path target, String content) {
 		return reportWriteFailure(target, fileWriter.writeUtf8(target, content));
+	}
+
+	private void closeTitlePermissionRefresh() {
+		AutoCloseable subscription = titlePermissionRefresh;
+		titlePermissionRefresh = null;
+		if (subscription == null) return;
+		try {
+			subscription.close();
+		} catch (Exception e) {
+			getLogger().log(Level.WARNING, "Failed to unsubscribe title permission refresh", e);
+		}
 	}
 
 	public CompletableFuture<Void> updateFile(Path target, AsyncAtomicFileWriter.Utf8Update update) {

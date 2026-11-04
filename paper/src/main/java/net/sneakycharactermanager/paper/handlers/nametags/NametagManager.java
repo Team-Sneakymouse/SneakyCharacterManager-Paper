@@ -10,6 +10,7 @@ import net.sneakycharactermanager.paper.api.nameplate.AttachResult;
 import net.sneakycharactermanager.paper.api.nameplate.NameplateHandle;
 import net.sneakycharactermanager.paper.api.nameplate.ReleaseReason;
 import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.titles.TitleRegistry;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -110,6 +111,22 @@ public class NametagManager implements PlateAttachment.Operations {
         renickLater(owner);
     }
 
+    /**
+     * Re-resolves the owner's title line on the next tick, e.g. after their permissions changed. Safe to call from any
+     * thread; nothing happens unless the owner still has a plate and a stored title.
+     */
+    public void refreshTitleSoon(UUID owner) {
+        if (!plugin.isEnabled()) return;
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!plugin.isEnabled()) return;
+            Player current = Bukkit.getPlayer(owner);
+            if (current == null || !current.isOnline() || getNickname(current) == null) return;
+            Character character = Character.get(current);
+            if (character == null || character.getTitle().isBlank()) return;
+            nicknamePlayer(current, character.getDisplayName());
+        });
+    }
+
     /** Re-reads the character when the delay elapses; nothing happens if the plate changed meanwhile. */
     public void renickLater(Player owner) {
         runLater(owner, RENICK_DELAY_TICKS, current -> {
@@ -174,6 +191,11 @@ public class NametagManager implements PlateAttachment.Operations {
         }
         var registry = plugin.titleRegistry;
         if (registry == null) {
+            return null;
+        }
+        // A deleted title and one whose unlock permission was revoked are both hidden; the stored key is kept so
+        // re-adding the title or re-granting the permission brings it back.
+        if (!player.hasPermission(TitleRegistry.permissionNode(titleKey))) {
             return null;
         }
         return registry.getDisplay(titleKey);

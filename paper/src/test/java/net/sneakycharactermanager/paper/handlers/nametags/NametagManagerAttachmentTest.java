@@ -190,9 +190,90 @@ class NametagManagerAttachmentTest {
         when(titles.getDisplay("knight")).thenReturn("Sir");
         f.plugin.titleRegistry = titles;
         when(f.characterOf(owner).getTitle()).thenReturn("knight");
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(true);
 
         f.nick(owner);
         verify(f.plate(owner).entity).updatePackets("Owner (character)", "Sir");
+    }
+
+    private TitleRegistry knightTitleEquipped() {
+        TitleRegistry titles = new TitleRegistry();
+        titles.replaceAll(java.util.Map.of("knight", "Sir"));
+        f.plugin.titleRegistry = titles;
+        when(f.characterOf(owner).getTitle()).thenReturn("knight");
+        return titles;
+    }
+
+    @Test
+    void existingTitleIsNotShownWithoutItsPermission() {
+        knightTitleEquipped();
+
+        f.nick(owner);
+        verify(f.plate(owner).entity).updatePackets("Owner (character)", null);
+        verify(f.plate(owner).entity, never()).updatePackets(any(), eq("Sir"));
+    }
+
+    @Test
+    void deletedTitleIsNotShownEvenWithItsPermission() {
+        knightTitleEquipped().replaceAll(java.util.Map.of());
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(true);
+
+        f.nick(owner);
+        verify(f.plate(owner).entity).updatePackets("Owner (character)", null);
+    }
+
+    @Test
+    void permittedTitleIsShownAndStoredTitleIsKept() {
+        knightTitleEquipped();
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(true);
+
+        f.nick(owner);
+        verify(f.plate(owner).entity).updatePackets("Owner (character)", "Sir");
+        verify(f.characterOf(owner), never()).setTitle(any());
+    }
+
+    @Test
+    void permissionChangesRefreshTheExistingPlatesTitleOnTheNextTick() {
+        knightTitleEquipped();
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(true);
+        when(f.characterOf(owner).getDisplayName()).thenReturn("Owner (character)");
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        verify(plate.entity).updatePackets("Owner (character)", "Sir");
+
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(false);
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        verify(plate.entity, never()).updatePackets("Owner (character)", null);
+        f.tick();
+        assertSame(plate, f.plate(owner), "updated in place, not rebuilt");
+        verify(plate.entity).updatePackets("Owner (character)", null);
+
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(true);
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        f.tick();
+        verify(plate.entity, times(2)).updatePackets("Owner (character)", "Sir");
+        verify(f.characterOf(owner), never()).setTitle(any());
+    }
+
+    @Test
+    void permissionRefreshBuildsNoPlateAndSkipsUntitledOrOfflineOwners() {
+        knightTitleEquipped();
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        f.tick();
+        assertNull(f.plate(owner), "no plate is created by a permission change");
+
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        when(f.characterOf(owner).getTitle()).thenReturn("");
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        f.tick();
+        verify(plate.entity, times(1)).updatePackets(any(), any());
+
+        when(f.characterOf(owner).getTitle()).thenReturn("knight");
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        f.quit(owner);
+        f.tick();
+        verify(plate.entity, times(1)).updatePackets(any(), any());
     }
 
     @Test
