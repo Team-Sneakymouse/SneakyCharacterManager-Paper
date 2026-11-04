@@ -9,6 +9,7 @@ import org.bukkit.Location;
 import org.bukkit.craftbukkit.entity.CraftEntity;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Display;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
 import org.joml.Quaternionf;
@@ -26,7 +27,10 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 
 public class NicknameEntity {
 
-    private TextDisplay mounted;
+    /** Scoreboard tag carried by every SCM nameplate display. Not an API. */
+    public static final String SCOREBOARD_TAG = "NicknameEntity";
+
+    private final TextDisplay mounted;
     private final Player player;
 
     private ClientboundSetEntityDataPacket packetOff;
@@ -44,28 +48,40 @@ public class NicknameEntity {
         this.player = player;
         Location loc = player.getLocation().clone();
         loc.setPitch(0);
-        mounted = player.getWorld().spawn(loc, TextDisplay.class);
+        // Configured before it is added to the world, so a failing setter never leaves a stray display behind.
+        mounted = player.getWorld().spawn(loc, TextDisplay.class, NicknameEntity::configure);
+        try {
+            player.addPassenger(mounted);
 
-        mounted.setBillboard(Display.Billboard.CENTER);
-        mounted.setLineWidth(250);
-        mounted.setShadowed(true);
-        mounted.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
-        mounted.setBrightness(new Display.Brightness(15, 15));
+            packetOff = makePacket(Component.text(" "), 0.01F, 0);
 
-        mounted.addScoreboardTag("NicknameEntity");
+            packetHiddenOn = makePacket(
+                TextUtility.INSTANCE.convertToComponent("<gray>[ Hidden ]<newline><gray>[" + player.getName() + "]"),
+                0.2F,
+                COLOR_DEFAULT_BACKGROUND);
+            packetHiddenOnTalking = makePacket(
+                TextUtility.INSTANCE.convertToComponent("<gray>[ Hidden ] \uD83D\uDD0A<newline><gold>[" + player.getName() + "]"),
+                0.2F,
+                COLOR_TALKING);
+        } catch (RuntimeException | Error failure) {
+            try {
+                mounted.remove();
+            } catch (RuntimeException | Error cleanup) {
+                failure.addSuppressed(cleanup);
+            }
+            throw failure;
+        }
+    }
 
-        player.addPassenger(mounted);
-
-        packetOff = makePacket(Component.text(" "), 0.01F, 0);
-
-        packetHiddenOn = makePacket(
-            TextUtility.INSTANCE.convertToComponent("<gray>[ Hidden ]<newline><gray>[" + player.getName() + "]"),
-            0.2F,
-            COLOR_DEFAULT_BACKGROUND);
-        packetHiddenOnTalking = makePacket(
-            TextUtility.INSTANCE.convertToComponent("<gray>[ Hidden ] \uD83D\uDD0A<newline><gold>[" + player.getName() + "]"),
-            0.2F,
-            COLOR_TALKING);
+    static void configure(TextDisplay display) {
+        // Never saved: a plate carried by a non-player anchor would otherwise be written into chunk data on unload.
+        display.setPersistent(false);
+        display.setBillboard(Display.Billboard.CENTER);
+        display.setLineWidth(250);
+        display.setShadowed(true);
+        display.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
+        display.setBrightness(new Display.Brightness(15, 15));
+        display.addScoreboardTag(SCOREBOARD_TAG);
     }
 
     public void updatePackets(String name) {
@@ -168,7 +184,9 @@ public class NicknameEntity {
         this.talking = talking;
         var mgr = SneakyCharacterManager.getInstance().nametagManager;
         Nickname ownerNickname = mgr.getNickname(this.player);
-        for (Player tracker : this.player.getTrackedBy()) {
+        if (ownerNickname == null) return;
+        // The plate may ride another entity, so its own trackers are the viewers who need the update.
+        for (Player tracker : this.mounted.getTrackedBy()) {
             mgr.refreshNickname(ownerNickname, tracker);
         }
         if (SneakyCharacterManager.getInstance().getConfig().getBoolean("see-own-nameplate", false)) {
@@ -178,6 +196,21 @@ public class NicknameEntity {
 
     public void destroy() {
         mounted.remove();
+    }
+
+    TextDisplay display() {
+        return mounted;
+    }
+
+    boolean isValid() {
+        return mounted.isValid();
+    }
+
+    /** Mounts the plate on {@code vehicle}; true when it rides that vehicle afterwards. */
+    boolean mountOn(Entity vehicle) {
+        if (vehicle.equals(mounted.getVehicle())) return true;
+        vehicle.addPassenger(mounted);
+        return vehicle.equals(mounted.getVehicle());
     }
 
 }
