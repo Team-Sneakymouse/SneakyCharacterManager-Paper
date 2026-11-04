@@ -17,6 +17,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
+import org.bukkit.plugin.IllegalPluginAccessException;
 import org.bukkit.plugin.Plugin;
 
 import me.clip.placeholderapi.PlaceholderAPI;
@@ -112,19 +113,32 @@ public class NametagManager implements PlateAttachment.Operations {
     }
 
     /**
-     * Re-resolves the owner's title line on the next tick, e.g. after their permissions changed. Safe to call from any
-     * thread; nothing happens unless the owner still has a plate and a stored title.
+     * Re-resolves the owner's title line on the next tick, e.g. after their permissions changed, and resends the
+     * plate's text to its current trackers (each per their own preference/attachment state). Safe to call from any
+     * thread; nothing happens unless the owner still has an unsuppressed plate and a stored title. The plate keeps
+     * its lifecycle, so pending delayed work for it (e.g. initial text) is not cancelled.
      */
     public void refreshTitleSoon(UUID owner) {
         if (!plugin.isEnabled()) return;
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            if (!plugin.isEnabled()) return;
-            Player current = Bukkit.getPlayer(owner);
-            if (current == null || !current.isOnline() || getNickname(current) == null) return;
-            Character character = Character.get(current);
-            if (character == null || character.getTitle().isBlank()) return;
-            nicknamePlayer(current, character.getDisplayName());
-        });
+        try {
+            Bukkit.getScheduler().runTask(plugin, () -> refreshTitle(owner));
+        } catch (IllegalPluginAccessException rejected) {
+            // SCM was disabled between the check above and scheduling (e.g. a LuckPerms thread racing shutdown).
+            if (plugin.isEnabled()) throw rejected;
+        }
+    }
+
+    private void refreshTitle(UUID owner) {
+        if (!plugin.isEnabled()) return;
+        Player current = Bukkit.getPlayer(owner);
+        if (current == null || !current.isOnline() || isSuppressed(current)) return;
+        Nickname name = livePlate(current);
+        if (name == null) return;
+        Character character = Character.get(current);
+        if (character == null || character.getTitle().isBlank()) return;
+        name.setNickname(character.getDisplayName(), resolveTitleDisplay(current));
+        // Cached packets alone reach nobody: viewers already tracking the plate need the new text now.
+        refreshNicknames(current, name, null);
     }
 
     /** Re-reads the character when the delay elapses; nothing happens if the plate changed meanwhile. */

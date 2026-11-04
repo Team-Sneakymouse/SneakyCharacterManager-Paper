@@ -26,8 +26,9 @@ dependencies {
     implementation("org.apache.httpcomponents:httpclient:4.5.14")
     compileOnly("me.clip:placeholderapi:2.11.5")
     compileOnly("net.luckperms:api:5.4")
-    // NamesPreferenceHandler (nameplate text path) links LuckPerms types; tests exercise that path without LuckPerms enabled.
-    testRuntimeOnly("net.luckperms:api:5.4")
+    // NamesPreferenceHandler (nameplate text path) links LuckPerms types; tests exercise that path without LuckPerms enabled,
+    // and TitlePermissionRefreshTest compiles against the event API.
+    testImplementation("net.luckperms:api:5.4")
     compileOnly("de.maxhenkel.voicechat:voicechat-api:2.5.27")
     compileOnly("io.github.team-sneakymouse:sneakyutils:${rootProject.extra["sneakyUtilsVersion"]}")
     implementation("com.google.code.gson:gson:2.10.1")

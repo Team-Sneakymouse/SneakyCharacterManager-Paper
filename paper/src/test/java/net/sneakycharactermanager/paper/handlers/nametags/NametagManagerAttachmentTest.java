@@ -277,6 +277,83 @@ class NametagManagerAttachmentTest {
     }
 
     @Test
+    void permissionRefreshSendsTheNewTextToCurrentTrackersOnTheNextTick() {
+        knightTitleEquipped();
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(true);
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        NameplateHandle handle = attached(api.attach(racials, owner, f.anchor("shell")));
+        handle.setExcludedViewers(List.of(b.getUniqueId()));
+        plate.trackers.addAll(List.of(a, b));
+        f.ticks((int) NametagManager.INITIAL_TEXT_DELAY_TICKS);
+        verify(plate.entity, atLeastOnce()).sendCharacter(a); // a already sees the titled plate
+        assertEquals(0, f.pendingTasks());
+        clearInvocations(plate.entity);
+
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(false);
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        f.tick();
+
+        var order = inOrder(plate.entity);
+        order.verify(plate.entity).updatePackets("Owner (character)", null);
+        order.verify(plate.entity).sendCharacter(a);
+        verify(plate.entity, times(1)).sendCharacter(a);
+        verify(plate.entity, never()).sendCharacter(b);
+        verify(plate.entity, never()).sendOff(b);
+        verify(plate.entity, never()).sendOn(b);
+        assertSame(plate, f.plate(owner), "updated in place, not rebuilt");
+        assertSame(handle, f.manager.currentAttachment(racials, owner).orElseThrow());
+    }
+
+    @Test
+    void permissionRefreshDoesNotCancelPendingInitialText() {
+        knightTitleEquipped();
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        plate.trackers.add(a);
+        long generation = f.manager.lifecycle(owner.getUniqueId());
+
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        f.tick();
+        assertEquals(generation, f.manager.lifecycle(owner.getUniqueId()));
+        verify(plate.entity, times(1)).sendCharacter(a); // the refresh itself
+        f.ticks((int) NametagManager.INITIAL_TEXT_DELAY_TICKS);
+        verify(plate.entity, times(2)).sendCharacter(a); // the plate's initial text still arrives
+    }
+
+    @Test
+    void permissionRefreshSkipsASuppressedOwner() {
+        knightTitleEquipped();
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        plate.trackers.add(a);
+        f.vanish(owner, "V");
+
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        f.tick();
+        verify(plate.entity, times(1)).updatePackets(any(), any());
+        verify(plate.entity, never()).sendCharacter(a);
+    }
+
+    @Test
+    void permissionRefreshIgnoresSchedulerRejectionOnlyWhileDisabling() {
+        org.bukkit.scheduler.BukkitScheduler scheduler = org.bukkit.Bukkit.getScheduler();
+        doThrow(new org.bukkit.plugin.IllegalPluginAccessException("Plugin attempted to register task while disabled"))
+                .when(scheduler).runTask(any(Plugin.class), any(Runnable.class));
+
+        when(f.plugin.isEnabled()).thenReturn(true, false); // disabled between the check and the scheduling
+        assertDoesNotThrow(() -> f.manager.refreshTitleSoon(owner.getUniqueId()));
+
+        when(f.plugin.isEnabled()).thenReturn(true);
+        assertThrows(org.bukkit.plugin.IllegalPluginAccessException.class,
+                () -> f.manager.refreshTitleSoon(owner.getUniqueId()));
+
+        doThrow(new IllegalStateException("unrelated")).when(scheduler).runTask(any(Plugin.class), any(Runnable.class));
+        when(f.plugin.isEnabled()).thenReturn(true, false);
+        assertThrows(IllegalStateException.class, () -> f.manager.refreshTitleSoon(owner.getUniqueId()));
+    }
+
+    @Test
     void excludedViewerGetsNoTextEvenFromPreferenceChanges() {
         f.nick(owner);
         Plate plate = f.plate(owner);
