@@ -1,9 +1,8 @@
 package net.sneakycharactermanager.paper.listeners;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 
-import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -15,18 +14,14 @@ public class GamemodeEvents implements Listener {
     @EventHandler
     public void onGamemodeChange(PlayerGameModeChangeEvent event){
         Player player = event.getPlayer();
+        NametagManager manager = SneakyCharacterManager.getInstance().nametagManager;
 
         if(event.getNewGameMode().equals(GameMode.SPECTATOR)){
-            SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
+            manager.unnicknamePlayer(player);
         }
         else{
-            SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
-            Character character = Character.get(player);
-            if(character == null) return;
-
-            Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), ()->{
-                SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
-            }, 2);
+            // Fenced: re-reads the character later and is dropped if the plate was rebuilt or removed meanwhile.
+            manager.rebuild(player);
         }
     }
 

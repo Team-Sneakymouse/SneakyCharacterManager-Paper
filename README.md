@@ -199,6 +199,51 @@ The resolved hook covers every `applySkin` call: newly resolved/cached skins, ch
 
 Cancelling prevents all work inside `applySkin`: profile preparation (including texture removal), `setPlayerProfile`, vehicle removal and teleport. It does **not** roll back caller-side history, caches, messages or backend updates; use the initial request hook to veto the character-skin request itself. Cancellation of the resolved hook is a local application veto, not a storage transaction.
 
+## Nameplates
+
+### Who sees a plate
+
+A character's nameplate is a text display riding the player. SCM shows it per viewer:
+
+- Hiding a player from one viewer (`hideEntity`/`hidePlayer`, by any plugin) hides their plate from that viewer only; showing them again shows the plate and resends its text. The plate is not destroyed or rebuilt for anyone else.
+- Dead, spectating and CMI-vanished players (`%cmi_user_vanished_symbol%` resolves to a non-empty value; an unresolved placeholder is not a vanish) have no plate at all, for every viewer including staff. SCM rebuilds it when that ends.
+- A plate attached to another entity (below) follows each viewer's visibility of that entity instead of the player.
+
+The scoreboard tag `NicknameEntity` on the display is unchanged but is not an API: do not find, move, hide or resend plates yourself.
+
+### Attachment API (Paper)
+
+`net.sneakycharactermanager.paper.api.nameplate` lets a plugin put a player's plate on another entity (a body copy, a shell, a disguise). The service is registered in Bukkit's `ServicesManager` at the end of SCM's enable and unregistered when SCM disables.
+
+```java
+NameplateAttachments.get().ifPresent(api -> {
+    AttachResult result = api.attach(plugin, player, shell);
+    if (result instanceof AttachResult.Attached attached) {
+        NameplateHandle plate = attached.handle();
+        plate.setBlank(burrowed);                         // blank text for everyone
+        plate.setExcludedViewers(Set.of(staffUuid));      // never shown to these viewers
+        plate.moveTo(otherShell);                         // same rules as attach
+        plate.park();                                     // back on the player, hidden from everyone
+        plate.close();                                    // back on the player, normal visibility and text
+    } else if (result instanceof AttachResult.Refused refused) {
+        // refused.reason(): CONFLICT, OWNER_OFFLINE, ANCHOR_INVALID, DIFFERENT_WORLD,
+        // ANCHOR_IS_OWNER, CONSUMER_DISABLED, SCM_DISABLED; nothing changed
+    }
+});
+```
+
+- **One owner per plate, first plugin wins.** While a plugin holds an active attachment, another plugin's `attach` returns `CONFLICT`. The same plugin calling `attach` again gets the same handle, moved to the new anchor.
+- **Survives rebuilds.** Nickname/title/gender changes, `/charreload`, `respawnNameTags`, same-world teleports, gamemode changes, death and vanish rebuild or remove the display; the attachment stays and every new plate goes back onto the anchor with the same blank/excluded settings. The owner needs no plate to attach.
+- **Releases are terminal** (`NameplateHandle.releaseReason()`): `CLOSED`, `OWNER_QUIT`, `CONSUMER_DISABLED`, `SCM_DISABLED`, `ANCHOR_INVALID` (anchor removed, unloaded, changed world, or refused the plate as a passenger), `OWNER_CHANGED_WORLD`. Afterwards the handle is inert (mutators return `false`) and can never affect a later attachment; attach again for a new handle. There is no callback: check `isActive()` where you use the handle.
+- **Threading.** Everything except `owner()`, `consumer()`, `isActive()` and `releaseReason()` must run on the server main thread and throws `IllegalStateException` otherwise.
+- **Not exposed:** the display entity, packets and SCM's `Nickname` classes.
+
+The plate display is not persistent (Paper skips non-persistent passengers when saving), so a plate on an anchor is not written into chunk data; unloading the anchor releases the attachment (`ANCHOR_INVALID`) and SCM returns the plate to the player on the next tick, rebuilding it if it unloaded with the anchor.
+
+**Migration (consumers).** This replaces moving SCM's display entity directly. There is no compatibility path: SCM ignores the unreleased `sneakycharactermanager:keep-nameplate` metadata from PR #13, and SCM places and shows every plate itself (a plate moved by another plugin is put back on its player or anchor within a second). SneakyRacials must adopt this API in its own release, pinned to the SCM version that publishes it.
+
+**Known limitation.** Paper refuses API cross-world teleports (`Player#teleport`) of a player carrying passengers before any event fires; an unattached plate rides the player, so this pre-existing behaviour is unchanged. Portal and respawn world changes are unaffected.
+
 ## SkinState undo / re-apply
 
 The plugin tracks skin changes during a server session, allowing players to undo and re-apply skins via clickable chat buttons.
