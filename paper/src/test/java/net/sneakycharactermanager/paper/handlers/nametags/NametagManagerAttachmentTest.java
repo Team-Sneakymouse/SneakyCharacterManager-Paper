@@ -190,9 +190,167 @@ class NametagManagerAttachmentTest {
         when(titles.getDisplay("knight")).thenReturn("Sir");
         f.plugin.titleRegistry = titles;
         when(f.characterOf(owner).getTitle()).thenReturn("knight");
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(true);
 
         f.nick(owner);
         verify(f.plate(owner).entity).updatePackets("Owner (character)", "Sir");
+    }
+
+    private TitleRegistry knightTitleEquipped() {
+        TitleRegistry titles = new TitleRegistry();
+        titles.replaceAll(java.util.Map.of("knight", "Sir"));
+        f.plugin.titleRegistry = titles;
+        when(f.characterOf(owner).getTitle()).thenReturn("knight");
+        return titles;
+    }
+
+    @Test
+    void existingTitleIsNotShownWithoutItsPermission() {
+        knightTitleEquipped();
+
+        f.nick(owner);
+        verify(f.plate(owner).entity).updatePackets("Owner (character)", null);
+        verify(f.plate(owner).entity, never()).updatePackets(any(), eq("Sir"));
+    }
+
+    @Test
+    void deletedTitleIsNotShownEvenWithItsPermission() {
+        knightTitleEquipped().replaceAll(java.util.Map.of());
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(true);
+
+        f.nick(owner);
+        verify(f.plate(owner).entity).updatePackets("Owner (character)", null);
+    }
+
+    @Test
+    void permittedTitleIsShownAndStoredTitleIsKept() {
+        knightTitleEquipped();
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(true);
+
+        f.nick(owner);
+        verify(f.plate(owner).entity).updatePackets("Owner (character)", "Sir");
+        verify(f.characterOf(owner), never()).setTitle(any());
+    }
+
+    @Test
+    void permissionChangesRefreshTheExistingPlatesTitleOnTheNextTick() {
+        knightTitleEquipped();
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(true);
+        when(f.characterOf(owner).getDisplayName()).thenReturn("Owner (character)");
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        verify(plate.entity).updatePackets("Owner (character)", "Sir");
+
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(false);
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        verify(plate.entity, never()).updatePackets("Owner (character)", null);
+        f.tick();
+        assertSame(plate, f.plate(owner), "updated in place, not rebuilt");
+        verify(plate.entity).updatePackets("Owner (character)", null);
+
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(true);
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        f.tick();
+        verify(plate.entity, times(2)).updatePackets("Owner (character)", "Sir");
+        verify(f.characterOf(owner), never()).setTitle(any());
+    }
+
+    @Test
+    void permissionRefreshBuildsNoPlateAndSkipsUntitledOrOfflineOwners() {
+        knightTitleEquipped();
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        f.tick();
+        assertNull(f.plate(owner), "no plate is created by a permission change");
+
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        when(f.characterOf(owner).getTitle()).thenReturn("");
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        f.tick();
+        verify(plate.entity, times(1)).updatePackets(any(), any());
+
+        when(f.characterOf(owner).getTitle()).thenReturn("knight");
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        f.quit(owner);
+        f.tick();
+        verify(plate.entity, times(1)).updatePackets(any(), any());
+    }
+
+    @Test
+    void permissionRefreshSendsTheNewTextToCurrentTrackersOnTheNextTick() {
+        knightTitleEquipped();
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(true);
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        NameplateHandle handle = attached(api.attach(racials, owner, f.anchor("shell")));
+        handle.setExcludedViewers(List.of(b.getUniqueId()));
+        plate.trackers.addAll(List.of(a, b));
+        f.ticks((int) NametagManager.INITIAL_TEXT_DELAY_TICKS);
+        verify(plate.entity, atLeastOnce()).sendCharacter(a); // a already sees the titled plate
+        assertEquals(0, f.pendingTasks());
+        clearInvocations(plate.entity);
+
+        when(owner.hasPermission(TitleRegistry.permissionNode("knight"))).thenReturn(false);
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        f.tick();
+
+        var order = inOrder(plate.entity);
+        order.verify(plate.entity).updatePackets("Owner (character)", null);
+        order.verify(plate.entity).sendCharacter(a);
+        verify(plate.entity, times(1)).sendCharacter(a);
+        verify(plate.entity, never()).sendCharacter(b);
+        verify(plate.entity, never()).sendOff(b);
+        verify(plate.entity, never()).sendOn(b);
+        assertSame(plate, f.plate(owner), "updated in place, not rebuilt");
+        assertSame(handle, f.manager.currentAttachment(racials, owner).orElseThrow());
+    }
+
+    @Test
+    void permissionRefreshDoesNotCancelPendingInitialText() {
+        knightTitleEquipped();
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        plate.trackers.add(a);
+        long generation = f.manager.lifecycle(owner.getUniqueId());
+
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        f.tick();
+        assertEquals(generation, f.manager.lifecycle(owner.getUniqueId()));
+        verify(plate.entity, times(1)).sendCharacter(a); // the refresh itself
+        f.ticks((int) NametagManager.INITIAL_TEXT_DELAY_TICKS);
+        verify(plate.entity, times(2)).sendCharacter(a); // the plate's initial text still arrives
+    }
+
+    @Test
+    void permissionRefreshSkipsASuppressedOwner() {
+        knightTitleEquipped();
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        plate.trackers.add(a);
+        f.vanish(owner, "V");
+
+        f.manager.refreshTitleSoon(owner.getUniqueId());
+        f.tick();
+        verify(plate.entity, times(1)).updatePackets(any(), any());
+        verify(plate.entity, never()).sendCharacter(a);
+    }
+
+    @Test
+    void permissionRefreshIgnoresSchedulerRejectionOnlyWhileDisabling() {
+        org.bukkit.scheduler.BukkitScheduler scheduler = org.bukkit.Bukkit.getScheduler();
+        doThrow(new org.bukkit.plugin.IllegalPluginAccessException("Plugin attempted to register task while disabled"))
+                .when(scheduler).runTask(any(Plugin.class), any(Runnable.class));
+
+        when(f.plugin.isEnabled()).thenReturn(true, false); // disabled between the check and the scheduling
+        assertDoesNotThrow(() -> f.manager.refreshTitleSoon(owner.getUniqueId()));
+
+        when(f.plugin.isEnabled()).thenReturn(true);
+        assertThrows(org.bukkit.plugin.IllegalPluginAccessException.class,
+                () -> f.manager.refreshTitleSoon(owner.getUniqueId()));
+
+        doThrow(new IllegalStateException("unrelated")).when(scheduler).runTask(any(Plugin.class), any(Runnable.class));
+        when(f.plugin.isEnabled()).thenReturn(true, false);
+        assertThrows(IllegalStateException.class, () -> f.manager.refreshTitleSoon(owner.getUniqueId()));
     }
 
     @Test

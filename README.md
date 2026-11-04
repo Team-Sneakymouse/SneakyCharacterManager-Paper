@@ -98,6 +98,7 @@ Titles (proxy file `titles.yml`, not Paper `config.yml`):
 
 - Stored on the proxy and pushed to each Paper backend on player join / title create
 - `key: "Display Text"` — unlock with `sneakycharacters.title.<key>`; characters store the key; backends resolve display text for the second nameplate line in characters-only mode (styled via Paper `titlePrefix`)
+- A stored title is not shown if its key is missing from the catalog or the player no longer has `sneakycharacters.title.<key>`. The stored key is kept, so re-adding the title or re-granting the permission shows it again. With LuckPerms, permission changes refresh the nameplate on the next tick; otherwise the next nameplate rebuild (character load, title catalog sync, respawn/teleport rebuilds) applies it
 - If you previously kept `titles.yml` on Paper, copy it into the proxy plugin data folder once
 
 ## Commands (Paper)
