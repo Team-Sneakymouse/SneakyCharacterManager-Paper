@@ -18,15 +18,19 @@ public final class CharacterSlots {
     private CharacterSlots() {
     }
 
-    /** True when the player has no slot limit ({@code sneakycharacters.*}). */
-    public static boolean isUnlimited(@NotNull Player player) {
+    /** Base slots for admins ({@code sneakycharacters.*}); they used to be unlimited. */
+    public static final int ADMIN_BASE_SLOTS = 50;
+
+    /** True for admins ({@code sneakycharacters.*}): their base is at least {@link #ADMIN_BASE_SLOTS}. */
+    public static boolean isAdmin(@NotNull Player player) {
         return player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".*");
     }
 
-    /** Base plus bonus slots, or {@link Integer#MAX_VALUE} when unlimited. */
+    /** Base plus bonus slots. */
     public static int max(@NotNull Player player) {
-        if (isUnlimited(player)) return Integer.MAX_VALUE;
-        return base(player) + bonus(player);
+        int base = base(player);
+        if (isAdmin(player)) base = Math.max(base, ADMIN_BASE_SLOTS);
+        return base + bonus(player);
     }
 
     /** Highest {@code characterslots.<n>} the player has. */

@@ -115,7 +115,7 @@ public final class CharacterCrystal implements Listener {
         String startCharacter = Character.get(player).getCharacterUUID();
         User user = LuckPermsNodes.user(player);
         int bonus = LuckPermsNodes.highestOwnPermanentSuffix(user, CharacterSlots.BONUS_PREFIX) + 1;
-        int newMax = CharacterSlots.base(player) + Math.max(CharacterSlots.bonus(player), bonus);
+        int newMax = CharacterSlots.max(player) - CharacterSlots.bonus(player) + Math.max(CharacterSlots.bonus(player), bonus);
 
         // Save the slot first; the crystal is only spent once LuckPerms has stored it.
         active.put(id, null);
@@ -207,10 +207,6 @@ public final class CharacterCrystal implements Listener {
         }
         if (!Character.isPlayedMapped(player)) {
             send(player, "&cYour character is still loading. Try again in a moment.");
-            return false;
-        }
-        if (CharacterSlots.isUnlimited(player)) {
-            send(player, "&eYou already have unlimited character slots; the crystal has nothing to give you.");
             return false;
         }
         if (LuckPermsNodes.user(player) == null) {
