@@ -23,7 +23,6 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 import com.destroystokyo.paper.profile.ProfileProperty;
@@ -159,7 +158,7 @@ public class CharacterSelectionMenu implements Listener {
             }
 
             if (this.getClass().equals(CharacterMenuHolder.class) && this.player != null) {
-                int maxCharacterSlots = calculateMaxCharacterSlots(this.player);
+                int maxCharacterSlots = CharacterSlots.max(this.player);
                 int openSlots = maxCharacterSlots - allCharacters.size();
                 
                 if (openSlots > 0 && allCharacters.size() <= currentPage * CHARS_PER_PAGE) {
@@ -174,25 +173,6 @@ public class CharacterSelectionMenu implements Listener {
                     }
                 }
             }
-        }
-
-        private int calculateMaxCharacterSlots(Player player) {
-            int maxCharacterSlots = 0;
-            if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".*") || 
-                player.hasPermission(CHARACTER_SLOTS_PERMISSION_NODE + ".*")) {
-                maxCharacterSlots = Integer.MAX_VALUE;
-            } else {
-                for (PermissionAttachmentInfo permission : player.getEffectivePermissions()) {
-                    if (permission.getValue() && permission.getPermission().startsWith(CHARACTER_SLOTS_PERMISSION_NODE)) {
-                        String valueString = permission.getPermission().replace(CHARACTER_SLOTS_PERMISSION_NODE, "");
-                        try {
-                            int value = Integer.parseInt(valueString);
-                            if (value > maxCharacterSlots) maxCharacterSlots = value;
-                        } catch (NumberFormatException e) {}
-                    }
-                }
-            }
-            return maxCharacterSlots;
         }
 
         private void addItem(Inventory inventory, Character character, int index) {
@@ -504,24 +484,8 @@ public class CharacterSelectionMenu implements Listener {
         holder.receivedCharacterList(characters);
 
         if (holder.getClass().equals(CharacterMenuHolder.class)) {
-            int maxCharacterSlots = 0;
-
             Player player = Bukkit.getPlayer(UUID.fromString(playerUUID));
-
-            if (player.hasPermission(SneakyCharacterManager.IDENTIFIER + ".*") || player.hasPermission(CHARACTER_SLOTS_PERMISSION_NODE + ".*")) maxCharacterSlots = Integer.MAX_VALUE;
-            else {
-                for (PermissionAttachmentInfo permission : player.getEffectivePermissions()) {
-                    if (permission.getValue() && permission.getPermission().startsWith(CHARACTER_SLOTS_PERMISSION_NODE)) {
-                        String valueString = permission.getPermission().replace(CHARACTER_SLOTS_PERMISSION_NODE, "");
-
-                        try {
-                            int value = Integer.parseInt(valueString);
-                        if (value > maxCharacterSlots) maxCharacterSlots = value;
-                        } catch (NumberFormatException e) {}
-                    }
-                }
-                maxCharacterSlots = Math.min(maxCharacterSlots, Integer.MAX_VALUE);
-            }
+            int maxCharacterSlots = CharacterSlots.max(player);
 
             if (characters.size() < holder.getInventory().getSize()) {
                 int openSlots = maxCharacterSlots - characters.size();

@@ -27,6 +27,7 @@ import net.sneakycharactermanager.paper.api.nameplate.NameplateAttachments;
 import net.sneakycharactermanager.paper.commands.*;
 import net.sneakycharactermanager.paper.consolecommands.*;
 import net.sneakycharactermanager.paper.listeners.*;
+import net.sneakycharactermanager.paper.handlers.crystal.CharacterCrystal;
 import net.sneakycharactermanager.paper.handlers.ContextCalculatorCharacterTag;
 import net.sneakycharactermanager.paper.handlers.Placeholders;
 import net.sneakycharactermanager.paper.handlers.character.Character;
@@ -69,6 +70,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 	private Object svcIntegration;
 	/** LuckPerms event subscription; typed loosely so this class loads without LuckPerms. */
 	private AutoCloseable titlePermissionRefresh;
+	private CharacterCrystal characterCrystal;
     private StorageMode storageMode = StorageMode.LEGACY;
     private CharacterBackend characterBackend;
     public CharacterBackend getCharacterBackend() { return characterBackend; }
@@ -150,6 +152,8 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		getServer().getPluginManager().registerEvents(new VanishEvents(), this);
 		getServer().getPluginManager().registerEvents(new TeleportEvents(), this);
 		getServer().getPluginManager().registerEvents(new NameplateLifecycleListener(this), this);
+		characterCrystal = new CharacterCrystal(this);
+		getServer().getPluginManager().registerEvents(characterCrystal, this);
 
 		getServer().getPluginManager().addPermission(new Permission(IDENTIFIER + ".*"));
 		getServer().getPluginManager()
@@ -222,6 +226,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		if (event.getPlugin() == this) {
             if (characterBackend != null) characterBackend.close();
 			closeTitlePermissionRefresh();
+			if (characterCrystal != null) characterCrystal.shutdown();
 			Character.saveAll();
 			// Releases every attachment (SCM_DISABLED) before removing the plates.
 			this.nametagManager.unnickAll();
