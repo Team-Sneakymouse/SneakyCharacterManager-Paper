@@ -24,7 +24,7 @@ public class SimpleVoiceChatIntegration implements VoicechatPlugin {
     private final Map<UUID, BukkitTask> resetTasks = new HashMap<>();
     private final Set<UUID> talking = new HashSet<>();
     private static final int TALKING_TIMEOUT_TICKS = 10; // 0.5 seconds of inactivity to stop talking
-    // Must run before plugins like SneakyConfigurableVoice (priority 100) that cancel this event;
+    // Must run before plugins like SneakyVoiceChat (priority 100) that cancel this event;
     // SVC stops dispatching to lower-priority listeners once cancelled.
     private static final int MIC_EVENT_PRIORITY = 101;
 
