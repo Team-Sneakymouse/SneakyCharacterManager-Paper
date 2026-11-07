@@ -3,11 +3,8 @@ package net.sneakycharactermanager.paper.handlers.titles;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import net.luckperms.api.LuckPerms;
-import net.luckperms.api.LuckPermsProvider;
-import net.luckperms.api.model.user.User;
-import net.luckperms.api.node.Node;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.util.LuckPermsNodes;
 
 public final class TitlePermissionGranter {
 
@@ -18,14 +15,8 @@ public final class TitlePermissionGranter {
 		return SneakyCharacterManager.getInstance().luckPermsActive;
 	}
 
+	/** @throws IllegalStateException when the player's LuckPerms user is not loaded */
 	public static void grant(@NotNull Player player, @NotNull String titleKey) {
-		LuckPerms luckPerms = LuckPermsProvider.get();
-		User user = luckPerms.getUserManager().getUser(player.getUniqueId());
-		if (user == null) {
-			throw new IllegalStateException("LuckPerms user not loaded for " + player.getName());
-		}
-		String node = TitleRegistry.permissionNode(titleKey);
-		user.data().add(Node.builder(node).build());
-		luckPerms.getUserManager().saveUser(user);
+		LuckPermsNodes.addPermanent(player, TitleRegistry.permissionNode(titleKey));
 	}
 }
