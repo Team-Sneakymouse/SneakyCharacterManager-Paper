@@ -216,6 +216,19 @@ public final class CharacterCrystal implements Listener {
         return true;
     }
 
+    /** MagicSpells spell (MagicSpells-Data spells-item-characterCrystal.yml): m1 screen animation + coin quake sound. */
+    public static final String USE_EFFECT_SPELL = "characterCrystal-effect";
+
+    /** Plays the use effect through MagicSpells, or a vanilla stand-in when MagicSpells is off. */
+    private static void playUseEffect(Player player) {
+        org.bukkit.plugin.Plugin magicSpells = Bukkit.getPluginManager().getPlugin("MagicSpells");
+        if (magicSpells != null && magicSpells.isEnabled()) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "cast forcecast " + player.getName() + " " + USE_EFFECT_SPELL);
+        } else {
+            player.getWorld().playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, 0.8f, 1.6f);
+        }
+    }
+
     private static void send(Player player, String message) {
         player.sendMessage(TextUtility.INSTANCE.convertToComponent(message));
     }
@@ -253,8 +266,7 @@ public final class CharacterCrystal implements Listener {
                 d.setTransformation(transform(0.45f, 0f));
             });
             send(player, "&cThe crystal tears free of your grip and rises...");
-            world.playSound(start, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.PLAYERS, 1f, 0.6f);
-            world.playSound(start, Sound.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, 0.8f, 1.6f);
+            playUseEffect(player);
         }
 
         @Override
@@ -279,10 +291,7 @@ public final class CharacterCrystal implements Listener {
                 float p = (tick - RISE_END) / (float) (EXPAND_END - RISE_END);
                 spinTo(1f + 2.2f * p, 0.25f + 0.35f * p);
                 ring(world, 1.0 + 1.6 * p, tick * 0.35, EMBER);
-                if (tick % 5 == 0) world.playSound(hover, Sound.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 1f,
-                        0.5f + p);
                 if (tick == EXPAND_END) {
-                    world.playSound(hover, Sound.BLOCK_PORTAL_TRIGGER, SoundCategory.PLAYERS, 0.5f, 1.8f);
                     send(player, "&4It hungers for you.");
                 }
             } else if (tick <= PULL_END) {
