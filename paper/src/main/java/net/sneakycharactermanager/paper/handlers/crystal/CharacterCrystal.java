@@ -3,8 +3,12 @@ package net.sneakycharactermanager.paper.handlers.crystal;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Color;
+import org.bukkit.GameMode;
+import org.bukkit.Material;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
@@ -14,6 +18,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -22,7 +27,9 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -35,14 +42,11 @@ import org.joml.Vector3f;
 
 import com.sneakyutils.util.TextUtility;
 
-import net.luckperms.api.LuckPerms;
-import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.model.user.User;
-import net.luckperms.api.node.Node;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
-import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSlots;
+import net.sneakycharactermanager.paper.util.LuckPermsNodes;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 
 /**
@@ -52,7 +56,12 @@ import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 public final class CharacterCrystal implements Listener {
 
     public static final NamespacedKey ITEM_MODEL = new NamespacedKey("lom", "character_crystal");
+    /** MagicSpells stores each magic item's name under magicspells:magicitem; only the real item counts. */
+    public static final NamespacedKey MAGIC_ITEM_KEY = NamespacedKey.fromString("magicspells:magicitem");
+    public static final String MAGIC_ITEM_NAME = "item-characterCrystal";
 
+    private static final long CONFIRM_WINDOW_MS = 5000;
+    private static final double MAX_DRIFT = 8.0;
     private static final int RISE_END = 20;
     private static final int EXPAND_END = 45;
     private static final int PULL_END = 70;
@@ -63,7 +72,9 @@ public final class CharacterCrystal implements Listener {
     private static final Color VIOLET = Color.fromRGB(0x8A, 0x30, 0xFF);
 
     private final SneakyCharacterManager plugin;
+    /** Players whose save or ritual is in progress (value null while the LuckPerms save runs). */
     private final Map<UUID, Ritual> active = new HashMap<>();
+    private final Map<UUID, Long> confirmUntil = new HashMap<>();
 
     public CharacterCrystal(SneakyCharacterManager plugin) {
         this.plugin = plugin;
@@ -71,42 +82,121 @@ public final class CharacterCrystal implements Listener {
 
     public static boolean isCrystal(@Nullable ItemStack item) {
         if (item == null || item.isEmpty() || !item.hasItemMeta()) return false;
-        ItemMeta meta = item.getItemMeta();
-        return meta.hasItemModel() && ITEM_MODEL.equals(meta.getItemModel());
+        String name = item.getItemMeta().getPersistentDataContainer().get(MAGIC_ITEM_KEY, PersistentDataType.STRING);
+        return MAGIC_ITEM_NAME.equals(name);
     }
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = false)
+    @EventHandler(priority = EventPriority.HIGH)
     public void onUse(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         ItemStack item = event.getItem();
         if (!isCrystal(item)) return;
+        // Air clicks arrive already cancelled, so ignoreCancelled can't be used. Region and protection plugins deny
+        // the item use instead, and that is respected here.
+        if (event.useItemInHand() == Event.Result.DENY) return;
         event.setCancelled(true);
 
         Player player = event.getPlayer();
-        if (active.containsKey(player.getUniqueId())) return;
+        UUID id = player.getUniqueId();
+        if (active.containsKey(id)) return;
         if (!canUse(player)) return;
 
-        EquipmentSlot hand = event.getHand() == null ? EquipmentSlot.HAND : event.getHand();
-        ItemStack shown = item.clone();
-        shown.setAmount(1);
-        item.setAmount(item.getAmount() - 1);
-        player.getInventory().setItem(hand, item.getAmount() <= 0 ? null : item);
+        long now = System.currentTimeMillis();
+        Long until = confirmUntil.get(id);
+        if (until == null || until < now) {
+            confirmUntil.put(id, now + CONFIRM_WINDOW_MS);
+            send(player, "&eRight-click again within 5 seconds to use your &cCharacter Crystal&e. It grants one more"
+                    + " character slot and swaps you to a new character.");
+            return;
+        }
+        confirmUntil.remove(id);
 
-        int newMax = grantSlot(player);
-        Ritual ritual = new Ritual(player, shown, newMax);
-        active.put(player.getUniqueId(), ritual);
-        ritual.runTaskTimer(plugin, 0L, 1L);
+        EquipmentSlot hand = event.getHand() == null ? EquipmentSlot.HAND : event.getHand();
+        String startCharacter = Character.get(player).getCharacterUUID();
+        User user = LuckPermsNodes.user(player);
+        int bonus = LuckPermsNodes.highestOwnPermanentSuffix(user, CharacterSlots.BONUS_PREFIX) + 1;
+        int newMax = CharacterSlots.base(player) + Math.max(CharacterSlots.bonus(player), bonus);
+
+        // Save the slot first; the crystal is only spent once LuckPerms has stored it.
+        active.put(id, null);
+        CompletableFuture<Void> save;
+        try {
+            save = LuckPermsNodes.addPermanent(player, CharacterSlots.BONUS_PREFIX + bonus);
+        } catch (IllegalStateException e) {
+            active.remove(id);
+            send(player, "&cThe crystal can't reach your soul right now. Try again in a moment.");
+            return;
+        }
+        save.whenComplete((ok, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
+            if (error != null) {
+                active.remove(id);
+                if (player.isOnline()) send(player, "&cThe crystal flickers and stays whole: your slot couldn't be"
+                        + " saved. Your crystal was not used; please tell staff.");
+                return;
+            }
+            plugin.getLogger().info("Character Crystal: " + player.getName() + " got bonus slot " + bonus + " ("
+                    + newMax + " slots).");
+            ItemStack shown = consume(player, hand);
+            if (!player.isOnline()) {
+                active.remove(id);
+                return;
+            }
+            Ritual ritual = new Ritual(player, shown, newMax, startCharacter);
+            active.put(id, ritual);
+            ritual.runTaskTimer(plugin, 0L, 1L);
+        }));
+    }
+
+    /** Takes one crystal (the hand used, else anywhere in the inventory) unless in creative; returns a copy to show. */
+    private ItemStack consume(Player player, EquipmentSlot hand) {
+        PlayerInventory inventory = player.getInventory();
+        boolean spend = player.getGameMode() != GameMode.CREATIVE;
+        ItemStack held = inventory.getItem(hand);
+        ItemStack shown = null;
+        if (isCrystal(held)) {
+            shown = held.clone();
+            if (spend) {
+                held.setAmount(held.getAmount() - 1);
+                inventory.setItem(hand, held.getAmount() <= 0 ? null : held);
+            }
+        } else {
+            ItemStack[] contents = inventory.getContents();
+            for (int i = 0; i < contents.length; i++) {
+                if (!isCrystal(contents[i])) continue;
+                shown = contents[i].clone();
+                if (spend) {
+                    contents[i].setAmount(contents[i].getAmount() - 1);
+                    inventory.setItem(i, contents[i].getAmount() <= 0 ? null : contents[i]);
+                }
+                break;
+            }
+            if (shown == null) {
+                plugin.getLogger().warning("Character Crystal: " + player.getName()
+                        + " got a slot but no crystal was left to take (moved during the save).");
+                shown = new ItemStack(Material.PAPER);
+                ItemMeta meta = shown.getItemMeta();
+                meta.setItemModel(ITEM_MODEL);
+                shown.setItemMeta(meta);
+            }
+        }
+        shown.setAmount(1);
+        return shown;
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        Ritual ritual = active.remove(event.getPlayer().getUniqueId());
-        if (ritual != null) ritual.abort();
+        UUID id = event.getPlayer().getUniqueId();
+        confirmUntil.remove(id);
+        Ritual ritual = active.get(id);
+        if (ritual != null) {
+            active.remove(id);
+            ritual.abort();
+        }
     }
 
-    /** Stops every ritual (plugin disable). Slots were granted when each ritual began. */
+    /** Stops every ritual (plugin disable). Slots were saved before each ritual began. */
     public void shutdown() {
-        for (Ritual ritual : active.values()) ritual.abort();
+        for (Ritual ritual : active.values()) if (ritual != null) ritual.abort();
         active.clear();
     }
 
@@ -123,22 +213,11 @@ public final class CharacterCrystal implements Listener {
             send(player, "&eYou already have unlimited character slots; the crystal has nothing to give you.");
             return false;
         }
-        if (LuckPermsProvider.get().getUserManager().getUser(player.getUniqueId()) == null) {
+        if (LuckPermsNodes.user(player) == null) {
             send(player, "&cThe crystal can't reach your soul right now. Try again in a moment.");
             return false;
         }
         return true;
-    }
-
-    /** Adds {@code characterslots.<current+1>} to the player in LuckPerms; returns the new slot count. */
-    private int grantSlot(Player player) {
-        int newMax = CharacterSlots.parseMax(player) + 1;
-        LuckPerms luckPerms = LuckPermsProvider.get();
-        User user = luckPerms.getUserManager().getUser(player.getUniqueId());
-        user.data().add(Node.builder(CharacterSelectionMenu.CHARACTER_SLOTS_PERMISSION_NODE + newMax).build());
-        luckPerms.getUserManager().saveUser(user);
-        plugin.getLogger().info("Character Crystal: " + player.getName() + " now has " + newMax + " character slots.");
-        return newMax;
     }
 
     private static void send(Player player, String message) {
@@ -148,15 +227,17 @@ public final class CharacterCrystal implements Listener {
     private final class Ritual extends BukkitRunnable {
         private final Player player;
         private final int newMax;
+        private final String startCharacter;
         private final ItemDisplay display;
         private final Location hover;
         private int tick = 0;
         private float spin = 0f;
         private boolean done = false;
 
-        Ritual(Player player, ItemStack shown, int newMax) {
+        Ritual(Player player, ItemStack shown, int newMax, String startCharacter) {
             this.player = player;
             this.newMax = newMax;
+            this.startCharacter = startCharacter;
             Location eye = player.getEyeLocation();
             Location start = eye.clone().add(eye.getDirection().multiply(0.6)).subtract(0, 0.35, 0);
             start.setYaw(0);
@@ -182,7 +263,11 @@ public final class CharacterCrystal implements Listener {
 
         @Override
         public void run() {
-            if (!player.isOnline() || player.isDead() || !display.isValid()) {
+            // Teleports, world changes or a character load end the ritual (the slot stays granted).
+            if (!player.isOnline() || player.isDead() || !display.isValid()
+                    || !player.getWorld().equals(hover.getWorld())
+                    || player.getLocation().distanceSquared(hover) > MAX_DRIFT * MAX_DRIFT
+                    || !onStartCharacter()) {
                 active.remove(player.getUniqueId());
                 abort();
                 return;
@@ -270,6 +355,12 @@ public final class CharacterCrystal implements Listener {
             display.setTransformation(transform(scale, spin));
         }
 
+        private boolean onStartCharacter() {
+            if (!Character.isPlayedMapped(player)) return false;
+            Character current = Character.get(player);
+            return current != null && startCharacter.equals(current.getCharacterUUID());
+        }
+
         private void finish() {
             cancel();
             active.remove(player.getUniqueId());
@@ -277,6 +368,11 @@ public final class CharacterCrystal implements Listener {
             display.remove();
             player.setVelocity(new Vector(0, 0, 0));
             player.setFallDistance(0);
+            if (!onStartCharacter()) {
+                send(player, "&eYour character changed during the ritual, so you weren't swapped. Your new slot is"
+                        + " yours: open &f/char&e to use it.");
+                return;
+            }
             send(player, "&aA new soul takes shape. You now have &f" + newMax + "&a character slots.");
             send(player, "&aUse &f/nick&a and &f/skin&a to shape your new character!");
             ProxyMessagingUtil.sendByteArray(player, "createNewCharacter", player.getUniqueId().toString());
