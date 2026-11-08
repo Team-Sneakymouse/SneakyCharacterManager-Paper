@@ -1,0 +1,19 @@
+## Character Crystal owned by SneakyCharacterManager / SneakyItems (PDC namespace magicspells).
+## Behavior is plugin-side; Magics may still hold characterCrystal-effect for the use FX.
+## Give with /ms magicitem item-characterCrystal or SneakyItems create.
+
+magic-items:
+    item-characterCrystal:
+        type: "paper"
+        item-model: "lom:character_crystal"
+        max-stack-size: 1
+        name: "&cCharacter Crystal"
+        lore:
+            - "&7Value: &c5,555 Dragon Coins"
+            - "&7A ruby heart with a spare soul inside."
+            - "&7Grants &f+1 character slot&7 and swaps"
+            - "&7you to your new character."
+            - "&f&7 Use it"
+        pdc-permanent:
+            store_value_currency: "dragoncoins"
+            store_value_amount: "5555"

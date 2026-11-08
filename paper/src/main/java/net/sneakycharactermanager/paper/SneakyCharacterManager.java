@@ -28,6 +28,7 @@ import net.sneakycharactermanager.paper.commands.*;
 import net.sneakycharactermanager.paper.consolecommands.*;
 import net.sneakycharactermanager.paper.listeners.*;
 import net.sneakycharactermanager.paper.handlers.crystal.CharacterCrystal;
+import com.sneakyitems.api.SneakyItemsAPI;
 import net.sneakycharactermanager.paper.handlers.ContextCalculatorCharacterTag;
 import net.sneakycharactermanager.paper.handlers.Placeholders;
 import net.sneakycharactermanager.paper.handlers.character.Character;
@@ -94,6 +95,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		titleSelectionMenu = new TitleSelectionMenu();
 
 		saveDefaultConfig();
+		registerMagicItems();
         try {
             storageMode = StorageMode.parse(getConfig().getString("storage.backend"));
             if (storageMode == StorageMode.SNEAKYDB) {
@@ -221,9 +223,19 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 				new NameplateAttachmentsImpl(nametagManager), this, ServicePriority.Normal);
 	}
 
+	/** Own MagicsSpells-style item defs under resources/magic-items.yml; PDC namespace stays magicspells. */
+	private void registerMagicItems() {
+		saveResource("magic-items.yml", false);
+		SneakyItemsAPI.clearOwner(this);
+		int n = SneakyItemsAPI.registerMagicItemsFile(this, "magicspells",
+				new File(getDataFolder(), "magic-items.yml"));
+		getLogger().info("Registered " + n + " magic item(s) with SneakyItems.");
+	}
+
 	@EventHandler
 	public void onPluginDisable(PluginDisableEvent event) {
 		if (event.getPlugin() == this) {
+			SneakyItemsAPI.clearOwner(this);
             if (characterBackend != null) characterBackend.close();
 			closeTitlePermissionRefresh();
 			if (characterCrystal != null) characterCrystal.shutdown();

@@ -31,11 +31,13 @@ dependencies {
     testImplementation("net.luckperms:api:5.4")
     compileOnly("de.maxhenkel.voicechat:voicechat-api:2.5.27")
     compileOnly("io.github.team-sneakymouse:sneakyutils:${rootProject.extra["sneakyUtilsVersion"]}")
+    compileOnly("io.github.team-sneakymouse:sneakyitems:${rootProject.extra["sneakyItemsVersion"]}")
     implementation("com.google.code.gson:gson:2.10.1")
     testImplementation("org.postgresql:postgresql:42.7.7")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation("org.mockito:mockito-core:5.21.0")
     testRuntimeOnly("io.github.team-sneakymouse:sneakyutils:${rootProject.extra["sneakyUtilsVersion"]}")
+    testRuntimeOnly("io.github.team-sneakymouse:sneakyitems:${rootProject.extra["sneakyItemsVersion"]}")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

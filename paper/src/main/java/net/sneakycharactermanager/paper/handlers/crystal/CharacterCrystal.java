@@ -220,7 +220,7 @@ public final class CharacterCrystal implements Listener {
         return true;
     }
 
-    /** MagicSpells spell (MagicSpells-Data spells-item-characterCrystal.yml): m1 screen animation + coin quake sound. */
+    /** Magics spell still in Magics YAML (characterCrystal-effect): m1 screen animation + coin quake sound. */
     public static final String USE_EFFECT_SPELL = "characterCrystal-effect";
 
     /** Plays the use effect through MagicSpells, or a vanilla stand-in when MagicSpells is off. */
