@@ -146,13 +146,14 @@ public class SkinQueue extends BukkitRunnable {
     }
 
     /**
-     * Drops this requester's queued base-skin jobs for one character (e.g. after applying a stored texture/signature).
-     * Matches the character by owner and ID: another owner's character with the same ID is left alone.
+     * Drops this requester's queued preload/load jobs for one character (e.g. after applying a stored texture/signature).
+     * Matches the character by owner and ID: another owner's character with the same ID is left alone. Explicit skin
+     * changes ({@link #PRIO_SKIN} and up) stay queued: they are newer than any stored skin and must still be saved.
      */
     public void removePendingForCharacter(Player requester, CharacterKey key) {
         if (requester == null || key == null) return;
         queue.values().stream().flatMap(List::stream).filter(data -> isFor(data, requester, key)
-                && data.getUniformHash() == null).toList().forEach(this::remove);
+                && data.getUniformHash() == null && data.getPriority() < PRIO_SKIN).toList().forEach(this::remove);
     }
 
     private static boolean isFor(SkinData data, Player requester, CharacterKey key) {

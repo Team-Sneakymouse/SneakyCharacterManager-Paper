@@ -156,6 +156,18 @@ class SkinOwnerTest {
         assertTrue(plugin.skinQueue.getQueue().get(SkinQueue.PRIO_SKIN).contains(own));
     }
 
+    /** A character-list refresh (e.g. after switching away) drops preloads, never a pending /skin change. */
+    @Test
+    void droppingPendingJobsKeepsExplicitSkinChanges() {
+        SkinData preload = SkinData.getOrCreate("https://skins/old.png", "", false, SkinQueue.PRIO_ONLINE, wearer, borrowed, "Name");
+        SkinData requested = SkinData.getOrCreate(URL, "", false, SkinQueue.PRIO_SKIN, wearer, borrowed, "Name");
+
+        plugin.skinQueue.removePendingForCharacter(wearer, borrowed);
+
+        assertFalse(plugin.skinQueue.getQueue().get(SkinQueue.PRIO_ONLINE).contains(preload));
+        assertTrue(plugin.skinQueue.getQueue().get(SkinQueue.PRIO_SKIN).contains(requested));
+    }
+
     @Test
     void mineSkinResultIsSavedToTheJobsCharacter() {
         SkinData job = SkinData.getOrCreate(URL, "", false, SkinQueue.PRIO_LOAD, wearer, borrowed, "Name");

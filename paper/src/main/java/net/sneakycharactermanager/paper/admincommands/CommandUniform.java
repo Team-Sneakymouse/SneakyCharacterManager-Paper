@@ -155,14 +155,7 @@ public class CommandUniform extends CommandBaseAdmin {
 
                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
                     if (!cachedTexture.isEmpty() && !cachedSignature.isEmpty()) {
-                        ProfileProperty property = new ProfileProperty("textures", cachedTexture, cachedSignature);
-                        SkinUtil.applySkin(player, property);
-                        SkinApplyService.registerGlobalSkinCacheAfterApply(player, cachedUrl, property, character.isSlim());
-
-                        SkinState state = SneakyCharacterManager.getInstance().skinStateManager.record(
-                                player, SkinStateManager.uniformKeyToDisplayName(args[1]), cachedTexture, cachedSignature,
-                                character.getKey(), cachedUrl, true);
-                        SkinStateManager.sendSkinUpdatedMessage(player, state);
+                        applyCachedVariant(sender, player, character, args[1], cachedUrl, cachedTexture, cachedSignature);
                     } else {
                         SkinData sd = SkinData.getOrCreate(cachedUrl, cachedUUID, character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getKey(), character.getName());
                         sd.setUniformCacheInfo(baseSkinUrl, uniformHash, args[1]);
@@ -319,6 +312,27 @@ public class CommandUniform extends CommandBaseAdmin {
             }
         });
         
+        return true;
+    }
+
+    /**
+     * Puts a cached uniform variant on {@code player}, but only while it still wears the character the uniform was
+     * requested for: the file hash runs async, and the player may have switched character meanwhile.
+     */
+    static boolean applyCachedVariant(CommandSender sender, Player player, Character character, String uniformKey,
+                                      String cachedUrl, String texture, String signature) {
+        if (!player.isOnline() || !Character.isWearing(player, character.getKey())) {
+            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&cUniform not applied: the character changed."));
+            return false;
+        }
+        ProfileProperty property = new ProfileProperty("textures", texture, signature);
+        SkinUtil.applySkin(player, property);
+        SkinApplyService.registerGlobalSkinCacheAfterApply(player, cachedUrl, property, character.isSlim());
+
+        SkinState state = SneakyCharacterManager.getInstance().skinStateManager.record(
+                player, SkinStateManager.uniformKeyToDisplayName(uniformKey), texture, signature,
+                character.getKey(), cachedUrl, true);
+        SkinStateManager.sendSkinUpdatedMessage(player, state);
         return true;
     }
 
