@@ -89,7 +89,7 @@ The gameplay file path didn't change. Until now the owner was always the wearer,
 | Character lock permission (`sneakycharacters.character.<id>`) | Checked on the player loading the character. |
 | Character slots (slot permissions, Character Crystal) | LuckPerms nodes belong to accounts. The crystal is an item in the worn character's inventory, so it only works while you wear one of your own characters, and only swaps you if you are still on the character you started it on. |
 | `chardisable` / `charenable` | They lock a player out of their own characters. |
-| Skin undo history (`/skin state`, [Undo]/[Re-apply]) | It is session-only and per player. Each entry names its character key, so it is only restored onto that exact character. |
+| Skin undo history (`/skin state`, [Undo]/[Re-apply]) | It is session-only and per player. Each entry names its character key, so it is only restored onto that exact character. A swap moves each character's latest entry to its new body. |
 | `/charprefix` | It lives in memory on the loaded character and is lost on reload, as before. |
 | Skin queue requester (priority on join/quit, dropped when offline, menu repaint) | A job is applied to, and messages, the player who asked. |
 | SneakyDB in-flight state per player (join, result fences) | It tracks what is on its way to a body. The owner queue and revision fences are per owner. |
@@ -132,7 +132,7 @@ Another plugin can put a player's character on a different body (a *puppet*) and
 - `Puppets.puppet(body, CharacterKey)` returns a `CompletableFuture<PuppetResult>` that always completes. It is a normal switch for the body: what it wore is saved first, then the character loads from its owner's gameplay file with its owner's name and skin. The owner may be offline. It never writes a last-played character (neither the body's nor the owner's), doesn't block commands, and isn't re-applied on rejoin. Everything saved or edited while wearing it goes to the owner (see "Character identity").
 - `Puppets.release(body)` returns `RELEASED`, `NOT_PUPPETED` or `UNSUPPORTED`. It saves the borrowed character where it stands, takes it off at once, and loads the body's own last-played character as a normal switch. Until that arrives the body wears nothing and its inventory is cleared (when SCM manages inventories), so the borrowed items aren't on two bodies. If a third body wears that character by then, the body gets its character menu. A puppet still on its way isn't cancelled by `release`: release once its future completes.
 - `Puppets.borrowedBy(body)` is the character the body wears if it isn't its own, or null.
-- `PuppetLeaveEvent` (a `PlayerEvent` on the body) fires once whenever a puppeting body stops wearing the borrowed character, after it was saved (except in the case under `QUIT` below) and taken off. `getCharacterKey()` is the borrowed character, and `getReason()` says how it left:
+- `PuppetLeaveEvent` (a `PlayerEvent` on the body) fires once whenever a puppeting body stops wearing the borrowed character, after it was saved (except in the case under `QUIT` below) and taken off. A swap is the one exception (see "Swap" below). `getCharacterKey()` is the borrowed character, and `getReason()` says how it left:
 
 | Reason | When |
 | --- | --- |
@@ -161,6 +161,67 @@ Another plugin can put a player's character on a different body (a *puppet*) and
 **Character lists.** `CharacterLists.of(owner)` gives any owner's characters, online or offline, as a `CompletableFuture<List<ListedCharacter>>` for another plugin's menu: key, name, skin URL, texture, signature and model, in `/char` order and without disabled characters. `ListedCharacter.current()` marks the owner's current character: the one they wear if they're online and wearing one of their own, otherwise their last-played one. It only reads: it creates nothing in storage and builds no `Character`. In legacy mode the future fails with `UnsupportedOperationException`; it also fails if storage fails or SCM shuts down. For plain names only, or to look one character up by its ID, use the [character directory](#character-directory-paper-api), which works in both storage modes.
 
 The cases above are tested one by one in `PuppetApiTest` (its header lists them), and ticket 02's end-to-end checks run through `puppet` in `BorrowedCharacterTest`.
+
+### Swap
+
+`Puppets.swap(a, b)` exchanges the characters two online bodies wear, in one call on the main thread (one tick), in memory: each body takes over the other's character exactly where it stood, so onlookers see no change. Nothing is read from storage. SneakyDB mode only. It returns a `SwapResult`:
+
+| Result | Meaning |
+| --- | --- |
+| `SWAPPED` | Each body wears the other's character. The only success. |
+| `UNSUPPORTED` | Legacy mode. |
+| `BODY_OFFLINE` | A body isn't online. |
+| `SAME_BODY` | Both arguments are the same body. |
+| `NOT_WEARING` | A body wears no character (for example a released puppet waiting for its own). |
+| `DEAD` | A body is dead. |
+| `DIFFERENT_WORLDS` | The bodies are in different worlds. The caller moves them into one world first. |
+| `SLEEPING` | A body is in a bed. The caller gets it out first. |
+| `BUSY` | A body or one of the two characters is in the middle of a load or another swap (for example, called from a `LoadCharacterEvent` listener). |
+| `REFUSED` | A listener refused a teleport, or a body quit or lost its character before anything was exchanged. Bodies that moved are put back. Both characters may have been saved where they stood. |
+| `INTERRUPTED` | A listener of one of the swap's own events took a body off its new character, or a body quit, after the exchange. Both characters were saved before it began; each body wears whatever it wears now. |
+
+Only `SWAPPED`, `REFUSED` and `INTERRUPTED` can change anything. The others are checked before anything happens.
+
+**What moves, in order.** Body `a` wears X and body `b` wears Y:
+
+1. Any open container is closed (its cursor item goes back into the inventory, as in vanilla). The player's own inventory view, with its crafting grid, stays open.
+2. Both bodies' live state is read, and X is saved from `a` and Y from `b`. That is the one save each character gets, of exactly the state that moves.
+3. **Teleport first:** both get off any vehicle, then each goes to the other's exact location and facing (no +1 Y).
+4. The holder registry and puppet bookkeeping swap in one step: `a` wears Y and `b` wears X.
+5. Each body gets the other's: attribute base values (scale, maximum health), plugin attribute modifiers when `manageAttributes` is on (Minecraft's own modifiers, from equipment and effects, stay with the body), effects, health, absorption, food, saturation, exhaustion, fire, freezing, air, fall distance, inventory with cursor item and 2x2 crafting grid when `manageInventories` is on, held hotbar slot, and velocity.
+6. **Skin last:** the signed skin property each body wore moves as it is (uniforms included, nothing waits on the network). `CharacterSkinAppliedEvent` fires for each, but nothing else `SkinUtil.applySkin` does (no dismount or +1 Y). Each character's latest skin-history entry moves to its new body.
+7. SneakyPoses poses (sit, sleep, crawl) are put back on the body that now wears the character, at the same spot, after the skin so a sleeping pose copies the new one. A body that rode a vehicle hands its seat to the other.
+8. Each nameplate stays on its body (the swap's teleports don't rebuild it) and shows the new character's name and title: sent at once to everyone tracking it, and again the next tick to anyone who starts tracking it after the teleport.
+9. After that, each body that now wears **its own** character gets its last-played character set to it, through its owner's storage queue. A body wearing someone else's character keeps its pointer.
+
+**What stays with the body:** game mode and flight, XP, ender chest, spawn point, permissions (so title unlocks and character locks), the account name that viewers with names ON see, skin-undo chat buttons, voice effect chains (SneakyShadowDancing swaps those itself), and anything another plugin keeps per player (for example MagicSpells buffs and mana). Inventory and plugin attribute modifiers also stay when SCM doesn't manage them, as for a normal load.
+
+**Nothing can run in the middle.** Autosave, quits, commands and storage results all run on the main thread, so they can't run during the call. For the swap's own events (teleports, effects, skins, poses), until it returns:
+
+- no load can put anything on either body, and no load can put X or Y on any body;
+- `Character.save()` does nothing for either body (step 2 already saved both), so a listener can't add a save or write a half-swapped state;
+- a body kicked by a listener saves nothing more, and the result is `INTERRUPTED`.
+
+So each swap writes exactly two gameplay files, X and Y, and one last-played pointer for each body that ends up in its own character.
+
+**Events.** A swap fires no `LoadCharacterEvent`: its listeners treat it as a character switch, and MagicSpells' load spells cure effects, reset XP and scale, and add a hunger penalty, which would undo what a swap moves. It fires no `PuppetLeaveEvent` either: the plugin that swaps knows it did.
+
+**Puppet bookkeeping afterwards.** Whatever a body wears decides it, as always. In a Shadow Dance the Driver (wearing their own X) and the Supporter (puppeting the Driver's Y) swap:
+
+- the Driver wears Y, their own: `Puppets.borrowedBy(driver)` is null and their last-played pointer names Y;
+- the Supporter wears X: `Puppets.borrowedBy(supporter)` is X, and `CharacterHolders.holderOf(X)` is the Supporter. The Supporter's pointer is unchanged;
+- from then on every `PuppetLeaveEvent` for the Supporter carries X: a quit (`QUIT`), any other load (`LOADED_OTHER`), `Puppets.release` (`RELEASED`), the Driver joining as X (`OWNER_JOINED`).
+
+**Rejoining.** The Driver rejoins as Y. If the pointer write fails, SCM's usual storage-unavailable handling applies: the Driver is told, and the Driver's storage is fenced until a restart. The pointer then still names X; if another body wears X when the Driver next joins, the owner-join rule above gives it back to the Driver.
+
+**Poses** go through what SneakyPoses documents, since it has no API: its `%sneakyposes_sitting|sleeping|crawling%` placeholders (so PlaceholderAPI is needed), the `SneakyPosesSeat` tag on its seat, its `sit.y-offset`, `sleep.y-offset` and `sleep.camera-y-offset` settings, and the console form `/<pose> true <player> world,x,y,z,yaw`. It assumes SneakyPoses' default `end-on-teleport: true`. Without SneakyPoses or PlaceholderAPI, a posed character stands up, as on any teleport.
+
+**Known gaps:**
+
+- A skin change still resolving when the swap happens (`/skin`, a uniform) is saved to its character but shown only on the body that asked, so the character's new wearer shows it at its next load.
+- What each swapping player sees on their own screen, and whether onlookers see a one-frame blink, is client behaviour that tests can't show (Shadow Dancing ticket 14).
+
+The cases are tested in `SwapTest` (its header lists them), with `LiveStateTest`, `PoseTransferTest` and focused tests for the skin history, nameplate and skin helper.
 
 ## Configuration (Paper)
 

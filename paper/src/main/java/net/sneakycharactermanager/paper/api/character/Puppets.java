@@ -9,15 +9,17 @@ import org.jetbrains.annotations.Nullable;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.character.CharacterSwap;
 import net.sneakycharactermanager.paper.handlers.character.HolderRegistry;
 import net.sneakycharactermanager.paper.storage.DatabaseBackend;
 
 /**
- * Puppeting: putting another player's character on a body, and taking it off again. SneakyDB mode only; in legacy
- * proxy mode every call reports {@code UNSUPPORTED}. The cases are listed in the README ("Puppets").
+ * Puppeting: putting another player's character on a body, taking it off again, and swapping two bodies' characters.
+ * SneakyDB mode only; in legacy proxy mode every call reports {@code UNSUPPORTED}. The cases are listed in the README
+ * ("Puppets" and "Swap").
  *
- * <p>A body is puppeting while it wears a character it doesn't own. When it stops, by any route, SCM fires
- * {@link PuppetLeaveEvent} with the reason.
+ * <p>A body is puppeting while it wears a character it doesn't own. When it stops, by any route except a
+ * {@link #swap}, SCM fires {@link PuppetLeaveEvent} with the reason.
  *
  * <p>All methods must be called on the server main thread, and returned futures complete on it.
  */
@@ -72,6 +74,29 @@ public final class Puppets {
         requireMainThread();
         if (backend() == null) return ReleaseResult.UNSUPPORTED;
         return HolderRegistry.release(body, PuppetLeaveEvent.Reason.RELEASED) ? ReleaseResult.RELEASED : ReleaseResult.NOT_PUPPETED;
+    }
+
+    /**
+     * Exchanges the characters {@code a} and {@code b} wear, in this one call (a single tick, in memory): each body
+     * takes over the other's character exactly where it stood, so onlookers see no change. Teleport first, skin last.
+     * Moves location and facing, velocity, fall distance, health, absorption, hunger, effects, fire, freezing, air,
+     * attributes, the inventory with the cursor item and crafting grid (when SCM manages inventories), the held slot,
+     * the worn skin, SneakyPoses poses and the name on the nameplate.
+     *
+     * <p>Both bodies must be online, alive, out of bed and in the same world, each wearing a character. Nothing else
+     * can save, load or quit them in the middle. Each character is saved once, where it stood. Afterwards each body
+     * that wears its own character gets its last-played character set to it, through the owner's storage queue; a
+     * body wearing someone else's character keeps its pointer. Fires no {@link PuppetLeaveEvent} and no
+     * {@code LoadCharacterEvent}: a body wearing someone else's character after the swap simply puppets that one now
+     * ({@link #borrowedBy}). The README's "Swap" section lists what moves and what stays with the body.
+     */
+    public static SwapResult swap(Player a, Player b) {
+        Objects.requireNonNull(a, "a");
+        Objects.requireNonNull(b, "b");
+        requireMainThread();
+        DatabaseBackend backend = backend();
+        if (backend == null) return SwapResult.UNSUPPORTED;
+        return CharacterSwap.swap(a, b, backend);
     }
 
     /** The character {@code body} wears if it isn't the body's own, or null. */

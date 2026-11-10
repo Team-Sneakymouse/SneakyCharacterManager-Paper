@@ -126,7 +126,9 @@ public final class DatabaseBackend implements CharacterBackend {
         String queueKey = request instanceof CharacterRequest.RegisterSkin r ? "$skin:" + r.id()
                 : owner.isEmpty() ? "$global" : owner;
         revisions.begin(owner);
-        if (request instanceof CharacterRequest.Update || request instanceof CharacterRequest.DefaultSkin) revisions.changed(owner);
+        // A moved pointer counts too: a load of the owner read before it lands is stale (see writeLastPlayed).
+        if (request instanceof CharacterRequest.Update || request instanceof CharacterRequest.DefaultSkin
+                || request instanceof CharacterRequest.SetLastPlayed) revisions.changed(owner);
         long changes = revisions.changes(owner);
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
         CompletableFuture<List<DatabaseOperations.Effect>> future = enqueue(queueKey, barrier, deadline,
@@ -294,6 +296,19 @@ public final class DatabaseBackend implements CharacterBackend {
     public void loadOwnLastPlayed(Player body) {
         joining.remove(body);
         submit(body, new CharacterRequest.Join(body.getUniqueId().toString()));
+    }
+    /**
+     * Sets {@code key}'s owner's last-played character to it, through the owner's queue, after a swap put it on
+     * {@code body}, its owner. Loads nothing. Any load of that owner's characters still on its way was read before the
+     * swap and is dropped, so it can't put another character on the owner after the pointer moved. A failure is
+     * handled like any storage failure: the owner is told storage is unavailable and the owner's storage is fenced. The
+     * pointer then still names the character they wore before; if another body wears that one when they next join,
+     * the holder rule's owner-join exception gives it back to them.
+     */
+    @ApiStatus.Internal
+    public void writeLastPlayed(Player body, CharacterKey key) {
+        if (!body.getUniqueId().equals(key.owner())) throw new IllegalArgumentException(body.getName() + " doesn't own " + key);
+        submit(body, new CharacterRequest.SetLastPlayed(key.owner().toString(), key.characterId()));
     }
     /**
      * Internal seam under {@code CharacterLists}: {@code owner}'s enabled characters and last-played pointer, online or

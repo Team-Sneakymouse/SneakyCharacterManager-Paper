@@ -165,6 +165,38 @@ public final class SkinStateManager {
         for (UUID other : statesByPlayer.keySet()) if (!other.equals(body)) forget(other, characterKey);
     }
 
+    /**
+     * A swap moved character {@code toA} from body {@code b} to body {@code a}, and {@code toB} from {@code a} to
+     * {@code b}, each wearing the skin it wore before. Each body's history for the character it gave away moves with
+     * that character: the latest state becomes the new body's current state (under a new ID, so old chat buttons on
+     * the first body can't reach it), and the first body forgets the rest. A later reload of the character on its new
+     * body then restores that skin, uniforms included, as it would have on the old one.
+     */
+    public void swapped(UUID a, CharacterKey toA, UUID b, CharacterKey toB) {
+        SkinState fromB = take(b, toA);
+        SkinState fromA = take(a, toB);
+        give(a, fromB);
+        give(b, fromA);
+    }
+
+    @Nullable
+    private SkinState take(UUID body, CharacterKey characterKey) {
+        SkinState latest = latestForCharacter(body, characterKey);
+        forget(body, characterKey);
+        return latest;
+    }
+
+    private void give(UUID body, @Nullable SkinState state) {
+        if (state == null) return;
+        List<SkinState> states = statesByPlayer.computeIfAbsent(body, _k -> new ArrayList<>());
+        int id = nextIdByPlayer.merge(body, 2, (old, _v) -> old + 1);
+        SkinState previous = current(body);
+        states.add(new SkinState(id, state.name(), state.texture(), state.signature(), state.characterKey(),
+                state.proxyTextureUrl(), state.proxyTexture(), state.proxySignature(),
+                previous != null ? previous.id() : null, null));
+        currentIdByPlayer.put(body, id);
+    }
+
     private void forget(UUID body, CharacterKey characterKey) {
         List<SkinState> states = statesByPlayer.get(body);
         if (states == null) return;

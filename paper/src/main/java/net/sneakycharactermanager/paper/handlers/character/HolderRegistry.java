@@ -107,6 +107,11 @@ public final class HolderRegistry {
         loading.remove(key, body);
     }
 
+    /** True while a load is putting some character on {@code body} (between {@link #reserve} and {@link #unreserve}). */
+    static boolean isLoadingOnto(Player body) {
+        return loading.containsValue(body);
+    }
+
     /** {@code body} left or was locked out: drop what the registry tracks for it. */
     static void forget(Player body) {
         returning.remove(body);

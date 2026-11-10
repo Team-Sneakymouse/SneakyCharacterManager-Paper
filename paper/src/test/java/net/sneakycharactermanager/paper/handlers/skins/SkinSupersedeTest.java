@@ -127,6 +127,39 @@ class SkinSupersedeTest {
         assertEquals("a-other", history.latestForCharacter(aId, otherKey).texture());
     }
 
+    /** A swap: each character's latest state (a uniform included) moves to its new body as that body's current. */
+    @Test
+    void aSwapMovesEachCharactersLatestStateToItsNewBody() {
+        Player a = body(), b = body();
+        UUID aId = a.getUniqueId(), bId = b.getUniqueId();
+        SkinStateManager history = new SkinStateManager();
+        history.record(a, "Regular", "a-k", "s", key, "a-k-url", false);
+        history.record(b, "Regular", "b-other", "s", otherKey, "b-other-url", false);
+        history.record(b, "Uniform", "b-uniform", "s", otherKey, "b-uniform-url", true);
+
+        history.swapped(aId, otherKey, bId, key); // A now wears otherKey, B wears key
+
+        assertEquals("b-uniform", history.current(aId).texture());
+        assertEquals("Uniform", history.current(aId).name());
+        assertEquals("b-other-url", history.current(aId).proxyTextureUrl(), "the uniform keeps its base skin");
+        assertEquals("a-k", history.current(bId).texture());
+        assertNull(history.latestForCharacter(aId, key), "A gave key away");
+        assertNull(history.latestForCharacter(bId, otherKey), "B gave otherKey away");
+    }
+
+    @Test
+    void aSwapWithNoHistoryForACharacterMovesNothingForIt() {
+        Player a = body(), b = body();
+        UUID aId = a.getUniqueId(), bId = b.getUniqueId();
+        SkinStateManager history = new SkinStateManager();
+        history.record(a, "Regular", "a-k", "s", key, "a-k-url", false);
+
+        history.swapped(aId, otherKey, bId, key);
+
+        assertNull(history.current(aId));
+        assertEquals("a-k", history.current(bId).texture());
+    }
+
     // --- SkinQueue.supersede / SkinData.apply ---
 
     /** Guards: an older preload/load/skin job for a character finished after a newer /skin and overwrote it. */

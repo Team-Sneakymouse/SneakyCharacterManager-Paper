@@ -47,6 +47,7 @@ public final class DatabaseOperations {
             case CharacterRequest.ListCharacters r -> r.owner();
             case CharacterRequest.Select r -> r.owner();
             case CharacterRequest.Borrow r -> r.owner();
+            case CharacterRequest.SetLastPlayed r -> r.owner();
             case CharacterRequest.SelectByName r -> r.owner();
             case CharacterRequest.Create r -> r.owner();
             case CharacterRequest.Update r -> r.owner();
@@ -89,6 +90,8 @@ public final class DatabaseOperations {
                 return List.<Effect>of(c == null ? new NotFound(r.body(), true)
                         : new Loaded(r.body(), r.owner(), s.revision(), c, true, true, s.uniforms()));
             });
+            // After a swap the owner already wears it: only the pointer moves, nothing is loaded.
+            case CharacterRequest.SetLastPlayed r -> empty(store.select(r.owner(), r.character()));
             case CharacterRequest.Create r -> {
                 String id = UUID.randomUUID().toString();
                 yield store.create(r.owner(), id, name, "", "", false)

@@ -55,15 +55,34 @@ public class SkinUtil {
     }
 
 	public static void applySkin(Player player, ProfileProperty profileProperty) {
-		CharacterSkinAppliedEvent event = new CharacterSkinAppliedEvent(player, profileProperty);
-		Bukkit.getPluginManager().callEvent(event);
-		if (event.isCancelled()) return;
-		player.setPlayerProfile(handleCachedSkin(player, profileProperty));
+		if (!applySkinInPlace(player, profileProperty)) return;
 
 		// Remove player from vehicle and teleport them up slightly to prevent them from getting stuck
 		Entity vehicle = player.getVehicle();
 		if (vehicle != null) vehicle.removePassenger(player);
 		player.teleport(player.getLocation().add(0, 1, 0));
+	}
+
+	/**
+	 * Puts {@code profileProperty} on {@code player} where it stands: fires {@link CharacterSkinAppliedEvent}, then
+	 * sets the profile, without {@link #applySkin}'s dismount and +1 Y teleport. For a swap, whose destination is
+	 * where another body stood. Returns false if a listener cancelled it.
+	 */
+	public static boolean applySkinInPlace(Player player, ProfileProperty profileProperty) {
+		CharacterSkinAppliedEvent event = new CharacterSkinAppliedEvent(player, profileProperty);
+		Bukkit.getPluginManager().callEvent(event);
+		if (event.isCancelled()) return false;
+		player.setPlayerProfile(handleCachedSkin(player, profileProperty));
+		return true;
+	}
+
+	/** The signed {@code textures} property {@code player} wears right now, or null if it wears none. */
+	@Nullable
+	public static ProfileProperty wornTextures(Player player) {
+		for (ProfileProperty property : player.getPlayerProfile().getProperties()) {
+			if (property.getName().equals("textures")) return property;
+		}
+		return null;
 	}
 
 	public static String getTextureUrl(ProfileProperty property) {

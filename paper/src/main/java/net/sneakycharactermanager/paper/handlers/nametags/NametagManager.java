@@ -141,6 +141,26 @@ public class NametagManager implements PlateAttachment.Operations {
         refreshNicknames(current, name, null);
     }
 
+    /**
+     * The owner now wears another character on the plate it already has (a swap, whose teleports don't rebuild it):
+     * puts the plate back where it belongs if it fell off, sets the worn character's name and title, and sends that
+     * text now to every viewer tracking the plate and again next tick for viewers that start tracking it after the
+     * teleport. Without a plate, builds one as a load would.
+     */
+    public void showWornCharacter(Player owner) {
+        Character character = Character.get(owner);
+        if (character == null) return;
+        ensurePlacement(owner);
+        Nickname name = livePlate(owner);
+        if (name == null) {
+            nicknamePlayer(owner, character.getDisplayName());
+            return;
+        }
+        name.setNickname(character.getDisplayName(), resolveTitleDisplay(owner));
+        refreshNicknames(owner, name, null);
+        scheduleTextRefresh(owner);
+    }
+
     /** Re-reads the character when the delay elapses; nothing happens if the plate changed meanwhile. */
     public void renickLater(Player owner) {
         runLater(owner, RENICK_DELAY_TICKS, current -> {

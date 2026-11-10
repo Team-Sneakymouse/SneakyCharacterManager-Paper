@@ -67,8 +67,11 @@ public class Character {
 
 	/** Owner + character ID: where this character's identity record and gameplay file live. */
 	private final CharacterKey key;
-	/** The body wearing this character, or null for a list entry, which is never loaded. */
-	@Nullable private final Player player;
+	/**
+	 * The body wearing this character, or null for a list entry, which is never loaded. Changes only when a swap moves
+	 * the character to another body ({@link #exchange}).
+	 */
+	@Nullable private Player player;
 	private final String characterUUID;
 	private String name;
 	private String namePrefix = "";
@@ -124,6 +127,11 @@ public class Character {
 	public boolean load(LoadReason reason) {
 		if (this.player == null) {
 			SneakyCharacterManager.getInstance().getLogger().severe("Attempted to load character " + this.key + " without a wearer");
+			return false;
+		}
+		if (CharacterSwap.isSwapping(this.player)) {
+			SneakyCharacterManager.getInstance().getLogger().info("Refused to load " + this.key + " onto "
+					+ this.player.getName() + ": it is in the middle of a swap");
 			return false;
 		}
 		// Held from here until this load ends, through the holder rule's own side effects (a takeover releases the
@@ -494,9 +502,22 @@ public class Character {
 		return this.firstLoad;
 	}
 
-	/** Writes the wearer's live location, inventory and attributes to this character's (the owner's) file. */
+	/**
+	 * Writes the wearer's live location, inventory and attributes to this character's (the owner's) file. Does
+	 * nothing while the wearer is in the middle of a swap, which saves both characters itself ({@link CharacterSwap}).
+	 */
 	public void save() {
 		if (this.player == null) return;
+		if (CharacterSwap.isSwapping(this.player)) {
+			SneakyCharacterManager.getInstance().getLogger().fine("Skipped saving " + this.key + ": "
+					+ this.player.getName() + " is in the middle of a swap");
+			return;
+		}
+		write();
+	}
+
+	/** {@link #save()} without the swap guard: only the swap itself saves a character mid-swap. */
+	void write() {
 		GameplayFile.write(GameplayFile.of(this.key), snapshot().saveToString());
 	}
 
@@ -548,7 +569,8 @@ public class Character {
 
 	/**
 	 * Puts {@code character} on {@code body} and returns what it wore before. With {@link #takeOff}, the only place
-	 * that changes what a body wears; each caller reports a borrowed character leaving ({@link #left}).
+	 * that changes what a body wears; each caller reports a borrowed character leaving ({@link #left}), except a
+	 * swap ({@link #exchange}), which fires nothing.
 	 */
 	@Nullable
 	private static Character wear(Player body, Character character) {
@@ -556,6 +578,21 @@ public class Character {
 		if (previous != null) holders.remove(previous.key, body);
 		holders.put(character.key, body);
 		return previous;
+	}
+
+	/**
+	 * A swap: {@code a} and {@code b} trade the characters they wear, and each character's wearer becomes the other
+	 * body. Changes the registry through {@link #wear} only, with no call-out in between, so nobody sees the half-way
+	 * state. Fires nothing; puppet bookkeeping ({@link #borrowedBy}) follows from what each body wears.
+	 */
+	static void exchange(Player a, Player b) {
+		Character x = characterMap.get(a);
+		Character y = characterMap.get(b);
+		if (x == null || y == null || a == b) throw new IllegalStateException("A swap needs two bodies that each wear a character");
+		wear(a, y);
+		wear(b, x);
+		x.player = b;
+		y.player = a;
 	}
 
 	/** {@code body} stops wearing its character, without saving it. Returns what it wore; see {@link #wear}. */

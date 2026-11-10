@@ -13,7 +13,8 @@ import org.jetbrains.annotations.NotNull;
  * One exception to the save: the autosave finding the body already offline (a missed quit, {@link Reason#QUIT}) only
  * takes the character off, since an offline body can't be read; the owner keeps the last autosave.
  * Not cancellable. Not fired when SCM itself disables: the body keeps the character until the server stops, and its
- * state is still saved to the owner.
+ * state is still saved to the owner. Not fired by {@link Puppets#swap} either: whoever swaps knows, and a body that
+ * wears another player's character after a swap simply puppets that one now.
  */
 public final class PuppetLeaveEvent extends PlayerEvent {
 

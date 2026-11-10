@@ -81,4 +81,32 @@ class SkinAppliedEventTest {
         order.verify(vehicle).removePassenger(player);
         order.verify(player).teleport(new Location(null, 1, 3, 3));
     }
+
+    @Test void inPlaceFiresTheEventAndSetsTheProfileWithoutMovingThePlayer() {
+        Player player = mock(Player.class);
+        PlayerProfile profile = mock(PlayerProfile.class);
+        PluginManager manager = mock(PluginManager.class);
+        when(player.getPlayerProfile()).thenReturn(profile);
+        ProfileProperty property = new ProfileProperty("textures", "value", "signature");
+        try (var bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::getPluginManager).thenReturn(manager);
+            assertTrue(SkinUtil.applySkinInPlace(player, property));
+        }
+        verify(manager).callEvent(any(CharacterSkinAppliedEvent.class));
+        verify(profile).setProperty(property);
+        verify(player).setPlayerProfile(profile);
+        verify(player, never()).teleport(any(Location.class));
+        verify(player, never()).getVehicle();
+    }
+
+    @Test void inPlaceReportsACancellation() {
+        Player player = mock(Player.class);
+        PluginManager manager = mock(PluginManager.class);
+        doAnswer(call -> { ((CharacterSkinAppliedEvent) call.getArgument(0)).setCancelled(true); return null; }).when(manager).callEvent(any());
+        try (var bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::getPluginManager).thenReturn(manager);
+            assertFalse(SkinUtil.applySkinInPlace(player, new ProfileProperty("textures", "value", "signature")));
+        }
+        verifyNoInteractions(player);
+    }
 }
