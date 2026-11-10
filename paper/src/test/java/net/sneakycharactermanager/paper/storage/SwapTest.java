@@ -471,6 +471,7 @@ class SwapTest {
 
         assertEquals(SwapResult.SWAPPED, Puppets.swap(driver.player, supporter.player));
 
+        assertTrue(log.contains("close:Supporter"), log.toString());
         assertTrue(log.indexOf("close:Supporter") < log.indexOf("save:main.yml"));
         assertFalse(log.contains("close:Driver"), "the player's own inventory view stays open");
     }
@@ -634,6 +635,26 @@ class SwapTest {
         assertEquals(List.of(false, false, false), loads);
         assertEquals(thirdsOwn, Character.get(third.player).getKey());
         assertEquals(second, Character.get(driver.player).getKey());
+    }
+
+    @Test
+    void theOwnerOfASwappingCharacterCantTakeItOverMidSwap() {
+        // Not a dance: the Supporter (puppeting the Driver's second) swaps with a third body, so the owner isn't swapping.
+        join(third);
+        api.forget();
+        List<Boolean> takeovers = new ArrayList<>();
+        listener = event -> {
+            if (event instanceof PlayerTeleportEvent && takeovers.isEmpty())
+                takeovers.add(character(second, driver.player).load(LoadReason.OWN_JOIN));
+        };
+
+        assertEquals(SwapResult.SWAPPED, Puppets.swap(supporter.player, third.player));
+
+        assertEquals(List.of(false), takeovers);
+        assertEquals(second, Character.get(third.player).getKey());
+        assertEquals(thirdsOwn, Character.get(supporter.player).getKey());
+        assertEquals(main, Character.get(driver.player).getKey());
+        assertEquals(List.of(), api.pointerWrites(), "neither body wears its own character now");
     }
 
     @Test

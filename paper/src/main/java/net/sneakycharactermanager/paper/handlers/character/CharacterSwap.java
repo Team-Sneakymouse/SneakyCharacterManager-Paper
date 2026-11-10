@@ -67,8 +67,8 @@ public final class CharacterSwap {
         if (x == null || y == null) return SwapResult.NOT_WEARING;
         SwapResult blocked = blocked(a, b);
         if (blocked != null) return blocked;
-        if (isSwapping(a) || isSwapping(b) || HolderRegistry.isLoadingOnto(a) || HolderRegistry.isLoadingOnto(b))
-            return SwapResult.BUSY;
+        // A body mid-swap has its new character reserved, so this also refuses a swap from inside a swap.
+        if (HolderRegistry.isLoadingOnto(a) || HolderRegistry.isLoadingOnto(b)) return SwapResult.BUSY;
         if (!HolderRegistry.reserve(y.getKey(), a)) return SwapResult.BUSY;
         if (!HolderRegistry.reserve(x.getKey(), b)) {
             HolderRegistry.unreserve(y.getKey(), a);
@@ -138,7 +138,8 @@ public final class CharacterSwap {
         if (online(a)) plugin.nametagManager.showWornCharacter(a);
         if (online(b)) plugin.nametagManager.showWornCharacter(b);
 
-        boolean done = online(a) && online(b) && Character.isWearing(a, y.getKey()) && Character.isWearing(b, x.getKey());
+        // A quit takes the character off, so this also covers a body that left.
+        boolean done = Character.isWearing(a, y.getKey()) && Character.isWearing(b, x.getKey());
         if (!done) plugin.getLogger().warning("A swap of " + a.getName() + " and " + b.getName()
                 + " was interrupted by another plugin; both characters were saved where they stood before it");
         return done ? SwapResult.SWAPPED : SwapResult.INTERRUPTED;
