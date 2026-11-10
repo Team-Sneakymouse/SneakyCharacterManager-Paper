@@ -124,7 +124,7 @@ public final class DatabaseBackend implements CharacterBackend {
                             "&cCharacter storage unavailable. No changes are being retried; contact an administrator."));
                     if (request instanceof CharacterRequest.ResolveSkin r) SkinCache.completeResolveOnMainThread(r.requestId(),
                             new SkinCache.ResolveResult(SkinCache.ResolveStatus.ERROR, "", "", "", "", "Database unavailable"));
-                    if (request instanceof CharacterRequest.CreateTitle r) CommandTitleGrant.handleCreateResult(r.admin(), r.target(), false, "", "", "failed");
+                    if (request instanceof CharacterRequest.CreateTitle r) CommandTitleGrant.handleCreateResult(r.admin(), r.target(), false, r.code(), r.display(), "failed");
                     return;
                 }
                 for (DatabaseOperations.Effect effect : effects) {

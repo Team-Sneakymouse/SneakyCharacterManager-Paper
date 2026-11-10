@@ -1,7 +1,9 @@
 package net.sneakycharactermanager.paper.admincommands;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.lang.reflect.Method;
@@ -125,6 +127,49 @@ class CommandTitleGrantEquipTest {
                 adminId.toString(), targetId.toString(), "master_fisherman", "Master Fisherman"), times(1));
         CommandTitleGrant.handleCreateResult(adminId.toString(), targetId.toString(), true,
                 "master_fisherman", "Master Fisherman", null); // clears the pending entry for other tests
+    }
+
+    // Guards: a retry after the expiry replaced the pending character, so the first, late reply equipped onto the retry's
+    // character. Two outstanding identical grants can't be told apart: neither reply may equip.
+    @Test
+    void retryAfterExpiryMakesBothRepliesAmbiguous() throws Exception {
+        CharacterKey later = new CharacterKey(targetId, "switched-to");
+        submitOn(granted, "Master Fisherman");
+        expirePendingEquips();
+        characters.when(() -> Character.isWearing(target, granted)).thenReturn(false); // target switched
+        submitOn(later, "Master Fisherman"); // allowed after the expiry
+
+        CommandTitleGrant.handleCreateResult(adminId.toString(), targetId.toString(), true,
+                "master_fisherman", "Master Fisherman", null); // the first, late reply
+        CommandTitleGrant.handleCreateResult(adminId.toString(), targetId.toString(), true,
+                "master_fisherman", "Master Fisherman", null); // the retry's reply
+
+        menu.verify(() -> TitleSelectionMenu.applyTitle(any(), any(), anyString()), never());
+        granter.verify(() -> TitlePermissionGranter.grant(target, "master_fisherman"), times(2));
+        assertTrue(pendingEquips().isEmpty(), "both replies consumed their request");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static java.util.Map<String, Object> pendingEquips() throws Exception {
+        java.lang.reflect.Field field = CommandTitleGrant.class.getDeclaredField("PENDING_EQUIPS");
+        field.setAccessible(true);
+        return (java.util.Map<String, Object>) field.get(null);
+    }
+
+    /** Ages every pending grant past the expiry, as if its reply never came within 60 s. */
+    private static void expirePendingEquips() throws Exception {
+        java.util.Map<String, Object> pending = pendingEquips();
+        for (var entry : pending.entrySet()) {
+            Object old = entry.getValue();
+            Class<?> type = old.getClass();
+            var character = type.getDeclaredMethod("character");
+            var outstanding = type.getDeclaredMethod("outstanding");
+            character.setAccessible(true);
+            outstanding.setAccessible(true);
+            var constructor = type.getDeclaredConstructor(CharacterKey.class, long.class, int.class);
+            constructor.setAccessible(true);
+            entry.setValue(constructor.newInstance(character.invoke(old), 0L, outstanding.invoke(old)));
+        }
     }
 
     // Guards: a result with no pending submit (duplicate or late reply) must not equip on whatever the target wears now.

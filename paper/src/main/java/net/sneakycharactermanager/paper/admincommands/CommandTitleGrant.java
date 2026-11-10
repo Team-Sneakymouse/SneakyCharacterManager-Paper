@@ -113,9 +113,13 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 		admin.showDialog(dialog);
 	}
 
-	/** Character a pending grant should be equipped on. The round trip carries no character, so a result is matched
-	 *  to its request by admin, target and title code; an identical grant can't be submitted while one is resolving. */
-	private record PendingEquip(CharacterKey character, long since) {}
+	/**
+	 * Character a pending grant should be equipped on. The round trip carries no request id, so a result is matched to
+	 * its request by admin, target and title code. An identical grant is refused while one is resolving. After
+	 * {@link #PENDING_EXPIRY_MILLIS} a retry is allowed, but the original reply may still arrive and the two can't be
+	 * told apart: the entry becomes ambiguous ({@code character == null}) and every reply for it grants without equipping.
+	 */
+	private record PendingEquip(CharacterKey character, long since, int outstanding) {}
 	private static final java.util.Map<String, PendingEquip> PENDING_EQUIPS = new java.util.concurrent.ConcurrentHashMap<>();
 	/** A result that never arrives must not block the same grant forever. */
 	private static final long PENDING_EXPIRY_MILLIS = 60_000;
@@ -170,7 +174,9 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 					"&cThat title is still being granted to this player. Wait for it to finish."));
 			return;
 		}
-		PENDING_EQUIPS.put(pendingKey, new PendingEquip(character, System.currentTimeMillis()));
+		PENDING_EQUIPS.put(pendingKey, earlier == null
+				? new PendingEquip(character, System.currentTimeMillis(), 1)
+				: new PendingEquip(null, System.currentTimeMillis(), earlier.outstanding() + 1));
 		ProxyMessagingUtil.sendByteArray(admin, "createTitle",
 				admin.getUniqueId().toString(),
 				targetId.toString(),
@@ -186,8 +192,13 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 			String code,
 			String display,
 			String error) {
-		PendingEquip pending = PENDING_EQUIPS.remove(pendingKey(adminUUID, targetUUID, code)); // also when the admin left
-		CharacterKey character = pending == null ? null : pending.character();
+		// Consume one outstanding request (also when the admin left); equip only if this reply is unambiguous.
+		PendingEquip[] consumed = new PendingEquip[1];
+		PENDING_EQUIPS.computeIfPresent(pendingKey(adminUUID, targetUUID, code), (k, p) -> {
+			consumed[0] = p;
+			return p.outstanding() <= 1 ? null : new PendingEquip(null, p.since(), p.outstanding() - 1);
+		});
+		CharacterKey character = consumed[0] == null ? null : consumed[0].character();
 		Player admin = Bukkit.getPlayer(UUID.fromString(adminUUID));
 		if (admin == null) {
 			return;
