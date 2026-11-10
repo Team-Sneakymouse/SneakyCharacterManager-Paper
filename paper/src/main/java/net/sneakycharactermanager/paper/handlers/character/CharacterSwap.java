@@ -181,7 +181,7 @@ public final class CharacterSwap {
      * it again then, unless the body changed character or its health changed meanwhile.
      */
     private static void topUpHealthLater(Player body, CharacterKey key, LiveState state) {
-        if (!online(body) || !Character.isWearing(body, key) || !state.healthCapped(body)) return;
+        if (!online(body) || !state.healthCapped(body)) return;
         double capped = body.getHealth();
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
             if (online(body) && Character.isWearing(body, key) && body.getHealth() == capped) state.topUpHealth(body);
