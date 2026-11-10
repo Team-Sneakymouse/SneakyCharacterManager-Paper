@@ -81,7 +81,7 @@ fun org.gradle.api.artifacts.dsl.RepositoryHandler.sneakyrpReleases() {
 }
 
 /** Keep compileOnly and runServer pluginJars on the same published SneakyUtils / SneakyItems. */
-val sneakyUtilsVersion = "2026.10.18-657d452bd6f4"
+val sneakyUtilsVersion = "2026.11.10-7e1262ebd376"
 extra["sneakyUtilsVersion"] = sneakyUtilsVersion
 val sneakyItemsVersion = "2026.11.08-edc6088f8201"
 extra["sneakyItemsVersion"] = sneakyItemsVersion

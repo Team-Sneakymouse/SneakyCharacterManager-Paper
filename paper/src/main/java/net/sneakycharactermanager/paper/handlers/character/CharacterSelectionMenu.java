@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
+import com.sneakyutils.util.DisplayOnlyInventoryHolder;
 import com.sneakyutils.util.InventoryUtility;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -54,7 +55,7 @@ public class CharacterSelectionMenu implements Listener {
     private static final Component NEXT_PAGE = TextUtility.INSTANCE.convertToComponent("&aNext Page >");
     private static final Component PREV_PAGE = TextUtility.INSTANCE.convertToComponent("&a< Previous Page");
 
-    public class CharacterMenuHolder implements InventoryHolder {
+    public class CharacterMenuHolder implements DisplayOnlyInventoryHolder {
 
         protected static String LEFT;
         protected static String SWAP_OFFHAND;

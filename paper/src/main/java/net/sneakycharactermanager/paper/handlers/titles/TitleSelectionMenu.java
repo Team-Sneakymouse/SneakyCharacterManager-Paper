@@ -13,12 +13,12 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 
+import com.sneakyutils.util.DisplayOnlyInventoryHolder;
 import com.sneakyutils.util.TextUtility;
 
 import net.kyori.adventure.text.Component;
@@ -154,7 +154,7 @@ public class TitleSelectionMenu implements Listener {
 		SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
 	}
 
-	public static final class TitleMenuHolder implements InventoryHolder {
+	public static final class TitleMenuHolder implements DisplayOnlyInventoryHolder {
 		private final Player player;
 		private final String currentTitle;
 		private Inventory inventory;
