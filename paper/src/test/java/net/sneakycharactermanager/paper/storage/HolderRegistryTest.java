@@ -67,7 +67,8 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  * <li>Staff and other plugins (a direct {@code Character.load()}, a forced load onto a non-owner): refused.</li>
  * <li>A load started from inside another load's events (a {@code LoadCharacterEvent} listener) can't put the same
  *     character on a second body, and a nested load of the same character (even onto the same body) is refused, so
- *     it can't end the outer load's reservation.</li>
+ *     it can't end the outer load's reservation. The same holds for a load started by the owner-join release itself
+ *     (for example from the holder's nameplate removal).</li>
  * <li>A released holder getting its own last-played character back doesn't take it from a third body; it gets the
  *     character menu. A {@code /char} pick queued behind a borrow of the same character doesn't move last-played.</li>
  * <li>The registry follows switches, quits ({@code Character.remove}, also used by {@code chardisable}) and the
@@ -476,6 +477,22 @@ class HolderRegistryTest {
         backend.loadBorrowed(supporter, borrowed);
 
         assertSame(supporter, CharacterHolders.holderOf(borrowed));
+        assertNull(Character.get(third));
+        verify(third, never()).teleport(any(Location.class));
+    }
+
+    @Test
+    void nothingTriggeredByReleasingTheHolderCanTakeTheCharacterBeforeTheOwner() {
+        holdBorrowed();
+        api.lastPlayed.put(ownerId.toString(), "second");
+        doAnswer(call -> {
+            character(borrowed, third).load(); // e.g. a listener on the holder's nameplate removal
+            return null;
+        }).when(plugin.nametagManager).unnicknamePlayer(supporter);
+
+        join(owner);
+
+        assertSame(owner, CharacterHolders.holderOf(borrowed));
         assertNull(Character.get(third));
         verify(third, never()).teleport(any(Location.class));
     }

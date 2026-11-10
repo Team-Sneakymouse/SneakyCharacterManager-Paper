@@ -125,11 +125,11 @@ public class Character {
 			SneakyCharacterManager.getInstance().getLogger().severe("Attempted to load character " + this.key + " without a wearer");
 			return false;
 		}
-		if (!HolderRegistry.admit(this, reason)) return false;
-		// Held until this load ends: a load started from its events can't put this character on another body.
-		HolderRegistry.reserve(this.key, this.player);
+		// Held from here until this load ends, through the holder rule's own side effects (a takeover releases the
+		// holder) and the load's events, so no load started from those can put this character on another body.
+		if (!HolderRegistry.reserve(this.key, this.player)) return false;
 		try {
-			return applyToWearer();
+			return HolderRegistry.admit(this, reason) && applyToWearer();
 		} finally {
 			HolderRegistry.unreserve(this.key, this.player);
 		}

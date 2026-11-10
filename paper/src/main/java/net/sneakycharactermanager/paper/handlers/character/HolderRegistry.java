@@ -21,10 +21,10 @@ import net.sneakycharactermanager.paper.api.character.HeldCharacterSelectionHand
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 
 /**
- * The holder rule: at most one body wears a character. Every load passes through {@link #admit} before it touches the
- * body and holds a reservation on the character until it finishes ({@link #reserve}), so the rule holds whichever path
- * the load takes, including a load started from inside another load's events. The index itself is what each body
- * wears ({@link Character#wearerOf}).
+ * The holder rule: at most one body wears a character. Every load reserves the character ({@link #reserve}) and then
+ * passes {@link #admit} before it touches the body, and keeps the reservation until it finishes. So the rule holds
+ * whichever path the load takes, including a load started from the rule's own side effects or another load's events.
+ * The index itself is what each body wears ({@link Character#wearerOf}).
  *
  * <p>When another body (the holder) already wears the character:
  * <ul>
@@ -72,12 +72,6 @@ public final class HolderRegistry {
         CharacterKey key = character.getKey();
         // A released holder's join is not the owner logging in: it must not take anything over in turn.
         if (reason == LoadReason.OWN_JOIN && returning.remove(body)) reason = LoadReason.RETURN;
-        // Already being loaded, even onto this body: a nested load could otherwise end the outer load's reservation.
-        Player midLoad = loading.get(key);
-        if (midLoad != null) {
-            refuse(body, key, reason, midLoad);
-            return false;
-        }
         Player holder = Character.wearerOf(key);
         switch (decide(reason, body.getUniqueId(), key, holder == null ? null : holder.getUniqueId())) {
             case LOAD:
@@ -94,9 +88,17 @@ public final class HolderRegistry {
         }
     }
 
-    /** Holds {@code key} for {@code body} while its load runs; see {@link Character#load(LoadReason)}. */
-    static void reserve(CharacterKey key, Player body) {
-        loading.put(key, body);
+    /**
+     * Holds {@code key} for {@code body} while its load runs, from before {@link #admit} to the end of the load; see
+     * {@link Character#load(LoadReason)}. Returns false if the character is already being loaded, even onto this
+     * body: a nested load must not end the outer load's reservation.
+     */
+    static boolean reserve(CharacterKey key, Player body) {
+        Player midLoad = loading.putIfAbsent(key, body);
+        if (midLoad == null) return true;
+        SneakyCharacterManager.getInstance().getLogger().info("Refused to load " + key + " onto " + body.getName()
+                + ": it is being loaded onto " + midLoad.getName());
+        return false;
     }
 
     static void unreserve(CharacterKey key, Player body) {
@@ -111,7 +113,7 @@ public final class HolderRegistry {
     private static void refuse(Player body, CharacterKey key, LoadReason reason, Player holder) {
         SneakyCharacterManager plugin = SneakyCharacterManager.getInstance();
         plugin.getLogger().info("Refused to load " + key + " onto " + body.getName() + " (" + reason + "): "
-                + holder.getName() + " is wearing or loading it");
+                + holder.getName() + " is wearing it");
         if (reason == LoadReason.RETURN) {
             // The released holder wears nothing; let it pick another of its characters.
             body.sendMessage(TextUtility.INSTANCE.convertToComponent("&cSomeone else is playing your last character. Pick another one."));
