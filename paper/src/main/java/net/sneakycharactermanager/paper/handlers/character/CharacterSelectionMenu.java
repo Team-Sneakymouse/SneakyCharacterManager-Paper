@@ -334,8 +334,9 @@ public class CharacterSelectionMenu implements Listener {
 
         public void onClose(){
             CharacterKey key = new CharacterKey(this.target.getUniqueId(), this.characterUUID);
-            if(Character.wearerOf(key) != null){
-                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Inventory not saved! &eSomeone loaded this character while you were editing!"));
+            String refusal = inventoryEditRefusal(key);
+            if(refusal != null){
+                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Inventory not saved! &e" + refusal));
                 return;
             }
 
@@ -396,8 +397,9 @@ public class CharacterSelectionMenu implements Listener {
 
             if (characterUUID == null) return;
             CharacterKey key = CharacterKey.of(playerUUID, characterUUID);
-            if (Character.wearerOf(key) != null) {
-                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&aSomeone is currently on this character. Use direct inventory editing instead."));
+            String refusal = inventoryEditRefusal(key);
+            if (refusal != null) {
+                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&a" + refusal));
                 return;
             }
 
@@ -422,6 +424,17 @@ public class CharacterSelectionMenu implements Listener {
             }, 2);
         }
     
+    }
+
+    /**
+     * Why an admin can't edit this character's stored inventory right now, or null if they can. A character someone
+     * wears is live, not stored; a character that has never been loaded has no gameplay file yet, and creating one
+     * here would skip its fresh defaults (spawn location, empty inventory) on first load.
+     */
+    static String inventoryEditRefusal(CharacterKey key) {
+        if (Character.wearerOf(key) != null) return "Someone is currently on this character. Use direct inventory editing instead.";
+        if (!GameplayFile.of(key).exists()) return "This character has never been loaded on this server, so it has no inventory yet.";
+        return null;
     }
 
     public CharacterSelectionMenu() {

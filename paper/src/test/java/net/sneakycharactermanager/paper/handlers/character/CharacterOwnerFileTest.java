@@ -170,6 +170,20 @@ class CharacterOwnerFileTest {
         assertEquals(new Location(null, 7, 70, 7), file.getLocation("location"));
     }
 
+    /** Files are created on load, so the admin editor must not create one that would skip fresh defaults. */
+    @Test
+    void adminInventoryEditorOnlyEditsStoredCharacters() throws Exception {
+        CharacterKey neverLoaded = new CharacterKey(ownerId, "never-loaded");
+        assertTrue(CharacterSelectionMenu.inventoryEditRefusal(neverLoaded).contains("never been loaded"));
+        assertFalse(data.resolve(ownerId.toString()).toFile().exists());
+
+        saved(ownerId, "stored", 40);
+        assertNull(CharacterSelectionMenu.inventoryEditRefusal(new CharacterKey(ownerId, "stored")));
+
+        character(ownerId, "stored").load(); // worn by someone: live, not stored
+        assertTrue(CharacterSelectionMenu.inventoryEditRefusal(new CharacterKey(ownerId, "stored")).contains("Someone"));
+    }
+
     @Test
     void firstLoadMeansNoGameplayFileYet() throws Exception {
         Character fresh = character(ownerId, "fresh");

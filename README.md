@@ -96,7 +96,7 @@ The gameplay file path didn't change. Until now the owner was always the wearer,
 **Other behaviour that follows from the rule:**
 
 - A character with no gameplay file starts from fresh defaults (world spawn, empty inventory). The one exception is the owner's very first character on this server: it still starts from the owner's live inventory and location, as before. A character worn by someone else never copies its wearer.
-- Gameplay files are created when a character is loaded, not when a character list arrives.
+- Gameplay files are created when a character is loaded, not when a character list arrives. `/charadmin` can only edit the inventory of a character that has been loaded at least once on this server.
 - A skin that resolves after its wearer switched to another character is still saved to the character it was requested for. It is only put on the body if the body still wears that character.
 
 The storage mode is public too: `StorageMode.current()` (same package) returns `LEGACY` or `SNEAKYDB`.
