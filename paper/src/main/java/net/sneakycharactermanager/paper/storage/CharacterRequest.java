@@ -6,6 +6,8 @@ public sealed interface CharacterRequest {
     record ListCharacters(String owner, String requester) implements CharacterRequest {}
     record Select(String owner, String character) implements CharacterRequest {}
     record SelectByName(String owner, String name) implements CharacterRequest {}
+    /** Internal (no wire name): put {@code owner}'s character on {@code body}. Reads only; never selects or creates. */
+    record Borrow(String body, String owner, String character) implements CharacterRequest {}
     record Create(String owner) implements CharacterRequest {}
     record Update(String owner, String character, int type, Object[] values) implements CharacterRequest {}
     record DefaultSkin(String owner, String character, String url, boolean slim) implements CharacterRequest {}

@@ -11,6 +11,7 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.listeners.ProxyMessageListener;
 import net.sneakycharactermanager.paper.handlers.skins.SkinFetching;
 import com.sneakyutils.util.TextUtility;
+import org.jetbrains.annotations.ApiStatus;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -61,13 +62,15 @@ public final class DatabaseBackend implements CharacterBackend {
         String owner = DatabaseOperations.owner(request);
         Player target = owner.isEmpty() ? null : Bukkit.getPlayer(UUID.fromString(owner));
         String name = target != null ? target.getName() : "";
+        Player destination = request instanceof CharacterRequest.Borrow r ? Bukkit.getPlayer(UUID.fromString(r.body())) : target;
         if (request instanceof CharacterRequest.Join && target != null) {
             if (failedJoins.contains(target) || !joining.add(target)) return;
         }
         boolean selection = request instanceof CharacterRequest.Join || request instanceof CharacterRequest.Select
-                || request instanceof CharacterRequest.SelectByName || request instanceof CharacterRequest.Create;
+                || request instanceof CharacterRequest.SelectByName || request instanceof CharacterRequest.Create
+                || request instanceof CharacterRequest.Borrow;
         boolean menuRequest = request instanceof CharacterRequest.ListCharacters r && r.requester().endsWith("|openGUI");
-        Player effectPlayer = selection ? target : requester;
+        Player effectPlayer = selection ? destination : requester;
         String lane = selection ? "selection" : menuRequest ? "menu" : request instanceof CharacterRequest.ListCharacters ? "list:" + owner
                 : request instanceof CharacterRequest.ResolveSkin r ? "skin:" + r.requestId() : request.getClass().getSimpleName() + ":" + owner;
         // Grants have non-replaceable permission/equip effects, unlike latest-wins UI requests.
@@ -139,9 +142,14 @@ public final class DatabaseBackend implements CharacterBackend {
                     r.characters().stream().map(c -> character(r.owner(), null, c, r.uniforms())).toList());
             case DatabaseOperations.Loaded r -> {
                 Character character = character(r.source(), Bukkit.getPlayer(UUID.fromString(r.destination())), r.character(), r.uniforms());
-                CharacterResultEffects.load(character, r.forced());
-                if (r.character().skin().isEmpty() && r.character().skinId().isEmpty())
-                    CharacterResultEffects.defaultSkin(r.destination(), r.character().id());
+                if (r.borrowed()) {
+                    // No lock-permission check and no default-skin initialisation: the body isn't the owner.
+                    character.load();
+                } else {
+                    CharacterResultEffects.load(character, r.forced());
+                    if (r.character().skin().isEmpty() && r.character().skinId().isEmpty())
+                        CharacterResultEffects.defaultSkin(r.destination(), r.character().id());
+                }
             }
             case DatabaseOperations.Catalog r -> {
                 // SCM title creation is append-only and canonical displays never change.
@@ -161,6 +169,10 @@ public final class DatabaseBackend implements CharacterBackend {
                         "&aThe following character has been deleted: &b`" + r.name() + "`&a (" + r.id() + ")"));
             }
             case DatabaseOperations.NotFound r -> {
+                if (r.borrowed()) {
+                    plugin.getLogger().warning("Character to borrow does not exist; nothing was loaded onto " + r.player());
+                    return;
+                }
                 Player player = Bukkit.getPlayer(UUID.fromString(r.player()));
                 if (player != null) {
                     player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aNo character found. Loading character menu..."));
@@ -179,6 +191,16 @@ public final class DatabaseBackend implements CharacterBackend {
         return character;
     }
     @Override public CharacterDirectory directory() { return directory; }
+    /**
+     * Internal seam, not public API: loads {@code key}'s character onto {@code body}, which need not be its owner.
+     * Reads the owner's snapshot through the owner's queue; never writes last-played for either player, never checks
+     * the character-lock permission, never creates the owner. The gameplay file and every later edit go to the owner
+     * (see {@link Character}). No holder rules yet (ticket 03); ticket 04 builds the public puppet API on this.
+     */
+    @ApiStatus.Internal
+    public void loadBorrowed(Player body, CharacterKey key) {
+        submit(null, new CharacterRequest.Borrow(body.getUniqueId().toString(), key.owner().toString(), key.characterId()));
+    }
     @Override public void disconnect(Player player) {
         fence.forget(player.getUniqueId().toString()); joining.remove(player); failedJoins.remove(player);
     }

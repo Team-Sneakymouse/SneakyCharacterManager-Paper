@@ -14,8 +14,8 @@ public final class DatabaseOperations {
     public record Listed(String owner, String requester, long revision, List<CharacterView> characters,
                          List<Map<String,Object>> uniforms) implements Effect {}
     public record Loaded(String destination, String source, long revision, CharacterView character, boolean forced,
-                         List<Map<String,Object>> uniforms) implements Effect {}
-    public record NotFound(String player) implements Effect {}
+                         boolean borrowed, List<Map<String,Object>> uniforms) implements Effect {}
+    public record NotFound(String player, boolean borrowed) implements Effect {}
     public record Deleted(String player, String id, String name) implements Effect {}
     public record Catalog(Map<String,String> titles) implements Effect {}
     public record TitleCreated(String admin, String target, boolean success, String code, String display, String error) implements Effect {}
@@ -35,6 +35,7 @@ public final class DatabaseOperations {
             case CharacterRequest.Join r -> r.owner();
             case CharacterRequest.ListCharacters r -> r.owner();
             case CharacterRequest.Select r -> r.owner();
+            case CharacterRequest.Borrow r -> r.owner();
             case CharacterRequest.SelectByName r -> r.owner();
             case CharacterRequest.Create r -> r.owner();
             case CharacterRequest.Update r -> r.owner();
@@ -47,7 +48,8 @@ public final class DatabaseOperations {
     }
     public CompletableFuture<List<Effect>> run(CharacterRequest request, String playerName) {
         String owner = owner(request);
-        CompletableFuture<?> initialized = owner.isEmpty() ? CompletableFuture.completedFuture(null)
+        // A borrow only reads: it must never create the owner it reads from.
+        CompletableFuture<?> initialized = owner.isEmpty() || request instanceof CharacterRequest.Borrow ? CompletableFuture.completedFuture(null)
                 : store.ensureOwner(owner, playerName);
         return initialized.thenCompose(unused -> dispatch(request, playerName));
     }
@@ -61,8 +63,14 @@ public final class DatabaseOperations {
                 String id = s.characters().stream().filter(c -> c.enabled() && !c.id().equals(s.lastPlayed())
                     && c.plainName().toLowerCase(Locale.ROOT).startsWith(r.name().toLowerCase(Locale.ROOT)))
                     .map(CharacterView::id).findFirst().orElse("");
-                if (id.isEmpty()) return done(new NotFound(r.owner()));
+                if (id.isEmpty()) return done(new NotFound(r.owner(), false));
                 return load(r.owner(), r.owner(), id, false, s);
+            });
+            // Owner's snapshot only: no select, so neither the body's nor the owner's last-played changes.
+            case CharacterRequest.Borrow r -> snapshot(r.owner()).thenApply(s -> {
+                CharacterView c = s.characters().stream().filter(ch -> ch.id().equals(r.character())).findFirst().orElse(null);
+                return List.<Effect>of(c == null ? new NotFound(r.body(), true)
+                        : new Loaded(r.body(), r.owner(), s.revision(), c, true, true, s.uniforms()));
             });
             case CharacterRequest.Create r -> {
                 String id = UUID.randomUUID().toString();
@@ -95,8 +103,8 @@ public final class DatabaseOperations {
     }
     private CompletableFuture<List<Effect>> load(String destination, String owner, String id, boolean forced, Snapshot s) {
         CharacterView c = s.characters().stream().filter(ch -> ch.id().equals(id)).findFirst().orElse(null);
-        if (c == null) return done(new NotFound(destination));
-        Loaded loaded = new Loaded(destination, owner, s.revision(), c, forced, s.uniforms());
+        if (c == null) return done(new NotFound(destination, false));
+        Loaded loaded = new Loaded(destination, owner, s.revision(), c, forced, false, s.uniforms());
         return store.select(owner, id).thenApply(unused -> List.of(loaded, list(owner, owner, s)));
     }
     private CompletableFuture<List<Effect>> update(CharacterRequest.Update r) {
