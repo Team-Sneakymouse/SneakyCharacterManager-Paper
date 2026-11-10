@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.PuppetLeaveEvent;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 
 public class ConsoleCommandCharDisable extends CommandBaseConsole {
@@ -43,8 +44,8 @@ public class ConsoleCommandCharDisable extends CommandBaseConsole {
         Character character = Character.get(player);
         if (character != null) character.save();
 
-        Character.remove(player);
         SneakyCharacterManager.getInstance().nametagManager.unnicknamePlayer(player);
+        Character.remove(player, PuppetLeaveEvent.Reason.LOCKED_OUT);
 
         disabledPlayerUUIDs.add(player.getUniqueId().toString());
 

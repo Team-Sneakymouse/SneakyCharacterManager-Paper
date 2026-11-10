@@ -35,6 +35,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.character.CharacterHolders;
 import net.sneakycharactermanager.paper.api.character.CharacterKey;
+import net.sneakycharactermanager.paper.api.character.PuppetLeaveEvent;
 import net.sneakycharactermanager.paper.api.character.HeldCharacterSelectionHandler;
 import net.sneakycharactermanager.paper.api.character.StorageMode;
 import net.sneakycharactermanager.paper.handlers.character.Character;
@@ -198,7 +199,7 @@ class HolderRegistryTest {
         for (PendingWrite write : writes) write.future().complete(null); // leave nothing in GameplayFile's queue
         CharacterHolders.clearSelectionHandler(dancing);
         backend.close();
-        Character.remove(owner); Character.remove(supporter); Character.remove(third);
+        Character.remove(owner, PuppetLeaveEvent.Reason.QUIT); Character.remove(supporter, PuppetLeaveEvent.Reason.QUIT); Character.remove(third, PuppetLeaveEvent.Reason.QUIT);
         cache.close(); skins.close(); bukkit.close(); plugins.close();
     }
 
@@ -372,7 +373,7 @@ class HolderRegistryTest {
         wearMain();
         holdBorrowed();
         CharacterHolders.setSelectionHandler(dancing, recordingHandler(true));
-        beforeNextTask = () -> Character.remove(supporter); // the holder quits before the result reaches the main thread
+        beforeNextTask = () -> Character.remove(supporter, PuppetLeaveEvent.Reason.QUIT); // the holder quits before the result reaches the main thread
         api.forget();
 
         backend.submit(owner, new CharacterRequest.Select(ownerId.toString(), "second"));
@@ -506,7 +507,7 @@ class HolderRegistryTest {
         assertNull(CharacterHolders.holderOf(borrowed));
         assertSame(supporter, CharacterHolders.holderOf(supportersOwn));
 
-        Character.remove(supporter); // quit, chardisable
+        Character.remove(supporter, PuppetLeaveEvent.Reason.QUIT); // quit, chardisable
         assertFalse(CharacterHolders.isHeld(supportersOwn));
 
         wearMain();

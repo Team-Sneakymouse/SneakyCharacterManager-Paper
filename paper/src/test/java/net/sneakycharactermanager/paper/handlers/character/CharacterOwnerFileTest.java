@@ -29,6 +29,7 @@ import org.mockito.MockedStatic;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.character.CharacterKey;
+import net.sneakycharactermanager.paper.api.character.PuppetLeaveEvent;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 
@@ -73,6 +74,9 @@ class CharacterOwnerFileTest {
         World world = mock(World.class);
         when(world.getSpawnLocation()).thenReturn(new Location(null, 7, 70, 7));
         bukkit.when(Bukkit::getWorlds).thenReturn(List.of(world));
+        Server server = mock(Server.class); // leaving a borrowed character fires PuppetLeaveEvent
+        when(server.getPluginManager()).thenReturn(mock(PluginManager.class));
+        bukkit.when(Bukkit::getServer).thenReturn(server);
         PlayerInventory inventory = mock(PlayerInventory.class);
         when(inventory.getSize()).thenReturn(41);
         when(wearer.getInventory()).thenReturn(inventory);
@@ -82,7 +86,7 @@ class CharacterOwnerFileTest {
 
     @AfterEach
     void tearDown() {
-        Character.remove(wearer);
+        Character.remove(wearer, PuppetLeaveEvent.Reason.QUIT);
         files.close(); disables.close(); loader.close(); bukkit.close(); plugins.close();
     }
 

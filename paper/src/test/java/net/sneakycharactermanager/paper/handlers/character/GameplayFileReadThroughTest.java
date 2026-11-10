@@ -14,10 +14,12 @@ import java.util.concurrent.CompletableFuture;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.plugin.PluginManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,7 @@ import org.mockito.MockedStatic;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.character.CharacterKey;
+import net.sneakycharactermanager.paper.api.character.PuppetLeaveEvent;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
@@ -78,6 +81,9 @@ class GameplayFileReadThroughTest {
         World world = mock(World.class);
         when(world.getSpawnLocation()).thenReturn(new Location(null, 7, 70, 7));
         bukkit.when(Bukkit::getWorlds).thenReturn(List.of(world));
+        Server server = mock(Server.class); // leaving a borrowed character fires PuppetLeaveEvent
+        when(server.getPluginManager()).thenReturn(mock(PluginManager.class));
+        bukkit.when(Bukkit::getServer).thenReturn(server);
         body(wearer, wearerId);
         body(otherBody, otherBodyId);
     }
@@ -85,8 +91,8 @@ class GameplayFileReadThroughTest {
     @AfterEach
     void tearDown() throws Exception {
         flushWrites(); // never leave entries in GameplayFile's static queue for the next test
-        Character.remove(wearer);
-        Character.remove(otherBody);
+        Character.remove(wearer, PuppetLeaveEvent.Reason.QUIT);
+        Character.remove(otherBody, PuppetLeaveEvent.Reason.QUIT);
         files.close(); disables.close(); loader.close(); bukkit.close(); plugins.close();
     }
 

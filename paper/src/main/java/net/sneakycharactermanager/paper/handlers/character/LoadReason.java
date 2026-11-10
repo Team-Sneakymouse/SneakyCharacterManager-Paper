@@ -20,7 +20,7 @@ public enum LoadReason {
      * one: if someone else wears that character, it is refused rather than taken over.
      */
     RETURN,
-    /** Another player's character put on this body through the internal borrow seam. */
+    /** Another player's character put on this body: {@code Puppets.puppet}, through the internal borrow seam. */
     BORROW,
     /** Any other load: a direct {@link Character#load()} call by another plugin, staff tooling, or a non-owner. */
     OTHER;

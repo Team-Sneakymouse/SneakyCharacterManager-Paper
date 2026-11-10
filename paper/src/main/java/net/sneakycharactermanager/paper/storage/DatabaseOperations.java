@@ -26,6 +26,8 @@ public final class DatabaseOperations {
     public record Resolved(String requestId, String status, String id, String url, String texture, String signature, String error) implements Effect {}
     public record Found(String requester, List<String> entries) implements Effect {}
     private record Snapshot(String lastPlayed, long revision, List<CharacterView> characters, List<Map<String,Object>> uniforms) {}
+    /** An owner's enabled characters in {@code /char} order, and their last-played character ID (empty if none). */
+    public record Roster(String lastPlayed, List<CharacterView> characters) {}
     private final SqlStore store;
     private final Function<String, CompletableFuture<String>> hash;
     /** True if a body other than the owner wears the character (or is about to). Called on storage threads. */
@@ -55,6 +57,11 @@ public final class DatabaseOperations {
     public CompletableFuture<List<Effect>> run(CharacterRequest request, String playerName, long deadline) {
         return new DatabaseOperations(store.withDeadline(deadline), hash, heldElsewhere).run(request, playerName);
     }
+    /** Reads {@code owner}'s character list. Reads only: an owner storage doesn't know is not created. */
+    public CompletableFuture<Roster> roster(String owner, long deadline) {
+        return new DatabaseOperations(store.withDeadline(deadline), hash, heldElsewhere).snapshot(owner)
+                .thenApply(s -> new Roster(s.lastPlayed(), s.characters().stream().filter(CharacterView::enabled).toList()));
+    }
     public CompletableFuture<List<Effect>> run(CharacterRequest request, String playerName) {
         String owner = owner(request);
         // A borrow only reads: it must never create the owner it reads from.
@@ -76,8 +83,9 @@ public final class DatabaseOperations {
                 return load(r.owner(), r.owner(), id, false, s);
             });
             // Owner's snapshot only: no select, so neither the body's nor the owner's last-played changes.
+            // A disabled character is deleted as far as /char is concerned, so it can't be borrowed either.
             case CharacterRequest.Borrow r -> snapshot(r.owner()).thenApply(s -> {
-                CharacterView c = s.characters().stream().filter(ch -> ch.id().equals(r.character())).findFirst().orElse(null);
+                CharacterView c = s.characters().stream().filter(ch -> ch.id().equals(r.character()) && ch.enabled()).findFirst().orElse(null);
                 return List.<Effect>of(c == null ? new NotFound(r.body(), true)
                         : new Loaded(r.body(), r.owner(), s.revision(), c, true, true, s.uniforms()));
             });

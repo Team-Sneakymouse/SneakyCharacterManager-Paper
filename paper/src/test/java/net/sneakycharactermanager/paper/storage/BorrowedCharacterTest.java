@@ -30,6 +30,9 @@ import org.mockito.MockedStatic;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.character.CharacterKey;
+import net.sneakycharactermanager.paper.api.character.PuppetLeaveEvent;
+import net.sneakycharactermanager.paper.api.character.PuppetResult;
+import net.sneakycharactermanager.paper.api.character.Puppets;
 import net.sneakycharactermanager.paper.api.character.StorageMode;
 import net.sneakycharactermanager.paper.commands.CommandNick;
 import net.sneakycharactermanager.paper.handlers.character.Character;
@@ -42,7 +45,7 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
 /**
- * End to end on the SneakyDB path, through {@link DatabaseBackend#loadBorrowed}: player Y wears owner X's character, and
+ * End to end on the SneakyDB path, through the public {@link Puppets#puppet}: player Y wears offline owner X's character, and
  * the load, {@code /nick}, a skin change (also one that resolves after Y switched) and the save all land on X's record.
  */
 class BorrowedCharacterTest {
@@ -137,13 +140,13 @@ class BorrowedCharacterTest {
     @AfterEach
     void tearDown() {
         backend.close();
-        Character.remove(body);
+        Character.remove(body, PuppetLeaveEvent.Reason.QUIT);
         cache.close(); skins.close(); bukkit.close(); plugins.close();
     }
 
     @Test
     void loadPutsTheOwnersCharacterOnTheBodyWithoutTouchingLastPlayed() {
-        backend.loadBorrowed(body, borrowed);
+        assertEquals(PuppetResult.PUPPETED, Puppets.puppet(body, borrowed).join());
 
         Character worn = Character.get(body);
         assertNotNull(worn);
@@ -158,7 +161,7 @@ class BorrowedCharacterTest {
 
     @Test
     void nickAndSaveLandOnTheOwnersRecord() {
-        backend.loadBorrowed(body, borrowed);
+        assertEquals(PuppetResult.PUPPETED, Puppets.puppet(body, borrowed).join());
 
         assertTrue(new CommandNick().execute(body, "nick", new String[]{"New", "Name"}));
         Character.get(body).save();
@@ -171,7 +174,7 @@ class BorrowedCharacterTest {
     void skinChangeLandsOnTheOwnersRecord() {
         CompletableFuture<SkinCache.ResolveResult> resolve = new CompletableFuture<>();
         cache.when(() -> SkinCache.resolve(body, SKIN_URL, false)).thenReturn(resolve);
-        backend.loadBorrowed(body, borrowed);
+        assertEquals(PuppetResult.PUPPETED, Puppets.puppet(body, borrowed).join());
 
         CharacterLoader.updateSkin(body, borrowed, SKIN_URL, false, null);
         resolve.complete(hit());
@@ -184,7 +187,7 @@ class BorrowedCharacterTest {
     void skinResolvingAfterTheBodySwitchedStillLandsOnlyOnTheOwnersRecord() {
         CompletableFuture<SkinCache.ResolveResult> resolve = new CompletableFuture<>();
         cache.when(() -> SkinCache.resolve(body, SKIN_URL, false)).thenReturn(resolve);
-        backend.loadBorrowed(body, borrowed);
+        assertEquals(PuppetResult.PUPPETED, Puppets.puppet(body, borrowed).join());
         CharacterLoader.updateSkin(body, borrowed, SKIN_URL, false, null);
 
         backend.submit(body, new CharacterRequest.Select(bodyId.toString(), "shared-id")); // back to its own, same ID
@@ -202,7 +205,7 @@ class BorrowedCharacterTest {
 
     @Test
     void missingCharacterLoadsNothing() {
-        backend.loadBorrowed(body, new CharacterKey(ownerId, "gone"));
+        assertEquals(PuppetResult.NOT_FOUND, Puppets.puppet(body, new CharacterKey(ownerId, "gone")).join());
 
         assertNull(Character.get(body));
         verifyNoInteractions(plugin.selectionMenu);

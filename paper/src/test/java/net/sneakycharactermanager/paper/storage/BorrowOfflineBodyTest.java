@@ -29,6 +29,7 @@ import org.mockito.MockedStatic;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.character.CharacterKey;
+import net.sneakycharactermanager.paper.api.character.PuppetLeaveEvent;
 import net.sneakycharactermanager.paper.api.character.StorageMode;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
@@ -118,7 +119,7 @@ class BorrowOfflineBodyTest {
     @AfterEach
     void tearDown() {
         backend.close();
-        Character.remove(body);
+        Character.remove(body, PuppetLeaveEvent.Reason.QUIT);
         cache.close(); skins.close(); bukkit.close(); plugins.close();
     }
 

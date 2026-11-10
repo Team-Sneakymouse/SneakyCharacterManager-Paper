@@ -18,6 +18,7 @@ import com.sneakyutils.util.TextUtility;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.api.character.HeldCharacterSelectionHandler;
+import net.sneakycharactermanager.paper.api.character.PuppetLeaveEvent;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 
 /**
@@ -28,8 +29,8 @@ import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
  *
  * <p>When another body (the holder) already wears the character:
  * <ul>
- * <li>the owner joining as it ({@link LoadReason#OWN_JOIN}) wins: the holder's live state is saved, the holder is
- *     released, and the owner loads the character where the holder stood;</li>
+ * <li>the owner joining as it ({@link LoadReason#OWN_JOIN}) wins: the holder is released ({@link #release}, which
+ *     saves its live state), and the owner loads the character where the holder stood;</li>
  * <li>the owner picking it in {@code /char} ({@link LoadReason#OWN_SELECT}) loads nothing and goes to the selection
  *     handler, or is refused without one;</li>
  * <li>anything else (a borrow, a released holder returning to its own character, staff tools, another plugin, a
@@ -159,27 +160,35 @@ public final class HolderRegistry {
         if (!handled) owner.sendMessage(TextUtility.INSTANCE.convertToComponent(BEING_PLAYED));
     }
 
-    /** The owner is joining as the character {@code holder} wears: save the holder's live state, then release it. */
+    /**
+     * The owner is joining as the character {@code holder} wears: save the holder's live state and release it. The
+     * holder never wears one of its own characters here ({@link #decide}), so this always releases.
+     */
     private static void takeOver(Player holder) {
-        Character worn = Character.get(holder);
-        if (worn != null) worn.save();
-        releaseForOwner(holder);
+        release(holder, PuppetLeaveEvent.Reason.OWNER_JOINED);
     }
 
     /**
-     * Takes the holder off the character right away, so the owner can load it in the same tick, then loads the
-     * holder's own last-played character. That load is a {@link LoadReason#RETURN}: if someone else wears it, it is
-     * refused and the holder gets its character menu. Stand-in until ticket 04's {@code release(body)}, which must
-     * also free the character before it returns. Until the holder's own character arrives it wears nothing, like after
-     * {@code chardisable}; its inventory is cleared so the borrowed items aren't left on two bodies.
+     * Releases a puppet: if {@code body} wears a character it doesn't own, saves it where it stands, takes it off right
+     * away (so the owner can load it in the same tick), then asks for the body's own last-played character. That load
+     * is a {@link LoadReason#RETURN}: if someone else wears it, it is refused and the body gets its character menu.
+     * Until its own character arrives the body wears nothing, like after {@code chardisable}; its inventory is cleared
+     * so the borrowed items aren't left on two bodies. Fires {@link PuppetLeaveEvent} last, with {@code reason}.
+     *
+     * @return false if {@code body} wasn't wearing another player's character; nothing changed then
      */
-    private static void releaseForOwner(Player holder) {
+    public static boolean release(Player body, PuppetLeaveEvent.Reason reason) {
+        Character worn = Character.get(body);
+        if (worn == null || worn.getOwnerUUID().equals(body.getUniqueId())) return false;
         SneakyCharacterManager plugin = SneakyCharacterManager.getInstance();
-        Character.takeOff(holder);
-        plugin.nametagManager.unnicknamePlayer(holder);
-        if (plugin.getConfig().getBoolean("manageInventories", true)) holder.getInventory().clear();
-        returning.add(holder);
-        ProxyMessagingUtil.sendByteArray(holder, "playerJoin", holder.getUniqueId().toString());
+        worn.save();
+        Character.takeOff(body);
+        plugin.nametagManager.unnicknamePlayer(body);
+        if (plugin.getConfig().getBoolean("manageInventories", true)) body.getInventory().clear();
+        returning.add(body);
+        ProxyMessagingUtil.sendByteArray(body, "playerJoin", body.getUniqueId().toString());
+        Character.left(body, worn, reason);
+        return true;
     }
 
     public static void setSelectionHandler(Plugin plugin, HeldCharacterSelectionHandler handler) {

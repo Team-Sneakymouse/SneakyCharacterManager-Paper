@@ -1,6 +1,7 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
 import net.sneakycharactermanager.paper.api.character.CharacterKey;
+import net.sneakycharactermanager.paper.api.character.PuppetLeaveEvent;
 
 import java.io.File;
 import java.io.IOException;
@@ -199,10 +200,12 @@ public class Character {
 				applyAttributes(config);
 			}
 
-			wear(this.player, this);
+			Character previous = wear(this.player, this);
 			// Only now does Character.get(body) return this character, so the plate shows its title, not the previous one's.
 			SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(this.player, getDisplayName());
 			ConsoleCommandCharDisable.playerCharEnable(this.player.getUniqueId().toString());
+			// Reloading the same character is not leaving it.
+			if (previous != null && !previous.key.equals(this.key)) left(this.player, previous, PuppetLeaveEvent.Reason.LOADED_OTHER);
 			return true;
 		}
 		return false;
@@ -532,22 +535,51 @@ public class Character {
 		return characterMap.values();
 	}
 
-	public static void remove(Player player) {
-		takeOff(player);
+	/**
+	 * {@code player} quit ({@link PuppetLeaveEvent.Reason#QUIT}) or was locked out of its characters
+	 * ({@link PuppetLeaveEvent.Reason#LOCKED_OUT}): it stops wearing its character, without saving it.
+	 */
+	public static void remove(Player player, PuppetLeaveEvent.Reason reason) {
+		Character worn = takeOff(player);
 		HolderRegistry.forget(player);
 		playerCharactersCache.remove(player.getUniqueId());
+		left(player, worn, reason);
 	}
 
-	private static void wear(Player body, Character character) {
+	/**
+	 * Puts {@code character} on {@code body} and returns what it wore before. With {@link #takeOff}, the only place
+	 * that changes what a body wears; each caller reports a borrowed character leaving ({@link #left}).
+	 */
+	@Nullable
+	private static Character wear(Player body, Character character) {
 		Character previous = characterMap.put(body, character);
 		if (previous != null) holders.remove(previous.key, body);
 		holders.put(character.key, body);
+		return previous;
 	}
 
-	/** {@code body} stops wearing its character, without saving it. */
-	static void takeOff(Player body) {
+	/** {@code body} stops wearing its character, without saving it. Returns what it wore; see {@link #wear}. */
+	@Nullable
+	static Character takeOff(Player body) {
 		Character previous = characterMap.remove(body);
 		if (previous != null) holders.remove(previous.key, body);
+		return previous;
+	}
+
+	/**
+	 * {@code body} no longer wears {@code worn}: if it was borrowed (not the body's own), fires
+	 * {@link PuppetLeaveEvent}. Call once the change is complete, so listeners see the body's new state.
+	 */
+	static void left(Player body, @Nullable Character worn, PuppetLeaveEvent.Reason reason) {
+		if (worn == null || worn.getOwnerUUID().equals(body.getUniqueId())) return;
+		Bukkit.getServer().getPluginManager().callEvent(new PuppetLeaveEvent(body, worn.key, reason));
+	}
+
+	/** The character {@code body} wears if another player owns it, or null. */
+	@Nullable
+	public static CharacterKey borrowedBy(Player body) {
+		Character worn = characterMap.get(body);
+		return worn == null || worn.getOwnerUUID().equals(body.getUniqueId()) ? null : worn.key;
 	}
 
 	public static List<Character> getPlayerCharacters(UUID playerUUID) {
@@ -568,7 +600,7 @@ public class Character {
 				SneakyCharacterManager.getInstance().getLogger().severe(
 						"SneakyCharacterManager found an offline player on the characterMap. They have been removed, but this should never happen: "
 								+ player.getName());
-				takeOff(player);
+				left(player, takeOff(player), PuppetLeaveEvent.Reason.QUIT);
 			}
 		}
 	}

@@ -119,11 +119,48 @@ At most one body wears a character. The holder registry, `CharacterHolders.holde
 - Creating a character gives it a new ID, so it is never held.
 - A held character that its owner disables stays on its holder until the holder switches. (`/char confirm` already refuses to delete a character someone is playing.)
 - Legacy proxy mode: the proxy moves last-played before Paper sees a `/char` pick, so a refused pick there still moves it. Nothing in legacy mode puts one owner's character on another body, so this only matters for SneakyDB.
-- The release step on the owner's join is a stand-in until the public `release` API exists. The holder wears nothing until its own character arrives, and its inventory is cleared so the borrowed items aren't on two bodies.
+- The release step on the owner's join is the same as `Puppets.release` (see "Puppets" below), and fires `PuppetLeaveEvent` with `OWNER_JOINED`.
 
 Save-before-load: a load never reads an older gameplay file than the latest save queued for it, because loads read queued saves before the disk (see the "Other behaviour" list above). That includes the owner's join, which reads the holder's save before it reaches the disk.
 
 The storage mode is public too: `StorageMode.current()` (same package) returns `LEGACY` or `SNEAKYDB`.
+
+### Puppets
+
+Another plugin can put a player's character on a different body (a *puppet*) and take it off again, through `Puppets` in the same package. A body is puppeting while it wears a character it doesn't own. SneakyDB mode only: in legacy mode `puppet` and `release` return `UNSUPPORTED`, and `Puppets.isSupported()` is false. Every method runs on the main thread, and futures complete on it.
+
+- `Puppets.puppet(body, CharacterKey)` returns a `CompletableFuture<PuppetResult>` that always completes. It is a normal switch for the body: what it wore is saved first, then the character loads from its owner's gameplay file with its owner's name and skin. The owner may be offline. It never writes a last-played character (neither the body's nor the owner's), doesn't block commands, and isn't re-applied on rejoin. Everything saved or edited while wearing it goes to the owner (see "Character identity").
+- `Puppets.release(body)` returns `RELEASED`, `NOT_PUPPETED` or `UNSUPPORTED`. It saves the borrowed character where it stands, takes it off at once, and loads the body's own last-played character as a normal switch. Until that arrives the body wears nothing and its inventory is cleared (when SCM manages inventories), so the borrowed items aren't on two bodies. If a third body wears that character by then, the body gets its character menu. A puppet still on its way isn't cancelled by `release`: release once its future completes.
+- `Puppets.borrowedBy(body)` is the character the body wears if it isn't its own, or null.
+- `PuppetLeaveEvent` (a `PlayerEvent` on the body) fires once whenever a puppeting body stops wearing the borrowed character, after it was saved and taken off. `getCharacterKey()` is the borrowed character, and `getReason()` says how it left:
+
+| Reason | When |
+| --- | --- |
+| `RELEASED` | `Puppets.release`. |
+| `LOADED_OTHER` | Any other character loaded onto the body: its own `/char`, a staff load, another `puppet`. Reloading the same character doesn't count. |
+| `QUIT` | The body quit (also when the autosave finds it offline). It rejoins as its own last-played character. |
+| `OWNER_JOINED` | The owner joined as the character and took it back (holder rule above). |
+| `LOCKED_OUT` | The console's `chardisable`. |
+
+  SCM disabling doesn't fire it: the body keeps the character until the server stops, and its state is still saved to the owner.
+
+`PuppetResult`:
+
+| Result | Meaning |
+| --- | --- |
+| `PUPPETED` | The body wears the character now. The only success. |
+| `UNSUPPORTED` | Legacy mode. |
+| `BODY_OFFLINE` | The body isn't online. |
+| `OWN_CHARACTER` | The body owns the character; that's a `/char` switch, not a puppet. |
+| `HELD` | Another body, the owner included, wears it, when asked or by the time the load arrived. |
+| `NOT_FOUND` | No such character, or it's disabled. |
+| `INTERRUPTED` | Cut short, nothing loaded: the owner or the body logged in or out while it was on its way, a newer load for the body replaced it, or the owner's character changed while it loaded. Trying again may work. |
+| `REFUSED` | Refused when it arrived, for example a `LoadCharacterEvent` listener cancelled it. |
+| `FAILED` | Storage failed, or SCM is shutting down. |
+
+**Character lists.** `CharacterLists.of(owner)` gives any owner's characters, online or offline, as a `CompletableFuture<List<ListedCharacter>>` for another plugin's menu: key, name, skin URL, texture, signature and model, in `/char` order and without disabled characters. `ListedCharacter.current()` marks the owner's current character: the one they wear if they're online and wearing one of their own, otherwise their last-played one. It only reads: it creates nothing in storage and builds no `Character`. In legacy mode the future fails with `UnsupportedOperationException`; it also fails if storage fails or SCM shuts down. For plain names only, or to look one character up by its ID, use the [character directory](#character-directory-paper-api), which works in both storage modes.
+
+The cases above are tested one by one in `PuppetApiTest` (its header lists them), and ticket 02's end-to-end checks run through `puppet` in `BorrowedCharacterTest`.
 
 ## Configuration (Paper)
 
