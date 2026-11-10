@@ -112,4 +112,17 @@ class SkinAppliedEventTest {
         verify(player, never()).teleport(any(Location.class));
         verify(player, never()).getVehicle();
     }
+
+    @Test void puttingNoSkinOnRemovesTheTexturesProperty() {
+        Player player = mock(Player.class);
+        PlayerProfile profile = mock(PlayerProfile.class);
+        when(player.getPlayerProfile()).thenReturn(profile);
+
+        SkinUtil.putSkin(player, null);
+
+        var order = inOrder(profile, player);
+        order.verify(profile).removeProperty("textures");
+        order.verify(player).setPlayerProfile(profile);
+        verify(player, never()).sendMessage(any(net.kyori.adventure.text.Component.class));
+    }
 }

@@ -5,6 +5,7 @@ import java.util.IdentityHashMap;
 import java.util.Set;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.ApiStatus;
@@ -36,8 +37,8 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  * <li>Read both bodies' live state and poses, and save X from {@code a} and Y from {@code b}: the one save each
  *     character gets, of exactly the state that moves. No later save can land in the middle (step 2).</li>
  * <li>Teleport first: get both off any vehicle, then each to the other's exact location and facing (no +1 Y). If a
- *     listener refuses either teleport, or a body goes offline, both go back where they stood, moving as they were:
- *     {@code REFUSED}.</li>
+ *     listener refuses or redirects either teleport, or a body goes offline, both go back where they stood, moving
+ *     as they were: {@code REFUSED}.</li>
  * <li>Exchange what each body wears ({@link Character#exchange}): the holder registry and puppet bookkeeping, with no
  *     call-out in between, so listeners see either the old pairs (during the teleports) or the new ones.</li>
  * <li>Apply each live state to the other body, then the worn skin last (the live signed property, so uniforms move
@@ -126,7 +127,8 @@ public final class CharacterSwap {
         b.leaveVehicle();
         boolean movedA = a.teleport(stateY.location());
         boolean movedB = movedA && b.teleport(stateX.location());
-        if (!movedA || !movedB || !online(a) || !online(b)
+        // A listener can also send a teleport somewhere else (PlayerTeleportEvent.setTo): that is a refusal too.
+        if (!movedA || !movedB || !online(a) || !online(b) || !arrived(a, stateY.location()) || !arrived(b, stateX.location())
                 || !Character.isWearing(a, x.getKey()) || !Character.isWearing(b, y.getKey())) {
             if (movedA && online(a)) putBack(a, stateX);
             if (movedB && online(b)) putBack(b, stateY);
@@ -138,9 +140,9 @@ public final class CharacterSwap {
         Character.exchange(a, b);
         stateY.apply(a);
         stateX.apply(b);
-        // Skin last, where each body now stands; both were allowed above.
-        if (skinY != null) SkinUtil.putSkin(a, skinY);
-        if (skinX != null) SkinUtil.putSkin(b, skinX);
+        // Skin last, where each body now stands; both were allowed above. No skin moves as no skin.
+        SkinUtil.putSkin(a, skinY);
+        SkinUtil.putSkin(b, skinX);
         plugin.skinStateManager.swapped(a.getUniqueId(), y.getKey(), b.getUniqueId(), x.getKey());
 
         restore(a, poseY, rideY, b);
@@ -176,6 +178,14 @@ public final class CharacterSwap {
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
             if (online(body) && Character.isWearing(body, key) && body.getHealth() == capped) state.topUpHealth(body);
         }, 1);
+    }
+
+    /** True if {@code body} stands at {@code spot}'s position, in its world. Facing isn't compared. */
+    private static boolean arrived(Player body, Location spot) {
+        Location at = body.getLocation();
+        if (at.getWorld() != spot.getWorld()) return false;
+        double dx = at.getX() - spot.getX(), dy = at.getY() - spot.getY(), dz = at.getZ() - spot.getZ();
+        return dx * dx + dy * dy + dz * dz < 1.0E-6;
     }
 
     /** Both still online, still wearing what they wore, and still able to swap where they are. */

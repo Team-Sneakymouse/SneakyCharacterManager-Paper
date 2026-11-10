@@ -266,7 +266,7 @@ class SwapTest {
             new TeleportEvents().onGamemodeChange(event);
             if (listener != null) listener.accept(event);
             if (refuseTeleport) return false;
-            location = to.clone();
+            location = event.getTo().clone(); // a listener may have redirected it
             velocity = new Vector(); // Paper's teleport zeroes velocity and fall distance
             fallDistance = 0;
             return true;
@@ -841,6 +841,49 @@ class SwapTest {
         assertEquals(4f, driver.fallDistance);
         assertUnchanged();
         assertFalse(log.stream().anyMatch(s -> s.startsWith("skin:") || s.startsWith("health")), log.toString());
+    }
+
+    @Test
+    void aRedirectedTeleportIsARefusal() {
+        Location driverSpot = driver.location.clone();
+        Location supporterSpot = supporter.location.clone();
+        listener = event -> {
+            if (event instanceof PlayerTeleportEvent teleport && teleport.getPlayer() == supporter.player
+                    && teleport.getTo().getX() == driverSpot.getX())
+                teleport.setTo(new Location(world, 500, 70, 500)); // e.g. a region plugin
+        };
+
+        assertEquals(SwapResult.REFUSED, Puppets.swap(driver.player, supporter.player));
+
+        assertEquals(driverSpot, driver.location);
+        assertEquals(supporterSpot, supporter.location, "put back where it stood");
+        assertUnchanged();
+    }
+
+    @Test
+    void aBodyWithoutASkinPropertyHandsOverNone() {
+        ProfileProperty mainSkin = driver.skin;
+        supporter.skin = null; // e.g. an offline-mode account
+
+        assertEquals(SwapResult.SWAPPED, Puppets.swap(driver.player, supporter.player));
+
+        assertNull(driver.skin, "the Driver no longer shows main's skin");
+        assertSame(mainSkin, supporter.skin);
+    }
+
+    @Test
+    void theTopUpDoesntRefillSpentAbsorption() {
+        driver.maxHealth = 30;
+        driver.health = 28;
+        driver.absorption = 4;
+        assertEquals(SwapResult.SWAPPED, Puppets.swap(driver.player, supporter.player));
+        supporter.maxHealth = 30;
+        supporter.absorption = 1; // damage took absorption, not health
+
+        nextTick();
+
+        assertEquals(28, supporter.health);
+        assertEquals(1, supporter.absorption);
     }
 
     @Test

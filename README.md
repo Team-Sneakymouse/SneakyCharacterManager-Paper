@@ -177,19 +177,19 @@ The cases above are tested one by one in `PuppetApiTest` (its header lists them)
 | `DIFFERENT_WORLDS` | The bodies are in different worlds. The caller moves them into one world first. |
 | `SLEEPING` | A body is in a bed. The caller gets it out first. |
 | `BUSY` | A body or one of the two characters is in the middle of a load or another swap (for example, called from a `LoadCharacterEvent` listener). |
-| `REFUSED` | A listener refused a teleport, or a body quit or lost its character before anything was exchanged. Bodies that moved are put back. Both characters may have been saved where they stood. |
+| `REFUSED` | Before anything was exchanged: a listener cancelled either skin's `CharacterSkinAppliedEvent`, refused or redirected a teleport, or a body quit or lost its character. Bodies that moved are put back, moving as they were. Both characters may have been saved where they stood. |
 | `INTERRUPTED` | A listener of one of the swap's own events took a body off its new character, or a body quit, after the exchange. Both characters were saved before it began; each body wears whatever it wears now. |
 
 Only `SWAPPED`, `REFUSED` and `INTERRUPTED` can change anything. The others are checked before anything happens.
 
 **What moves, in order.** Body `a` wears X and body `b` wears Y:
 
-1. Any open container is closed (its cursor item goes back into the inventory, as in vanilla). The player's own inventory view, with its crafting grid, stays open.
+1. Any open container is closed (its cursor item goes back into the inventory, as in vanilla). The player's own inventory view, with its crafting grid, stays open. `CharacterSkinAppliedEvent` fires for both skins; a veto refuses the swap here.
 2. Both bodies' live state is read, and X is saved from `a` and Y from `b`. That is the one save each character gets, of exactly the state that moves.
-3. **Teleport first:** both get off any vehicle, then each goes to the other's exact location and facing (no +1 Y).
+3. **Teleport first:** both get off any vehicle, then each goes to the other's exact location and facing (no +1 Y). A teleport a listener cancels or sends elsewhere refuses the swap.
 4. The holder registry and puppet bookkeeping swap in one step: `a` wears Y and `b` wears X.
-5. Each body gets the other's: attribute base values (scale, maximum health), plugin attribute modifiers when `manageAttributes` is on (Minecraft's own modifiers, from equipment and effects, stay with the body), effects, health, absorption, food, saturation, exhaustion, fire, freezing, air, fall distance, inventory with cursor item and 2x2 crafting grid when `manageInventories` is on, held hotbar slot, and velocity.
-6. **Skin last:** the signed skin property each body wore moves as it is (uniforms included, nothing waits on the network). `CharacterSkinAppliedEvent` fires for each, but nothing else `SkinUtil.applySkin` does (no dismount or +1 Y). Each character's latest skin-history entry moves to its new body.
+5. Each body gets the other's: attribute base values (scale, maximum health), plugin attribute modifiers when `manageAttributes` is on (Minecraft's own modifiers, from equipment and effects, stay with the body), effects, health, absorption, food, saturation, exhaustion, fire, freezing, air, fall distance, inventory with cursor item and 2x2 crafting grid when `manageInventories` is on, held hotbar slot, and velocity. Health above the body's maximum this tick (the incoming equipment's bonus only counts on its next tick) is capped, then set again on that tick unless the body changed character or its health changed. An effect that an `EntityPotionEffectEvent` listener keeps or refuses stays as the listener decided: that is how a plugin forbids an effect on a body.
+6. **Skin last:** the signed skin property each body wore moves as it is (uniforms included, nothing waits on the network); a body with no skin property hands over none. None of `SkinUtil.applySkin`'s dismount or +1 Y. Each character's latest skin-history entry moves to its new body.
 7. SneakyPoses poses (sit, sleep, crawl) are put back on the body that now wears the character, at the same spot, after the skin so a sleeping pose copies the new one. A body that rode a vehicle hands its seat to the other.
 8. Each nameplate stays on its body (the swap's teleports don't rebuild it) and shows the new character's name and title: sent at once to everyone tracking it, and again the next tick to anyone who starts tracking it after the teleport.
 9. After that, each body that now wears **its own** character gets its last-played character set to it, through its owner's storage queue. A body wearing someone else's character keeps its pointer.

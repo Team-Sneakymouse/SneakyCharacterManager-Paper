@@ -27,8 +27,9 @@ public enum SwapResult {
      */
     BUSY,
     /**
-     * A listener refused a teleport, or a body quit or lost its character before anything was exchanged. Nothing was
-     * exchanged; any body that had moved is back where it stood.
+     * Before anything was exchanged, a listener cancelled either skin's {@code CharacterSkinAppliedEvent}, refused or
+     * redirected a teleport, or a body quit or lost its character. Nothing was exchanged; any body that had moved is
+     * back where it stood, moving as it was.
      */
     REFUSED,
     /**

@@ -77,10 +77,17 @@ public class SkinUtil {
 
 	/**
 	 * Sets {@code player}'s profile to wear {@code profileProperty}, where it stands: no event (see
-	 * {@link #skinAllowed}), and none of {@link #applySkin}'s dismount and +1 Y teleport.
+	 * {@link #skinAllowed}), and none of {@link #applySkin}'s dismount and +1 Y teleport. Null wears no
+	 * {@code textures} property (the client's default skin).
 	 */
-	public static void putSkin(Player player, ProfileProperty profileProperty) {
-		player.setPlayerProfile(handleCachedSkin(player, profileProperty));
+	public static void putSkin(Player player, @Nullable ProfileProperty profileProperty) {
+		if (profileProperty != null) {
+			player.setPlayerProfile(handleCachedSkin(player, profileProperty));
+			return;
+		}
+		PlayerProfile profile = player.getPlayerProfile();
+		profile.removeProperty("textures");
+		player.setPlayerProfile(profile);
 	}
 
 	/** The signed {@code textures} property {@code player} wears right now, or null if it wears none. */

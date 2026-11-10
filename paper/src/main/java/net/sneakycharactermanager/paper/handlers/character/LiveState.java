@@ -95,6 +95,8 @@ public record LiveState(Location location, Vector velocity, float fallDistance, 
         if (inventory != null) body.getInventory().setContents(inventory);
         if (cursor != null) body.setItemOnCursor(cursor);
         if (craftingGrid != null && ownGrid(body) instanceof CraftingInventory grid) grid.setMatrix(craftingGrid);
+        // Removing and adding effects fire EntityPotionEffectEvent; an effect a listener keeps or refuses stays as the
+        // listener decided (how a plugin forbids an effect on a body).
         body.clearActivePotionEffects();
         body.addPotionEffects(effects);
         setHealth(body, health);
@@ -115,10 +117,12 @@ public record LiveState(Location location, Vector velocity, float fallDistance, 
         return body.getHealth() < health;
     }
 
-    /** Sets health and absorption again, once the incoming equipment's bonuses have reached the body. */
+    /**
+     * Sets health again, once the incoming equipment's bonuses have reached the body. Absorption isn't set again: it
+     * was set in {@link #apply}, and the body may have spent some of it since.
+     */
     void topUpHealth(Player body) {
         setHealth(body, health);
-        body.setAbsorptionAmount(absorption);
     }
 
     /** Velocity and fall distance again, after a refused swap teleported the body back (a teleport resets both). */
