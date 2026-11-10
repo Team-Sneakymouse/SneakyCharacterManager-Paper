@@ -35,6 +35,7 @@ import net.sneakycharactermanager.paper.handlers.ContextCalculatorCharacterTag;
 import net.sneakycharactermanager.paper.handlers.Placeholders;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
+import net.sneakycharactermanager.paper.handlers.character.HolderRegistry;
 import net.sneakycharactermanager.paper.handlers.nametags.NameTagRefresher;
 import net.sneakycharactermanager.paper.handlers.nametags.NameplateAttachmentsImpl;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
@@ -239,6 +240,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 	@EventHandler
 	public void onPluginDisable(PluginDisableEvent event) {
+		HolderRegistry.clearSelectionHandler(event.getPlugin());
 		if (event.getPlugin() == this) {
 			SneakyItemsAPI.clearOwner(this);
             if (characterBackend != null) characterBackend.close();

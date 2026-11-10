@@ -104,6 +104,23 @@ The gameplay file path didn't change. Until now the owner was always the wearer,
 - Loading a character sees its latest save even before that save reaches the disk, whether the same player reloads it or another player picks it up.
 - `/char confirm` refuses to delete a character someone is playing, and `/skin revert` on a borrowed character uses its owner's Mojang skin.
 
+### Holder rule
+
+At most one body wears a character. The holder registry, `CharacterHolders.holderOf(CharacterKey)` (same package), says which online body wears it. Every load checks it before touching the body, whatever path it came from. When another body (the *holder*) already wears the character:
+
+| Load | What happens |
+| --- | --- |
+| The owner joining as it (their last-played character names it) | The owner wins. The holder's live state is saved, the holder is released (taken off the character and sent its own last-played character), and the owner loads the character where the holder stood. |
+| The owner picking it in `/char` (menu or `/char <name>`) | Nothing loads. The handler another plugin registered with `CharacterHolders.setSelectionHandler` gets the pick. With no handler, or if it declines, the owner is told someone else is playing it. In SneakyDB mode the owner's last-played character doesn't change. |
+| Anything else: the internal borrow load, staff tools, another plugin calling `Character.load()`, any load onto a non-owner, forced or not | Refused. |
+
+- Creating a character gives it a new ID, so it is never held.
+- A held character that its owner disables stays on its holder until the holder switches. (`/char confirm` already refuses to delete a character someone is playing.)
+- Legacy proxy mode: the proxy moves last-played before Paper sees a `/char` pick, so a refused pick there still moves it. Nothing in legacy mode puts one owner's character on another body, so this only matters for SneakyDB.
+- The release step on the owner's join is a stand-in until the public `release` API exists. The holder wears nothing until its own character arrives, and its inventory is cleared so the borrowed items aren't on two bodies.
+
+Save-before-load: a load never reads an older gameplay file than the latest save queued for it, because loads read queued saves before the disk (see the "Other behaviour" list above). That includes the owner's join, which reads the holder's save before it reaches the disk.
+
 The storage mode is public too: `StorageMode.current()` (same package) returns `LEGACY` or `SNEAKYDB`.
 
 ## Configuration (Paper)

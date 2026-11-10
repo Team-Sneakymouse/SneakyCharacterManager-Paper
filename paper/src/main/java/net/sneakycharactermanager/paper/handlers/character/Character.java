@@ -15,6 +15,8 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
+import org.jetbrains.annotations.ApiStatus;
+
 import org.bukkit.Bukkit;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -52,8 +54,14 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Character {
 
-	/** What each body is wearing. Keyed by the body on purpose; see the class comment. */
+	/** What each body is wearing. Keyed by the body on purpose; see the class comment. Main thread only. */
 	private static Map<Player, Character> characterMap = new HashMap<>();
+	/**
+	 * The holder registry: the same pairs as {@link #characterMap}, by character. Changed only together with it
+	 * ({@link #wear}, {@link #takeOff}). Concurrent so storage threads can read it
+	 * ({@link HolderRegistry#heldAwayFromOwner}).
+	 */
+	private static final Map<CharacterKey, Player> holders = new ConcurrentHashMap<>();
 	private static final Map<UUID, List<Character>> playerCharactersCache = new ConcurrentHashMap<>();
 
 	/** Owner + character ID: where this character's identity record and gameplay file live. */
@@ -96,14 +104,28 @@ public class Character {
 	}
 
 	/**
-	 * Puts this character on its wearer: saves whatever the wearer had on, then applies this character's gameplay
-	 * file. The file belongs to the owner ({@link GameplayFile#of}); a character that has no file yet gets one here.
+	 * Puts this character on its wearer, unless another body wears it, in which case the load is refused (see
+	 * {@link HolderRegistry}). For other plugins; SCM's own loads say why they load with {@link #load(LoadReason)}.
 	 */
 	public void load() {
+		load(LoadReason.OTHER);
+	}
+
+	/**
+	 * Puts this character on its wearer: saves whatever the wearer had on, then applies this character's gameplay
+	 * file. The file belongs to the owner ({@link GameplayFile#of}); a character that has no file yet gets one here.
+	 * The holder rule runs first ({@link HolderRegistry}): if another body wears this character, {@code reason}
+	 * decides whether the load is refused, goes to the selection handler, or takes the character back for its owner.
+	 *
+	 * @return true if the character is now on its wearer
+	 */
+	@ApiStatus.Internal
+	public boolean load(LoadReason reason) {
 		if (this.player == null) {
 			SneakyCharacterManager.getInstance().getLogger().severe("Attempted to load character " + this.key + " without a wearer");
-			return;
+			return false;
 		}
+		if (!HolderRegistry.admit(this, reason)) return false;
 		Character current = get(this.player);
 		if (current != null) current.save();
 
@@ -167,12 +189,13 @@ public class Character {
 				applyAttributes(config);
 			}
 
-			characterMap.put(this.player, this);
+			wear(this.player, this);
 			// Only now does Character.get(body) return this character, so the plate shows its title, not the previous one's.
 			SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(this.player, getDisplayName());
 			ConsoleCommandCharDisable.playerCharEnable(this.player.getUniqueId().toString());
+			return true;
 		}
-
+		return false;
 	}
 
 	public Player getPlayer() {
@@ -500,8 +523,20 @@ public class Character {
 	}
 
 	public static void remove(Player player) {
-		characterMap.remove(player);
+		takeOff(player);
 		playerCharactersCache.remove(player.getUniqueId());
+	}
+
+	private static void wear(Player body, Character character) {
+		Character previous = characterMap.put(body, character);
+		if (previous != null) holders.remove(previous.key, body);
+		holders.put(character.key, body);
+	}
+
+	/** {@code body} stops wearing its character, without saving it. */
+	static void takeOff(Player body) {
+		Character previous = characterMap.remove(body);
+		if (previous != null) holders.remove(previous.key, body);
 	}
 
 	public static List<Character> getPlayerCharacters(UUID playerUUID) {
@@ -522,7 +557,7 @@ public class Character {
 				SneakyCharacterManager.getInstance().getLogger().severe(
 						"SneakyCharacterManager found an offline player on the characterMap. They have been removed, but this should never happen: "
 								+ player.getName());
-				characterMap.remove(player);
+				takeOff(player);
 			}
 		}
 	}
@@ -553,13 +588,13 @@ public class Character {
 		return worn != null && worn.characterUUID.equals(characterId) ? worn.key : null;
 	}
 
-	/** The body wearing this character right now, or null. */
+	/**
+	 * The body wearing this character right now, or null. This is the holder registry ({@link HolderRegistry});
+	 * safe to read from any thread, but only the main thread's answer is current.
+	 */
 	@Nullable
 	public static Player wearerOf(CharacterKey key) {
-		for (Map.Entry<Player, Character> entry : characterMap.entrySet()) {
-			if (entry.getValue().key.equals(key)) return entry.getKey();
-		}
-		return null;
+		return holders.get(key);
 	}
 
 	public static boolean canPlayerLoadCharacter(Player player, String characterUUID) {

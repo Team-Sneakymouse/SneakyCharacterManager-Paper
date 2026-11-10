@@ -120,6 +120,7 @@ public class ProxyMessageListener implements PluginMessageListener {
 				character = readCharacter(playerUUID, Bukkit.getPlayer(UUID.fromString(playerUUID)), messageIn);
 				boolean forced = messageIn.readBoolean();
 
+				// The proxy has already moved last-played; the holder rule still runs before the load.
 				CharacterResultEffects.load(character, forced);
 				break;
 			case "selectCharacterByNameFailed":

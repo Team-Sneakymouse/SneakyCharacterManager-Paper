@@ -7,6 +7,8 @@ import net.sneakycharactermanager.paper.api.directory.CharacterDirectory;
 import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.admincommands.CommandTitleGrant;
 import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.character.HolderRegistry;
+import net.sneakycharactermanager.paper.handlers.character.LoadReason;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.listeners.ProxyMessageListener;
 import net.sneakycharactermanager.paper.handlers.skins.SkinFetching;
@@ -40,7 +42,7 @@ public final class DatabaseBackend implements CharacterBackend {
         }, new ThreadPoolExecutor.AbortPolicy());
         // Player-supplied URLs go through the shared safe fetcher (issue #28); policy is read per fetch.
         operations = new DatabaseOperations(store, url -> CompletableFuture.supplyAsync(
-                () -> SkinFetching.skinId(url, SkinFetching.policy()), http));
+                () -> SkinFetching.skinId(url, SkinFetching.policy()), http), HolderRegistry::heldAwayFromOwner);
         operations.ready().whenComplete((unused, error) -> {
             if (error != null && !closed) plugin.getLogger().severe(
                     "SneakyDB SCM initialization failed. Apply db/001_scm.sql, check SneakyDB, then restart; no legacy fallback.");
@@ -146,12 +148,19 @@ public final class DatabaseBackend implements CharacterBackend {
                 Character character = character(r.source(), Bukkit.getPlayer(UUID.fromString(r.destination())), r.character(), r.uniforms());
                 if (r.borrowed()) {
                     // No lock-permission check and no default-skin initialisation: the body isn't the owner.
-                    character.load();
+                    character.load(LoadReason.BORROW);
                 } else {
                     CharacterResultEffects.load(character, r.forced());
                     if (r.character().skin().isEmpty() && r.character().skinId().isEmpty())
                         CharacterResultEffects.defaultSkin(r.destination(), r.character().id());
                 }
+            }
+            case DatabaseOperations.HeldElsewhere r -> {
+                Player owner = Bukkit.getPlayer(UUID.fromString(r.owner()));
+                if (owner == null || !CharacterResultEffects.canLoad(owner, r.character())) return;
+                // Freed since the check on the storage thread: pick it again as a normal switch.
+                if (!HolderRegistry.ownerPickedHeld(owner, CharacterKey.of(r.owner(), r.character())))
+                    submit(owner, new CharacterRequest.Select(r.owner(), r.character()));
             }
             case DatabaseOperations.Catalog r -> {
                 // SCM title creation is append-only and canonical displays never change.
@@ -197,7 +206,8 @@ public final class DatabaseBackend implements CharacterBackend {
      * Internal seam, not public API: loads {@code key}'s character onto {@code body}, which need not be its owner.
      * Reads the owner's snapshot through the owner's queue; never writes last-played for either player, never checks
      * the character-lock permission, never creates the owner. The gameplay file and every later edit go to the owner
-     * (see {@link Character}). No holder rules yet (ticket 03); ticket 04 builds the public puppet API on this.
+     * (see {@link Character}). Refused if any body (the owner included) already wears it ({@link HolderRegistry}).
+     * Ticket 04 builds the public puppet API on this.
      */
     @ApiStatus.Internal
     public void loadBorrowed(Player body, CharacterKey key) {

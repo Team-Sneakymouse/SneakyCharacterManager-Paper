@@ -2,6 +2,7 @@ package net.sneakycharactermanager.paper.storage;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import net.sneakycharactermanager.common.titles.TitleKeys;
 import net.sneakycharactermanager.proxy.common.SkinContentHash;
@@ -16,6 +17,8 @@ public final class DatabaseOperations {
     public record Loaded(String destination, String source, long revision, CharacterView character, boolean forced,
                          boolean borrowed, List<Map<String,Object>> uniforms) implements Effect {}
     public record NotFound(String player, boolean borrowed) implements Effect {}
+    /** The owner picked a character another body wears; nothing was selected, so last-played is unchanged. */
+    public record HeldElsewhere(String owner, String character) implements Effect {}
     public record Deleted(String player, String id, String name) implements Effect {}
     public record Catalog(Map<String,String> titles) implements Effect {}
     public record TitleCreated(String admin, String target, boolean success, String code, String display, String error) implements Effect {}
@@ -24,8 +27,13 @@ public final class DatabaseOperations {
     private record Snapshot(String lastPlayed, long revision, List<CharacterView> characters, List<Map<String,Object>> uniforms) {}
     private final SqlStore store;
     private final Function<String, CompletableFuture<String>> hash;
+    /** (owner, character) → true if a body other than the owner wears it. Called on storage threads. */
+    private final BiPredicate<String, String> heldElsewhere;
     public DatabaseOperations(SqlStore store, Function<String, CompletableFuture<String>> hash) {
-        this.store = store; this.hash = hash;
+        this(store, hash, (owner, character) -> false);
+    }
+    public DatabaseOperations(SqlStore store, Function<String, CompletableFuture<String>> hash, BiPredicate<String, String> heldElsewhere) {
+        this.store = store; this.hash = hash; this.heldElsewhere = heldElsewhere;
     }
     public CompletableFuture<Void> ready() { return store.ready(); }
     public void close() { store.close(); }
@@ -44,7 +52,7 @@ public final class DatabaseOperations {
         };
     }
     public CompletableFuture<List<Effect>> run(CharacterRequest request, String playerName, long deadline) {
-        return new DatabaseOperations(store.withDeadline(deadline), hash).run(request, playerName);
+        return new DatabaseOperations(store.withDeadline(deadline), hash, heldElsewhere).run(request, playerName);
     }
     public CompletableFuture<List<Effect>> run(CharacterRequest request, String playerName) {
         String owner = owner(request);
@@ -104,6 +112,9 @@ public final class DatabaseOperations {
     private CompletableFuture<List<Effect>> load(String destination, String owner, String id, boolean forced, Snapshot s) {
         CharacterView c = s.characters().stream().filter(ch -> ch.id().equals(id)).findFirst().orElse(null);
         if (c == null) return done(new NotFound(destination, false));
+        // A /char pick (not forced) of a character another body wears must not move last-played: the owner's next
+        // join would otherwise take it back from the holder. A join (forced) is the owner taking it back on purpose.
+        if (!forced && heldElsewhere.test(owner, id)) return done(new HeldElsewhere(owner, id));
         Loaded loaded = new Loaded(destination, owner, s.revision(), c, forced, false, s.uniforms());
         return store.select(owner, id).thenApply(unused -> List.of(loaded, list(owner, owner, s)));
     }
