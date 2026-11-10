@@ -154,6 +154,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		getServer().getPluginManager().registerEvents(new VanishEvents(), this);
 		getServer().getPluginManager().registerEvents(new TeleportEvents(), this);
 		getServer().getPluginManager().registerEvents(new NameplateLifecycleListener(this), this);
+		getServer().getPluginManager().registerEvents(new BookSignListener(), this);
 		characterCrystal = new CharacterCrystal(this);
 		getServer().getPluginManager().registerEvents(characterCrystal, this);
 
