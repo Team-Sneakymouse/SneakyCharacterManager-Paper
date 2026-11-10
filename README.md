@@ -132,13 +132,13 @@ Another plugin can put a player's character on a different body (a *puppet*) and
 - `Puppets.puppet(body, CharacterKey)` returns a `CompletableFuture<PuppetResult>` that always completes. It is a normal switch for the body: what it wore is saved first, then the character loads from its owner's gameplay file with its owner's name and skin. The owner may be offline. It never writes a last-played character (neither the body's nor the owner's), doesn't block commands, and isn't re-applied on rejoin. Everything saved or edited while wearing it goes to the owner (see "Character identity").
 - `Puppets.release(body)` returns `RELEASED`, `NOT_PUPPETED` or `UNSUPPORTED`. It saves the borrowed character where it stands, takes it off at once, and loads the body's own last-played character as a normal switch. Until that arrives the body wears nothing and its inventory is cleared (when SCM manages inventories), so the borrowed items aren't on two bodies. If a third body wears that character by then, the body gets its character menu. A puppet still on its way isn't cancelled by `release`: release once its future completes.
 - `Puppets.borrowedBy(body)` is the character the body wears if it isn't its own, or null.
-- `PuppetLeaveEvent` (a `PlayerEvent` on the body) fires once whenever a puppeting body stops wearing the borrowed character, after it was saved and taken off. `getCharacterKey()` is the borrowed character, and `getReason()` says how it left:
+- `PuppetLeaveEvent` (a `PlayerEvent` on the body) fires once whenever a puppeting body stops wearing the borrowed character, after it was saved (except in the case under `QUIT` below) and taken off. `getCharacterKey()` is the borrowed character, and `getReason()` says how it left:
 
 | Reason | When |
 | --- | --- |
 | `RELEASED` | `Puppets.release`. |
 | `LOADED_OTHER` | Any other character loaded onto the body: its own `/char`, a staff load, another `puppet`. Reloading the same character doesn't count. |
-| `QUIT` | The body quit (also when the autosave finds it offline). It rejoins as its own last-played character. |
+| `QUIT` | The body quit. It rejoins as its own last-played character. Also fired when the autosave finds a body already offline (a missed quit, which shouldn't happen); that one isn't saved first, since an offline body can't be read, so the owner keeps the last autosave. |
 | `OWNER_JOINED` | The owner joined as the character and took it back (holder rule above). |
 | `LOCKED_OUT` | The console's `chardisable`. |
 

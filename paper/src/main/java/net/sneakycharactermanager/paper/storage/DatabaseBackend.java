@@ -286,6 +286,16 @@ public final class DatabaseBackend implements CharacterBackend {
         return outcome;
     }
     /**
+     * Loads {@code body}'s own last-played character after a release. Unlike a login's repeated join, this one is never
+     * dropped as a duplicate: a join still on its way (an earlier release's return, since replaced by a puppet) is
+     * stale by now, and this newer one replaces it.
+     */
+    @ApiStatus.Internal
+    public void loadOwnLastPlayed(Player body) {
+        joining.remove(body);
+        submit(body, new CharacterRequest.Join(body.getUniqueId().toString()));
+    }
+    /**
      * Internal seam under {@code CharacterLists}: {@code owner}'s enabled characters and last-played pointer, online or
      * offline. Reads only, in the owner's queue turn (so it sees the owner's queued edits); creates nothing and applies
      * nothing. Completes on the main thread, or exceptionally if storage failed or closed.

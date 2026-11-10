@@ -10,6 +10,8 @@ import org.jetbrains.annotations.NotNull;
 /**
  * A body stopped wearing a character it doesn't own (a puppet ended). Fired on the main thread, once, after the
  * borrowed character was saved to its owner and taken off the body, by whichever way it left ({@link #getReason()}).
+ * One exception to the save: the autosave finding the body already offline (a missed quit, {@link Reason#QUIT}) only
+ * takes the character off, since an offline body can't be read; the owner keeps the last autosave.
  * Not cancellable. Not fired when SCM itself disables: the body keeps the character until the server stops, and its
  * state is still saved to the owner.
  */
@@ -20,7 +22,7 @@ public final class PuppetLeaveEvent extends PlayerEvent {
         RELEASED,
         /** Another character was loaded onto the body: its own {@code /char}, a staff load, another puppet. */
         LOADED_OTHER,
-        /** The body quit. */
+        /** The body quit, or the autosave found it offline (see the class comment). */
         QUIT,
         /** The owner joined as the character and took it back (the holder rule's owner-join exception). */
         OWNER_JOINED,

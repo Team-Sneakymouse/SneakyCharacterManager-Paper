@@ -19,6 +19,7 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.api.character.HeldCharacterSelectionHandler;
 import net.sneakycharactermanager.paper.api.character.PuppetLeaveEvent;
+import net.sneakycharactermanager.paper.storage.DatabaseBackend;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 
 /**
@@ -186,7 +187,8 @@ public final class HolderRegistry {
         plugin.nametagManager.unnicknamePlayer(body);
         if (plugin.getConfig().getBoolean("manageInventories", true)) body.getInventory().clear();
         returning.add(body);
-        ProxyMessagingUtil.sendByteArray(body, "playerJoin", body.getUniqueId().toString());
+        if (plugin.getCharacterBackend() instanceof DatabaseBackend db) db.loadOwnLastPlayed(body);
+        else ProxyMessagingUtil.sendByteArray(body, "playerJoin", body.getUniqueId().toString());
         Character.left(body, worn, reason);
         return true;
     }

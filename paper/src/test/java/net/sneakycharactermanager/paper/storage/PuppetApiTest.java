@@ -88,7 +88,8 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  * Ending ({@link PuppetLeaveEvent} fires once per way of leaving, after the change):
  * <ol>
  * <li>E1 {@code release}: saves the borrowed character where it stands, takes it off, the body gets its own last-played
- *     character; {@code RELEASED}. Its inventory is cleared after the save. A body that isn't puppeting: {@code NOT_PUPPETED}, nothing happens.</li>
+ *     character (also when an earlier release's return is still on its way); {@code RELEASED}. Its inventory is
+ *     cleared after the save. A body that isn't puppeting: {@code NOT_PUPPETED}, nothing happens.</li>
  * <li>E2 Any other load onto the body (its own {@code /char}, another puppet): {@code LOADED_OTHER}.</li>
  * <li>E3 A quit, or the autosave finding the body offline: {@code QUIT} (S2). E4 The owner joining as it: {@code OWNER_JOINED}. E5 {@code chardisable}:
  *     {@code LOCKED_OUT}.</li>
@@ -136,6 +137,8 @@ class PuppetApiTest {
         final Map<String, String> lastPlayed = new HashMap<>();
         final Set<String> disabled = new HashSet<>();
         boolean failSnapshots;
+        /** Owners whose next snapshot waits until the gate completes, like a slow database. */
+        final Map<String, CompletableFuture<Void>> gates = new HashMap<>();
         @Override public CompletableFuture<List<Map<String,Object>>> query(String sql, List<?> args) {
             if (sql.contains(SNAPSHOT)) {
                 statements.add(sql); bindings.add(args);
@@ -144,7 +147,8 @@ class PuppetApiTest {
                 List<Map<String,Object>> rows = new ArrayList<>();
                 for (String[] c : characters.getOrDefault(owner, List.of()))
                     rows.add(row(c[0], c[1], lastPlayed.get(owner), !disabled.contains(c[0])));
-                return CompletableFuture.completedFuture(rows);
+                CompletableFuture<Void> gate = gates.remove(owner);
+                return gate == null ? CompletableFuture.completedFuture(rows) : gate.thenApply(unused -> rows);
             }
             if (sql.startsWith("SELECT * FROM scm.uniform_variants")) return CompletableFuture.completedFuture(List.of());
             return super.query(sql, args);
@@ -508,6 +512,20 @@ class PuppetApiTest {
             assertTrue(writes.stream().anyMatch(w -> w.target().equals(file(second)) && w.content().contains("items")),
                     "saved with its items before they were cleared");
         }
+    }
+
+    @Test
+    void aSecondReleaseWhileTheFirstReturnIsStillOnItsWayStillBringsTheBodyBack() {
+        puppet(supporter, second);
+        CompletableFuture<Void> slowRead = new CompletableFuture<>();
+        api.gates.put(supporterId.toString(), slowRead); // the first return's read is slow
+        Puppets.release(supporter);
+        assertEquals(PuppetResult.PUPPETED, puppet(supporter, main)); // puppets again before it lands
+
+        assertEquals(ReleaseResult.RELEASED, Puppets.release(supporter));
+        slowRead.complete(null);
+
+        assertEquals(supportersOwn, Character.get(supporter).getKey(), "the second release's return must not be dropped");
     }
 
     @Test
