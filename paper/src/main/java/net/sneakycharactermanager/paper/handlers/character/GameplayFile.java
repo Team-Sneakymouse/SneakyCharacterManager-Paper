@@ -27,8 +27,15 @@ import net.sneakycharactermanager.paper.api.character.CharacterKey;
  */
 final class GameplayFile {
 
-    /** Newest content queued for each file and not yet on disk. */
-    private static final Map<Path, String> unwritten = new ConcurrentHashMap<>();
+    /** Newest write queued for each file and not yet on disk. */
+    private static final Map<Path, Queued> unwritten = new ConcurrentHashMap<>();
+
+    /** One queued write. Compared by identity: only the write that queued an entry may clear it, even if a later
+     *  write happens to carry the same content (A, B, A). */
+    private static final class Queued {
+        final String content;
+        Queued(String content) { this.content = content; }
+    }
 
     private GameplayFile() {}
 
@@ -46,8 +53,9 @@ final class GameplayFile {
     }
 
     static YamlConfiguration read(File file) {
-        String pending = unwritten.get(path(file));
-        if (pending == null) return YamlConfiguration.loadConfiguration(file);
+        Queued queued = unwritten.get(path(file));
+        if (queued == null) return YamlConfiguration.loadConfiguration(file);
+        String pending = queued.content;
         YamlConfiguration config = new YamlConfiguration();
         try {
             config.loadFromString(pending);
@@ -60,9 +68,10 @@ final class GameplayFile {
     static void write(File file, String content) {
         file.getParentFile().mkdirs();
         Path path = path(file);
-        unwritten.put(path, content);
+        Queued queued = new Queued(content);
+        unwritten.put(path, queued);
         SneakyCharacterManager.getInstance().writeFile(path, content)
-                .whenComplete((ignored, failure) -> unwritten.remove(path, content));
+                .whenComplete((ignored, failure) -> unwritten.remove(path, queued));
     }
 
     /** A new character's state: world spawn and an empty inventory. */

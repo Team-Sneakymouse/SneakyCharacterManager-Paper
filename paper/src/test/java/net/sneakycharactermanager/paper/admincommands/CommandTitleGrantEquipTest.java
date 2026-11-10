@@ -88,6 +88,45 @@ class CommandTitleGrantEquipTest {
         menu.verify(() -> TitleSelectionMenu.applyTitle(target, worn, "master_fisherman"));
     }
 
+    /** Submits while the target wears {@code on}, without the fixed-display verify of {@link #submit(String)}. */
+    private void submitOn(CharacterKey on, String display) throws Exception {
+        characters.when(() -> Character.isWearing(target, on)).thenReturn(true);
+        Method handleSubmit = CommandTitleGrant.class.getDeclaredMethod(
+                "handleSubmit", Player.class, UUID.class, CharacterKey.class, String.class);
+        handleSubmit.setAccessible(true);
+        handleSubmit.invoke(new CommandTitleGrant(), admin, targetId, on, display);
+    }
+
+    // Guards: overlapping grants shared one pending slot, so T1's result equipped T1 on the character captured for T2.
+    @Test
+    void overlappingGrantsEachEquipOnlyOnTheirOwnCharacter() throws Exception {
+        CharacterKey later = new CharacterKey(targetId, "switched-to");
+        submitOn(granted, "Master Fisherman");
+        characters.when(() -> Character.isWearing(target, granted)).thenReturn(false); // target switched
+        submitOn(later, "Gold Miner");
+
+        CommandTitleGrant.handleCreateResult(adminId.toString(), targetId.toString(), true,
+                "master_fisherman", "Master Fisherman", null);
+        menu.verify(() -> TitleSelectionMenu.applyTitle(any(), any(), anyString()), never());
+
+        CommandTitleGrant.handleCreateResult(adminId.toString(), targetId.toString(), true,
+                "gold_miner", "Gold Miner", null);
+        menu.verify(() -> TitleSelectionMenu.applyTitle(target, worn, "gold_miner"));
+        menu.verify(() -> TitleSelectionMenu.applyTitle(any(), any(), eq("master_fisherman")), never());
+    }
+
+    // Guards: an identical grant submitted while the first still resolves would make the two results ambiguous.
+    @Test
+    void identicalGrantIsRefusedWhileTheFirstIsResolving() throws Exception {
+        submitOn(granted, "Master Fisherman");
+        submitOn(granted, "Master Fisherman");
+
+        proxy.verify(() -> ProxyMessagingUtil.sendByteArray(admin, "createTitle",
+                adminId.toString(), targetId.toString(), "master_fisherman", "Master Fisherman"), times(1));
+        CommandTitleGrant.handleCreateResult(adminId.toString(), targetId.toString(), true,
+                "master_fisherman", "Master Fisherman", null); // clears the pending entry for other tests
+    }
+
     // Guards: a result with no pending submit (duplicate or late reply) must not equip on whatever the target wears now.
     @Test
     void resultWithoutPendingSubmitGrantsButDoesNotEquip() {

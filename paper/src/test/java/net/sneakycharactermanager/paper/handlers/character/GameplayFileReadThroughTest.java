@@ -151,6 +151,26 @@ class GameplayFileReadThroughTest {
         assertEquals(new Location(null, 30, 2, 0), GameplayFile.read(file).getLocation("location"));
     }
 
+    /** Bug guard: saves A, B, A (same content twice): the first A landing must not hide the newest A behind B. */
+    @Test
+    void anOlderIdenticalWriteLandingKeepsTheNewestQueuedSave() throws Exception {
+        File file = saved(ownerId, "k", 10);
+        Character worn = character(wearer, ownerId, "k");
+        worn.load();
+        when(wearer.getLocation()).thenReturn(new Location(null, 20, 2, 0));
+        worn.save(); // A
+        when(wearer.getLocation()).thenReturn(new Location(null, 30, 2, 0));
+        worn.save(); // B
+        when(wearer.getLocation()).thenReturn(new Location(null, 20, 2, 0));
+        worn.save(); // A again
+
+        flushOldestWrite(); // the first A lands
+        flushOldestWrite(); // B lands; the newest A is still queued
+
+        assertEquals(new Location(null, 30, 2, 0), YamlConfiguration.loadConfiguration(file).getLocation("location"));
+        assertEquals(new Location(null, 20, 2, 0), GameplayFile.read(file).getLocation("location"));
+    }
+
     /** Bug: the nametag was set before the body was mapped to the new character, so it showed the previous one's title. */
     @Test
     void nametagIsSetAfterTheBodyWearsTheNewCharacter() throws Exception {

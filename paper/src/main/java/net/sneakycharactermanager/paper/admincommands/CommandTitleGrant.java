@@ -113,11 +113,15 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 		admin.showDialog(dialog);
 	}
 
-	/** Character each pending grant should be equipped on, keyed by admin and target (the round trip carries no key). */
-	private static final java.util.Map<String, CharacterKey> PENDING_EQUIPS = new java.util.concurrent.ConcurrentHashMap<>();
+	/** Character a pending grant should be equipped on. The round trip carries no character, so a result is matched
+	 *  to its request by admin, target and title code; an identical grant can't be submitted while one is resolving. */
+	private record PendingEquip(CharacterKey character, long since) {}
+	private static final java.util.Map<String, PendingEquip> PENDING_EQUIPS = new java.util.concurrent.ConcurrentHashMap<>();
+	/** A result that never arrives must not block the same grant forever. */
+	private static final long PENDING_EXPIRY_MILLIS = 60_000;
 
-	private static String pendingKey(String admin, String target) {
-		return admin + "|" + target;
+	private static String pendingKey(String admin, String target, String code) {
+		return admin + "|" + target + "|" + TitleRegistry.normalizeTitleKey(code == null ? "" : code);
 	}
 
 	static String titleKeyFromDisplay(String display) {
@@ -159,7 +163,14 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 			return;
 		}
 
-		PENDING_EQUIPS.put(pendingKey(admin.getUniqueId().toString(), targetId.toString()), character);
+		String pendingKey = pendingKey(admin.getUniqueId().toString(), targetId.toString(), code);
+		PendingEquip earlier = PENDING_EQUIPS.get(pendingKey);
+		if (earlier != null && System.currentTimeMillis() - earlier.since() < PENDING_EXPIRY_MILLIS) {
+			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
+					"&cThat title is still being granted to this player. Wait for it to finish."));
+			return;
+		}
+		PENDING_EQUIPS.put(pendingKey, new PendingEquip(character, System.currentTimeMillis()));
 		ProxyMessagingUtil.sendByteArray(admin, "createTitle",
 				admin.getUniqueId().toString(),
 				targetId.toString(),
@@ -175,7 +186,8 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 			String code,
 			String display,
 			String error) {
-		CharacterKey character = PENDING_EQUIPS.remove(pendingKey(adminUUID, targetUUID)); // also when the admin left
+		PendingEquip pending = PENDING_EQUIPS.remove(pendingKey(adminUUID, targetUUID, code)); // also when the admin left
+		CharacterKey character = pending == null ? null : pending.character();
 		Player admin = Bukkit.getPlayer(UUID.fromString(adminUUID));
 		if (admin == null) {
 			return;
