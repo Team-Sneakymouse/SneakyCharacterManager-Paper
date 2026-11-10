@@ -17,7 +17,8 @@ import de.maxhenkel.voicechat.api.events.MicrophonePacketEvent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 
 /**
- * Simple Voice Chat integration: toggles talking nameplates based on incoming voice packets.
+ * Simple Voice Chat integration: toggles talking nameplates based on incoming voice packets. A registered
+ * {@link net.sneakycharactermanager.paper.api.voice.TalkingNameplateLookup} picks whose nameplate a packet lights up.
  */
 public class SimpleVoiceChatIntegration implements VoicechatPlugin {
 
@@ -27,6 +28,12 @@ public class SimpleVoiceChatIntegration implements VoicechatPlugin {
     // Must run before plugins like SneakyVoiceChat (priority 100) that cancel this event;
     // SVC stops dispatching to lower-priority listeners once cancelled.
     private static final int MIC_EVENT_PRIORITY = 101;
+
+    private final TalkingBodies bodies;
+
+    public SimpleVoiceChatIntegration(TalkingBodies bodies) {
+        this.bodies = bodies;
+    }
 
     @Override
     public String getPluginId() {
@@ -42,11 +49,13 @@ public class SimpleVoiceChatIntegration implements VoicechatPlugin {
         return event -> {
             // Use INFO so we can confirm packets are coming through without changing the global log level
             UUID uuid = resolveSender(event);
-            if (uuid != null) {
-                handleTalking(uuid);
-            } else {
+            if (uuid == null) {
                 SneakyCharacterManager.getInstance().getLogger().info("[SVC] Could not resolve speaker for MicrophonePacketEvent");
+                return;
             }
+            // This listener runs before SneakyVoiceChat (100) cancels the event, so the lookup sees the sent payload.
+            if (bodies.active()) uuid = bodies.bodyFor(uuid, event.getPacket().getOpusEncodedData());
+            if (uuid != null) handleTalking(uuid);
         };
     }
 

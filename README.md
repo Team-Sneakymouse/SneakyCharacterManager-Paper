@@ -415,6 +415,21 @@ The plate display is not persistent (Paper skips non-persistent passengers when 
 
 **Known limitation.** Paper refuses API cross-world teleports (`Player#teleport`) of a player carrying passengers before any event fires; an unattached plate rides the player, so this pre-existing behaviour is unchanged. Portal and respawn world changes are unaffected.
 
+### Talking lookup (Paper)
+
+With Simple Voice Chat installed, a player's plate shows as talking while their microphone packets arrive and for half a second after. A plugin that plays one player's voice from another player's body can make the plate follow the voice by registering a `net.sneakycharactermanager.paper.api.voice.TalkingNameplateLookup` in Bukkit's `ServicesManager`:
+
+```java
+Bukkit.getServicesManager().register(TalkingNameplateLookup.class,
+        (speaker, payload) -> isRouted(speaker, payload) ? bodyOf(speaker) : speaker,
+        plugin, ServicePriority.Normal);
+```
+
+- SCM asks for every packet that carries audio, from the speaker's UUID and a read-only view of the Opus payload exactly as the client sent it (SCM listens before SneakyVoiceChat changes or cancels the packet). Return the player whose plate lights up: the speaker for their own, or another player. A null answer or an exception means the speaker; an offline player lights nothing.
+- It runs on Simple Voice Chat's network thread for every packet: keep it fast, thread-safe and off Bukkit world state.
+- While a lookup is registered, SVC's empty end-of-talk packet lights no plate, since it can't say which body it belongs to.
+- SCM uses the highest-priority registration and drops it when it is unregistered (Bukkit unregisters a plugin's services when it disables). With none registered, plates behave as before.
+
 ## Character directory (Paper API)
 
 `net.sneakycharactermanager.paper.api.directory.CharacterDirectory` looks up characters whether or not they are loaded. It is read-only and registered in Bukkit's `ServicesManager` at the end of SCM's enable, in both storage modes.

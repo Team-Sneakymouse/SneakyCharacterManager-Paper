@@ -44,6 +44,7 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import net.sneakycharactermanager.paper.handlers.titles.TitleRegistry;
 import net.sneakycharactermanager.paper.handlers.titles.TitlePermissionRefresh;
 import net.sneakycharactermanager.paper.handlers.titles.TitleSelectionMenu;
+import net.sneakycharactermanager.paper.handlers.voice.TalkingBodies;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.api.character.StorageMode;
 import net.sneakycharactermanager.paper.storage.CharacterBackend;
@@ -301,7 +302,9 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 			}
 			Class<?> pluginIface = Class.forName("de.maxhenkel.voicechat.api.VoicechatPlugin");
 			Class<?> implClass = Class.forName("net.sneakycharactermanager.paper.handlers.voice.SimpleVoiceChatIntegration");
-			Object impl = implClass.getConstructor().newInstance();
+			TalkingBodies bodies = new TalkingBodies(getServer().getServicesManager(), getLogger());
+			getServer().getPluginManager().registerEvents(bodies, this);
+			Object impl = implClass.getConstructor(TalkingBodies.class).newInstance(bodies);
 			svcClass.getMethod("registerPlugin", pluginIface).invoke(service, impl);
 			svcIntegration = impl;
 			getLogger().info("[SVC] Registered SimpleVoiceChatIntegration with voicechat service");

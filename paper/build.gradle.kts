@@ -30,6 +30,8 @@ dependencies {
     // and TitlePermissionRefreshTest compiles against the event API.
     testImplementation("net.luckperms:api:5.4")
     compileOnly("de.maxhenkel.voicechat:voicechat-api:2.5.27")
+    // SimpleVoiceChatIntegrationTest drives the mic listener with mocked SVC events.
+    testImplementation("de.maxhenkel.voicechat:voicechat-api:2.5.27")
     compileOnly("io.github.team-sneakymouse:sneakyutils:${rootProject.extra["sneakyUtilsVersion"]}")
     compileOnly("io.github.team-sneakymouse:sneakyitems:${rootProject.extra["sneakyItemsVersion"]}")
     implementation("com.google.code.gson:gson:2.10.1")
