@@ -7,7 +7,6 @@ import org.bukkit.event.player.PlayerEditBookEvent;
 import org.bukkit.inventory.meta.BookMeta;
 
 import net.sneakycharactermanager.paper.handlers.character.Character;
-import net.sneakycharactermanager.paper.util.ChatUtility;
 
 /**
  * Signs written books with the active character's name instead of the account name.
@@ -22,7 +21,7 @@ public class BookSignListener implements Listener {
         Character character = Character.get(event.getPlayer());
         if (character == null) return;
 
-        String author = authorName(character.getName());
+        String author = authorName(character.getNameUnformatted());
         if (author == null) return;
 
         BookMeta meta = event.getNewBookMeta();
@@ -30,11 +29,10 @@ public class BookSignListener implements Listener {
         event.setNewBookMeta(meta);
     }
 
-    /** Plain-text author from a character name, or null when there is nothing usable. */
-    static String authorName(String characterName) {
-        String plain = ChatUtility.stripFormatting(characterName);
-        if (plain == null) return null;
-        plain = plain.strip();
-        return plain.isEmpty() ? null : plain;
+    /** Trimmed author from an already-unformatted character name, or null when there is nothing usable. */
+    static String authorName(String plainName) {
+        if (plainName == null) return null;
+        String author = plainName.strip();
+        return author.isEmpty() ? null : author;
     }
 }
