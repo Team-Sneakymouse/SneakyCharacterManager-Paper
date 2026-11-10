@@ -10,7 +10,10 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
+import com.destroystokyo.paper.profile.ProfileProperty;
+
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.api.character.SwapResult;
 import net.sneakycharactermanager.paper.storage.DatabaseBackend;
 import net.sneakycharactermanager.paper.util.SkinUtil;
@@ -28,15 +31,18 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  *     are marked as swapping, so nothing can load onto them or save them, and their teleports don't rebuild their
  *     nameplates, until the swap returns. Everything else that could save, load or quit them (autosave, quits,
  *     commands, storage results) runs on the main thread too, so it can't run in between.</li>
- * <li>Close any open container (its cursor item goes back into the inventory, as in vanilla), then check again.</li>
+ * <li>Close any open container (its cursor item goes back into the inventory, as in vanilla), then check again.
+ *     Fire {@code CharacterSkinAppliedEvent} for both skins: a veto refuses the swap before anything moves.</li>
  * <li>Read both bodies' live state and poses, and save X from {@code a} and Y from {@code b}: the one save each
  *     character gets, of exactly the state that moves. No later save can land in the middle (step 2).</li>
  * <li>Teleport first: get both off any vehicle, then each to the other's exact location and facing (no +1 Y). If a
- *     listener refuses either teleport, or a body goes offline, both go back where they stood: {@code REFUSED}.</li>
+ *     listener refuses either teleport, or a body goes offline, both go back where they stood, moving as they were:
+ *     {@code REFUSED}.</li>
  * <li>Exchange what each body wears ({@link Character#exchange}): the holder registry and puppet bookkeeping, with no
  *     call-out in between, so listeners see either the old pairs (during the teleports) or the new ones.</li>
  * <li>Apply each live state to the other body, then the worn skin last (the live signed property, so uniforms move
- *     too and nothing waits on the network), then hand over each character's skin history.</li>
+ *     too and nothing waits on the network), then hand over each character's skin history. Health capped by a
+ *     maximum that the incoming equipment only raises next tick is set again then.</li>
  * <li>Put poses back (SneakyPoses) and re-seat bodies that rode a vehicle, then show the new names on the same
  *     nameplates.</li>
  * <li>Unlock, then write the last-played pointer of each body that now wears its own character, through its owner's
@@ -96,8 +102,12 @@ public final class CharacterSwap {
         closeContainer(a);
         closeContainer(b);
         // A close listener may have done anything; nothing has changed yet, so just stop.
-        if (!online(a) || !online(b) || !Character.isWearing(a, x.getKey()) || !Character.isWearing(b, y.getKey())
-                || blocked(a, b) != null) return SwapResult.REFUSED;
+        if (!ready(a, b, x, y)) return SwapResult.REFUSED;
+        // Skin listeners may veto a skin: ask before anything moves, so a veto refuses the whole swap.
+        ProfileProperty skinX = SkinUtil.wornTextures(a);
+        ProfileProperty skinY = SkinUtil.wornTextures(b);
+        if (skinY != null && !SkinUtil.skinAllowed(a, skinY) || skinX != null && !SkinUtil.skinAllowed(b, skinX)
+                || !ready(a, b, x, y)) return SwapResult.REFUSED;
 
         SneakyCharacterManager plugin = SneakyCharacterManager.getInstance();
         boolean inventories = plugin.getConfig().getBoolean("manageInventories", true);
@@ -118,8 +128,8 @@ public final class CharacterSwap {
         boolean movedB = movedA && b.teleport(stateX.location());
         if (!movedA || !movedB || !online(a) || !online(b)
                 || !Character.isWearing(a, x.getKey()) || !Character.isWearing(b, y.getKey())) {
-            if (movedA && online(a) && !a.teleport(stateX.location())) stuck(a);
-            if (movedB && online(b) && !b.teleport(stateY.location())) stuck(b);
+            if (movedA && online(a)) putBack(a, stateX);
+            if (movedB && online(b)) putBack(b, stateY);
             restore(a, poseX, rideX, b);
             restore(b, poseY, rideY, a);
             return SwapResult.REFUSED;
@@ -128,15 +138,17 @@ public final class CharacterSwap {
         Character.exchange(a, b);
         stateY.apply(a);
         stateX.apply(b);
-        // Skin last, where each body now stands.
-        if (stateY.skin() != null) SkinUtil.applySkinInPlace(a, stateY.skin());
-        if (stateX.skin() != null) SkinUtil.applySkinInPlace(b, stateX.skin());
+        // Skin last, where each body now stands; both were allowed above.
+        if (skinY != null) SkinUtil.putSkin(a, skinY);
+        if (skinX != null) SkinUtil.putSkin(b, skinX);
         plugin.skinStateManager.swapped(a.getUniqueId(), y.getKey(), b.getUniqueId(), x.getKey());
 
         restore(a, poseY, rideY, b);
         restore(b, poseX, rideX, a);
         if (online(a)) plugin.nametagManager.showWornCharacter(a);
         if (online(b)) plugin.nametagManager.showWornCharacter(b);
+        topUpHealthLater(a, y.getKey(), stateY);
+        topUpHealthLater(b, x.getKey(), stateX);
 
         // A quit takes the character off, so this also covers a body that left.
         boolean done = Character.isWearing(a, y.getKey()) && Character.isWearing(b, x.getKey());
@@ -145,9 +157,31 @@ public final class CharacterSwap {
         return done ? SwapResult.SWAPPED : SwapResult.INTERRUPTED;
     }
 
-    private static void stuck(Player body) {
-        SneakyCharacterManager.getInstance().getLogger().warning("A refused swap couldn't move " + body.getName()
-                + " back where it stood; it keeps its own character where it is");
+    /** A refused swap moves {@code body} back where it stood, moving as it was (a teleport stops it). */
+    private static void putBack(Player body, LiveState own) {
+        if (!body.teleport(own.location())) {
+            SneakyCharacterManager.getInstance().getLogger().warning("A refused swap couldn't move " + body.getName()
+                    + " back where it stood; it keeps its own character where it is");
+        }
+        own.restoreMotion(body);
+    }
+
+    /**
+     * If {@code body}'s health had to be capped (the incoming equipment's health bonus arrives on its next tick), sets
+     * it again then, unless the body changed character or its health changed meanwhile.
+     */
+    private static void topUpHealthLater(Player body, CharacterKey key, LiveState state) {
+        if (!online(body) || !state.healthCapped(body)) return;
+        double capped = body.getHealth();
+        Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
+            if (online(body) && Character.isWearing(body, key) && body.getHealth() == capped) state.topUpHealth(body);
+        }, 1);
+    }
+
+    /** Both still online, still wearing what they wore, and still able to swap where they are. */
+    private static boolean ready(Player a, Player b, Character x, Character y) {
+        return online(a) && online(b) && Character.isWearing(a, x.getKey()) && Character.isWearing(b, y.getKey())
+                && blocked(a, b) == null;
     }
 
     /** Puts {@code pose} on {@code body}, or seats it on {@code ride}, where the character it wears now was. */

@@ -135,6 +135,10 @@ class SwapTest {
     final List<Event> fired = new ArrayList<>();
     boolean deferTasks;
     final List<Runnable> deferred = new ArrayList<>();
+    /** Tasks scheduled for a later tick; run with {@link #nextTick}. */
+    final List<Runnable> later = new ArrayList<>();
+    /** Bodies whose skin event a listener cancels. */
+    final Set<Player> skinVetoed = new java.util.HashSet<>();
     /** Runs inside the given event, like a listener; null for none. */
     Consumer<Event> listener;
     PluginManager events;
@@ -174,7 +178,7 @@ class SwapTest {
         Location location;
         Vector velocity = new Vector();
         float fallDistance;
-        double health = 20, absorption;
+        double health = 20, absorption, maxHealth = 20;
         int food = 20, fire, freeze, air = 300, slot;
         float saturation = 5, exhaustion;
         List<PotionEffect> effects = new ArrayList<>();
@@ -206,7 +210,13 @@ class SwapTest {
             when(player.getFallDistance()).thenAnswer(call -> fallDistance);
             doAnswer(call -> { fallDistance = call.getArgument(0); return null; }).when(player).setFallDistance(anyFloat());
             when(player.getHealth()).thenAnswer(call -> health);
-            doAnswer(call -> { health = call.getArgument(0); log("health"); return null; }).when(player).setHealth(anyDouble());
+            doAnswer(call -> {
+                double to = call.getArgument(0);
+                if (to > maxHealth) throw new IllegalArgumentException("above maximum"); // as Paper
+                health = to;
+                log("health");
+                return null;
+            }).when(player).setHealth(anyDouble());
             when(player.getAbsorptionAmount()).thenAnswer(call -> absorption);
             doAnswer(call -> { absorption = call.getArgument(0); return null; }).when(player).setAbsorptionAmount(anyDouble());
             when(player.getFoodLevel()).thenAnswer(call -> food);
@@ -288,8 +298,11 @@ class SwapTest {
         cache = mockStatic(SkinCache.class, CALLS_REAL_METHODS);
         items = mockStatic(InventoryUtility.class);
         // Only the attribute types are replaced; capturing and applying state run for real.
-        attributeTypes = mockStatic(LiveState.class, call -> call.getMethod().getName().equals("attributeTypes")
-                ? attributes : call.callRealMethod());
+        attributeTypes = mockStatic(LiveState.class, call -> switch (call.getMethod().getName()) {
+            case "attributeTypes" -> attributes;
+            case "maxHealth" -> body(call.getArgument(0)).maxHealth;
+            default -> call.callRealMethod();
+        });
         placeholders = mockStatic(PlaceholderUtil.class);
         // A save records which items it saw, so a gameplay write shows whose inventory it holds.
         items.when(() -> InventoryUtility.inventoryToPaperYaml(any(Inventory.class)))
@@ -298,11 +311,15 @@ class SwapTest {
         plugins.when(SneakyCharacterManager::getCharacterDataFolder).thenReturn(data.toFile());
         skins.when(() -> SkinUtil.getTextureUrl(any())).thenReturn("http://textures.minecraft.net/texture/stored");
         skins.when(() -> SkinUtil.wornTextures(any())).thenAnswer(call -> body(call.getArgument(0)).skin);
-        skins.when(() -> SkinUtil.applySkinInPlace(any(), any())).thenAnswer(call -> {
+        skins.when(() -> SkinUtil.skinAllowed(any(), any())).thenAnswer(call -> {
+            body(call.getArgument(0)).log("skinEvent");
+            return !skinVetoed.contains(call.getArgument(0));
+        });
+        skins.when(() -> SkinUtil.putSkin(any(), any())).thenAnswer(call -> {
             Body body = body(call.getArgument(0));
             body.skin = call.getArgument(1);
             body.log("skin");
-            return true;
+            return null;
         });
         config.set("manageInventories", true);
         config.set("manageAttributes", false); // a load that applies attributes needs the server's registry
@@ -324,6 +341,10 @@ class SwapTest {
         when(scheduler.runTask(eq(plugin), any(Runnable.class))).thenAnswer(call -> {
             if (deferTasks) deferred.add(call.getArgument(1));
             else ((Runnable) call.getArgument(1)).run();
+            return null;
+        });
+        when(scheduler.runTaskLater(eq(plugin), any(Runnable.class), anyLong())).thenAnswer(call -> {
+            later.add(call.getArgument(1));
             return null;
         });
         bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
@@ -680,7 +701,7 @@ class SwapTest {
     @Test
     void aBodyKickedMidSwapSavesNothingMoreAndTheSwapIsInterrupted() {
         // A listener of the Driver's skin event kicks the Driver, after the exchange.
-        skins.when(() -> SkinUtil.applySkinInPlace(any(), any())).thenAnswer(call -> {
+        skins.when(() -> SkinUtil.putSkin(any(), any())).thenAnswer(call -> {
             Body body = body(call.getArgument(0));
             body.skin = call.getArgument(1);
             body.log("skin");
@@ -688,7 +709,7 @@ class SwapTest {
                 driver.offline();
                 new ConnectionEventListeners().onPlayerLeave(new PlayerQuitEvent(driver.player, (Component) null, PlayerQuitEvent.QuitReason.KICKED));
             }
-            return true;
+            return null;
         });
 
         assertEquals(SwapResult.INTERRUPTED, Puppets.swap(driver.player, supporter.player));
@@ -807,15 +828,64 @@ class SwapTest {
     }
 
     @Test
-    void aRefusedTeleportPutsBothBack() {
+    void aRefusedTeleportPutsBothBackMovingAsTheyWere() {
         Location driverSpot = driver.location.clone();
+        driver.velocity = new Vector(0.3, -0.5, 0);
+        driver.fallDistance = 4;
         supporter.refuseTeleport = true;
 
         assertEquals(SwapResult.REFUSED, Puppets.swap(driver.player, supporter.player));
 
         assertEquals(driverSpot, driver.location, "the Driver went back");
+        assertEquals(new Vector(0.3, -0.5, 0), driver.velocity, "still moving as before the refused swap");
+        assertEquals(4f, driver.fallDistance);
         assertUnchanged();
-        assertFalse(log.stream().anyMatch(s -> s.startsWith("skin") || s.startsWith("health")), log.toString());
+        assertFalse(log.stream().anyMatch(s -> s.startsWith("skin:") || s.startsWith("health")), log.toString());
+    }
+
+    @Test
+    void aVetoedSkinRefusesTheSwapBeforeAnythingMoves() {
+        Location driverSpot = driver.location.clone();
+        skinVetoed.add(supporter.player); // a listener refuses main's skin on the Supporter
+
+        assertEquals(SwapResult.REFUSED, Puppets.swap(driver.player, supporter.player));
+
+        assertEquals(driverSpot, driver.location);
+        assertFalse(log.stream().anyMatch(s -> s.startsWith("teleport") || s.startsWith("skin:")), log.toString());
+        assertEquals(List.of(), writes, "refused before anything was saved");
+        assertUnchanged();
+    }
+
+    @Test
+    void healthAboveTheNewBodysMaximumIsToppedUpOnceItsEquipmentCounts() {
+        driver.maxHealth = 30; // main's equipment gives it 30 maximum health
+        driver.health = 28;
+
+        assertEquals(SwapResult.SWAPPED, Puppets.swap(driver.player, supporter.player));
+        assertEquals(20, supporter.health, "capped by the Supporter's maximum this tick");
+
+        supporter.maxHealth = 30; // the equipment's bonus reaches the body on its next tick
+        nextTick();
+        assertEquals(28, supporter.health);
+    }
+
+    @Test
+    void theTopUpLeavesHealthThatChangedOrABodyThatSwitchedAlone() {
+        driver.maxHealth = 30;
+        driver.health = 28;
+        assertEquals(SwapResult.SWAPPED, Puppets.swap(driver.player, supporter.player));
+        supporter.maxHealth = 30;
+        supporter.health = 12; // hurt during that tick
+
+        nextTick();
+
+        assertEquals(12, supporter.health);
+    }
+
+    private void nextTick() {
+        List<Runnable> due = new ArrayList<>(later);
+        later.clear();
+        due.forEach(Runnable::run);
     }
 
     private void assertUnchanged() {

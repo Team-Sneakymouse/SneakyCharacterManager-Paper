@@ -55,7 +55,8 @@ public class SkinUtil {
     }
 
 	public static void applySkin(Player player, ProfileProperty profileProperty) {
-		if (!applySkinInPlace(player, profileProperty)) return;
+		if (!skinAllowed(player, profileProperty)) return;
+		putSkin(player, profileProperty);
 
 		// Remove player from vehicle and teleport them up slightly to prevent them from getting stuck
 		Entity vehicle = player.getVehicle();
@@ -64,16 +65,22 @@ public class SkinUtil {
 	}
 
 	/**
-	 * Puts {@code profileProperty} on {@code player} where it stands: fires {@link CharacterSkinAppliedEvent}, then
-	 * sets the profile, without {@link #applySkin}'s dismount and +1 Y teleport. For a swap, whose destination is
-	 * where another body stood. Returns false if a listener cancelled it.
+	 * Fires {@link CharacterSkinAppliedEvent} for putting {@code profileProperty} on {@code player}; false if a
+	 * listener cancelled it. {@link #applySkin} asks this first. A swap asks it for both bodies before anything moves,
+	 * so a veto refuses the whole swap, and puts the skins on later with {@link #putSkin}.
 	 */
-	public static boolean applySkinInPlace(Player player, ProfileProperty profileProperty) {
+	public static boolean skinAllowed(Player player, ProfileProperty profileProperty) {
 		CharacterSkinAppliedEvent event = new CharacterSkinAppliedEvent(player, profileProperty);
 		Bukkit.getPluginManager().callEvent(event);
-		if (event.isCancelled()) return false;
+		return !event.isCancelled();
+	}
+
+	/**
+	 * Sets {@code player}'s profile to wear {@code profileProperty}, where it stands: no event (see
+	 * {@link #skinAllowed}), and none of {@link #applySkin}'s dismount and +1 Y teleport.
+	 */
+	public static void putSkin(Player player, ProfileProperty profileProperty) {
 		player.setPlayerProfile(handleCachedSkin(player, profileProperty));
-		return true;
 	}
 
 	/** The signed {@code textures} property {@code player} wears right now, or null if it wears none. */

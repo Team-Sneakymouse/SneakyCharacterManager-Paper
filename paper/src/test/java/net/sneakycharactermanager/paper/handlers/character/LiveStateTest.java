@@ -46,8 +46,11 @@ class LiveStateTest {
 
     @BeforeEach
     void setUp() {
-        types = mockStatic(LiveState.class, call -> call.getMethod().getName().equals("attributeTypes")
-                ? attributes : call.callRealMethod());
+        types = mockStatic(LiveState.class, call -> switch (call.getMethod().getName()) {
+            case "attributeTypes" -> attributes;
+            case "maxHealth" -> 20.0;
+            default -> call.callRealMethod();
+        });
         skins = mockStatic(SkinUtil.class);
         scaleA = attribute(0.8, buffA, armourA);
         scaleB = attribute(1.1, buffB, armourB);

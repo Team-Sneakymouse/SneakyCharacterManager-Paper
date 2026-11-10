@@ -19,10 +19,6 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
-import com.destroystokyo.paper.profile.ProfileProperty;
-
-import net.sneakycharactermanager.paper.util.SkinUtil;
-
 /**
  * A worn character's live state on its body, as a swap moves it to the other body: everything onlookers or the
  * character's player would notice, read straight off the body. Item and effect objects are Bukkit's own copies and
@@ -34,13 +30,12 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  * @param inventory    the 41 inventory slots (main, armour, off hand), or null when SCM doesn't manage inventories
  * @param cursor       the item on the cursor, or null when SCM doesn't manage inventories
  * @param craftingGrid the 2x2 crafting grid, or null when SCM doesn't manage inventories or no grid was open
- * @param skin         the signed {@code textures} property worn now (a uniform included), or null if none
  */
 @ApiStatus.Internal
 public record LiveState(Location location, Vector velocity, float fallDistance, double health, double absorption,
         int foodLevel, float saturation, float exhaustion, Collection<PotionEffect> effects, int fireTicks,
         int freezeTicks, int remainingAir, List<AttributeState> attributes, int heldSlot, @Nullable ItemStack[] inventory,
-        @Nullable ItemStack cursor, @Nullable ItemStack[] craftingGrid, @Nullable ProfileProperty skin) {
+        @Nullable ItemStack cursor, @Nullable ItemStack[] craftingGrid) {
 
     /**
      * One attribute: its base value, and the modifiers that move with it, or null if only the base moves.
@@ -76,15 +71,15 @@ public record LiveState(Location location, Vector velocity, float fallDistance, 
                 attributes, body.getInventory().getHeldItemSlot(),
                 inventories ? body.getInventory().getContents() : null,
                 inventories ? body.getItemOnCursor() : null,
-                inventories ? craftingGrid(body) : null,
-                SkinUtil.wornTextures(body));
+                inventories ? craftingGrid(body) : null);
     }
 
     /**
      * Puts this state on {@code body}, which the swap already teleported to {@link #location()}: everything except
-     * the location and the skin (the swap puts the skin on last). Attributes go first, then effects, so maximum health
-     * and absorption are right before health and absorption are set; velocity and fall distance go after the
-     * teleport, which resets them.
+     * the location and the skin (the swap puts the skin on last). Attributes, inventory and effects go first, so
+     * maximum health and absorption are as right as they can be this tick before health and absorption are set;
+     * velocity and fall distance go after the teleport, which resets them. Bonuses from the incoming equipment only
+     * reach the body on its next tick, so health above the body's maximum now is capped ({@link #topUpHealth}).
      */
     void apply(Player body) {
         for (AttributeState state : attributes) {
@@ -97,6 +92,9 @@ public record LiveState(Location location, Vector velocity, float fallDistance, 
             }
             for (AttributeModifier modifier : state.modifiers()) instance.addModifier(modifier);
         }
+        if (inventory != null) body.getInventory().setContents(inventory);
+        if (cursor != null) body.setItemOnCursor(cursor);
+        if (craftingGrid != null && ownGrid(body) instanceof CraftingInventory grid) grid.setMatrix(craftingGrid);
         body.clearActivePotionEffects();
         body.addPotionEffects(effects);
         setHealth(body, health);
@@ -108,11 +106,31 @@ public record LiveState(Location location, Vector velocity, float fallDistance, 
         body.setFreezeTicks(freezeTicks);
         body.setRemainingAir(remainingAir);
         body.setFallDistance(fallDistance);
-        if (inventory != null) body.getInventory().setContents(inventory);
-        if (cursor != null) body.setItemOnCursor(cursor);
-        if (craftingGrid != null && ownGrid(body) instanceof CraftingInventory grid) grid.setMatrix(craftingGrid);
         body.getInventory().setHeldItemSlot(heldSlot);
         body.setVelocity(velocity);
+    }
+
+    /** True if {@link #apply} had to cap health below this state's, so {@link #topUpHealth} has work to do. */
+    boolean healthCapped(Player body) {
+        return body.getHealth() < health;
+    }
+
+    /** Sets health and absorption again, once the incoming equipment's bonuses have reached the body. */
+    void topUpHealth(Player body) {
+        setHealth(body, health);
+        body.setAbsorptionAmount(absorption);
+    }
+
+    /** Velocity and fall distance again, after a refused swap teleported the body back (a teleport resets both). */
+    void restoreMotion(Player body) {
+        body.setVelocity(velocity);
+        body.setFallDistance(fallDistance);
+    }
+
+    /** {@code body}'s maximum health now. A seam: tests without a server registry replace it. */
+    public static double maxHealth(Player body) {
+        AttributeInstance maximum = body.getAttribute(Attribute.MAX_HEALTH);
+        return maximum == null ? body.getHealth() : maximum.getValue();
     }
 
     private static @Nullable ItemStack[] craftingGrid(Player body) {
@@ -136,12 +154,6 @@ public record LiveState(Location location, Vector velocity, float fallDistance, 
     }
 
     private static void setHealth(Player body, double health) {
-        try {
-            body.setHealth(health);
-        } catch (IllegalArgumentException aboveMaximum) {
-            // An effect or attribute the body refused left its maximum lower than the character's health.
-            AttributeInstance maximum = body.getAttribute(Attribute.MAX_HEALTH);
-            if (maximum != null) body.setHealth(Math.min(health, maximum.getValue()));
-        }
+        body.setHealth(Math.min(health, maxHealth(body)));
     }
 }
