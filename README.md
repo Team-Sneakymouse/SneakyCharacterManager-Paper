@@ -98,6 +98,10 @@ The gameplay file path didn't change. Until now the owner was always the wearer,
 - A character with no gameplay file starts from fresh defaults (world spawn, empty inventory). The one exception is the owner's very first character on this server: it still starts from the owner's live inventory and location, as before. A character worn by someone else never copies its wearer.
 - Gameplay files are created when a character is loaded, not when a character list arrives. `/charadmin` can only edit the inventory of a character that has been loaded at least once on this server.
 - A skin that resolves after its wearer switched to another character is still saved to the character it was requested for. It is only put on the body if the body still wears that character.
+- The same goes for all work that finishes later (async results, menus and dialogs left open, chat buttons): it uses the character key captured when it started, and only touches the body if `Character.isWearing(body, key)` is still true. This covers cached uniforms, `/title`, and `/titlegrant`, which grants the permission but only equips the title on the character the grant started for.
+- A newer skin on a character drops older queued skin jobs for it and other players' undo history for it, so nothing older can overwrite it later.
+- Loading a character sees its latest save even before that save reaches the disk, whether the same player reloads it or another player picks it up.
+- `/char confirm` refuses to delete a character someone is playing, and `/skin revert` on a borrowed character uses its owner's Mojang skin.
 
 The storage mode is public too: `StorageMode.current()` (same package) returns `LEGACY` or `SNEAKYDB`.
 

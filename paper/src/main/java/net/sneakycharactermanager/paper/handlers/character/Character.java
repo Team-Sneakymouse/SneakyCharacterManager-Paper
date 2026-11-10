@@ -108,7 +108,8 @@ public class Character {
 		if (current != null) current.save();
 
 		File characterFile = GameplayFile.of(this.key);
-		this.firstLoad = !characterFile.exists();
+		boolean hasFile = GameplayFile.exists(characterFile); // sees the save just queued above, too
+		this.firstLoad = !hasFile;
 		// Only the owner's very first character on this server starts from the body's live state, as before
 		// files moved to load time. Anyone else starts fresh: a borrowed character must not copy its wearer.
 		boolean seedFromBody = this.firstLoad && current == null
@@ -119,11 +120,11 @@ public class Character {
 		if (CharacterLoader.loadCharacter(this)) {
 			SneakyCharacterManager.getInstance().skinQueue.updatePriority(this.player, this.key, SkinQueue.PRIO_LOAD);
 			YamlConfiguration config;
-			if (characterFile.exists()) {
-				config = YamlConfiguration.loadConfiguration(characterFile);
+			if (hasFile) {
+				config = GameplayFile.read(characterFile);
 			} else {
 				config = seedFromBody ? snapshot() : GameplayFile.fresh(this.player.getInventory().getSize());
-				GameplayFile.create(characterFile, config);
+				GameplayFile.write(characterFile, config.saveToString());
 			}
 
 			if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageLocations", true)) {
@@ -167,6 +168,8 @@ public class Character {
 			}
 
 			characterMap.put(this.player, this);
+			// Only now does Character.get(body) return this character, so the plate shows its title, not the previous one's.
+			SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(this.player, getDisplayName());
 			ConsoleCommandCharDisable.playerCharEnable(this.player.getUniqueId().toString());
 		}
 
@@ -458,9 +461,7 @@ public class Character {
 	/** Writes the wearer's live location, inventory and attributes to this character's (the owner's) file. */
 	public void save() {
 		if (this.player == null) return;
-		File characterFile = GameplayFile.of(this.key);
-		characterFile.getParentFile().mkdirs();
-		SneakyCharacterManager.getInstance().writeFile(characterFile.toPath(), snapshot().saveToString());
+		GameplayFile.write(GameplayFile.of(this.key), snapshot().saveToString());
 	}
 
 	/** The wearer's live gameplay state, in the gameplay file's format. */
@@ -530,7 +531,13 @@ public class Character {
 		return characterMap.containsKey(player);
 	}
 
-	/** True if {@code body} is wearing exactly this character (same owner and ID) right now. */
+	/**
+	 * True if {@code body} is wearing exactly this character (same owner and ID) right now.
+	 *
+	 * <p>This is the guard for deferred work: anything that finishes later (async result, open menu or dialog, chat
+	 * button) keeps the key it started for, writes only to that key, and touches the body or its worn character only
+	 * while this returns true. An offline body wears nothing.
+	 */
 	public static boolean isWearing(Player body, CharacterKey key) {
 		Character worn = characterMap.get(body);
 		return worn != null && worn.key.equals(key);

@@ -48,6 +48,8 @@ public class CharacterLoader {
 					.latestForCharacter(player.getUniqueId(), character.getKey());
 			if (existingState != null) {
 				SneakyCharacterManager.getInstance().getLogger().info("[SkinState] Restoring session state for character: " + character.getName());
+				// The restored state wins: queued preloads of the record skin must not paint over it later.
+				SneakyCharacterManager.getInstance().skinQueue.removePendingForCharacter(player, character.getKey());
 				ProfileProperty prop = new ProfileProperty("textures", existingState.texture(), existingState.signature());
 				SkinUtil.applySkin(player, prop);
 				SneakyCharacterManager.getInstance().skinStateManager.setCurrent(player.getUniqueId(), existingState.id());
@@ -64,8 +66,6 @@ public class CharacterLoader {
 				SkinApplyService.requestSkin(player, character.getKey(), url, character.isSlim(),
 						SkinQueue.PRIO_LOAD, SkinApplyContext.defaults());
 			}
-
-			SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
 
 			return true;
 		}
@@ -124,6 +124,7 @@ public class CharacterLoader {
 	}
 
 	public static void updateSkin(Player player, CharacterKey key, String url, Boolean slim, @Nullable String skinStateName, int priority) {
+		SneakyCharacterManager.getInstance().skinQueue.supersede(player, key);
 		String sourceUrl = SkinUtil.isMojangTextureUrl(url) ? SkinUtil.normalizeMojangTextureUrl(url) : url;
 		SkinApplyContext ctx = skinStateName != null && !skinStateName.isBlank()
 				? SkinApplyContext.withSkinStateLabel(skinStateName.trim())

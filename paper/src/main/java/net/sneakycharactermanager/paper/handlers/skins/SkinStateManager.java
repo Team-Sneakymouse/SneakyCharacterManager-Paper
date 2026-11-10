@@ -82,6 +82,7 @@ public final class SkinStateManager {
         SkinState state = new SkinState(id, name, texture, signature, characterKey, proxyTextureUrl, proxyTexture, proxySignature, previousId, null);
         states.add(state);
         currentIdByPlayer.put(uuid, id);
+        if (!isUniform) recordChanged(uuid, characterKey);
         return state;
     }
 
@@ -148,15 +149,28 @@ public final class SkinStateManager {
     }
 
     /**
-     * Drops this body's history for one character. Used when that character's record got a newer skin while the body
-     * wasn't wearing it, so a later reload falls back to the record instead of restoring an older session state.
+     * Drops every body's history for one character. Used when that character's record got a newer skin that no body
+     * is showing (it finished after its requester switched away), so the next load uses the record instead of
+     * restoring an older session state.
      */
-    public void forgetCharacter(UUID playerUUID, CharacterKey characterKey) {
-        List<SkinState> states = statesByPlayer.get(playerUUID);
+    public void forgetCharacter(CharacterKey characterKey) {
+        for (UUID body : statesByPlayer.keySet()) forget(body, characterKey);
+    }
+
+    /**
+     * {@code body} just changed this character's record (or applied it): other bodies' history for it is now older
+     * than the record, so it is dropped. History stays per body (D3), but must never restore a stale skin.
+     */
+    public void recordChanged(UUID body, CharacterKey characterKey) {
+        for (UUID other : statesByPlayer.keySet()) if (!other.equals(body)) forget(other, characterKey);
+    }
+
+    private void forget(UUID body, CharacterKey characterKey) {
+        List<SkinState> states = statesByPlayer.get(body);
         if (states == null) return;
         states.removeIf(s -> characterKey.equals(s.characterKey()));
-        Integer current = currentIdByPlayer.get(playerUUID);
-        if (current != null && get(playerUUID, current) == null) currentIdByPlayer.remove(playerUUID);
+        Integer current = currentIdByPlayer.get(body);
+        if (current != null && get(body, current) == null) currentIdByPlayer.remove(body);
     }
 
     public void clearPlayer(UUID playerUUID) {

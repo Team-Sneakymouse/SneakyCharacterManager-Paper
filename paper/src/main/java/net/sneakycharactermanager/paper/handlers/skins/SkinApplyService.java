@@ -138,7 +138,7 @@ public final class SkinApplyService {
             } else if (context.updateProxyCharacter()) {
                 // The player switched away before the skin resolved. It still belongs to the requested character:
                 // save it there (below), and keep this body's older session state from overriding it on reload.
-                SneakyCharacterManager.getInstance().skinStateManager.forgetCharacter(player.getUniqueId(), characterKey);
+                SneakyCharacterManager.getInstance().skinStateManager.forgetCharacter(characterKey);
             }
 
             if (context.updateProxyCharacter()) {

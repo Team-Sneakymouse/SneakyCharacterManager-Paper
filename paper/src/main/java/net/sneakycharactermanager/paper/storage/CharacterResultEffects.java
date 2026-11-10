@@ -55,7 +55,7 @@ public final class CharacterResultEffects {
 			}
 
 			if (openGUI) {
-				SneakyCharacterManager.getInstance().selectionMenu.updateInventory(actualRequester, characters);
+				SneakyCharacterManager.getInstance().selectionMenu.updateInventory(actualRequester, playerUUID, characters);
 				return;
 			}
 

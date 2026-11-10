@@ -63,9 +63,12 @@ class CharacterOwnerFileTest {
         config.set("manageInventories", false);
         when(plugin.getConfig()).thenReturn(config);
         when(plugin.writeFile(any(), anyString())).thenAnswer(call -> {
-            writes.add(call.getArgument(0));
+            Path target = call.getArgument(0);
+            writes.add(target);
+            Files.writeString(target, call.getArgument(1)); // the real writer lands it later; this one at once
             return CompletableFuture.completedFuture(null);
         });
+        plugin.nametagManager = mock(net.sneakycharactermanager.paper.handlers.nametags.NametagManager.class);
         plugin.skinQueue = mock(SkinQueue.class);
         World world = mock(World.class);
         when(world.getSpawnLocation()).thenReturn(new Location(null, 7, 70, 7));
@@ -130,7 +133,7 @@ class CharacterOwnerFileTest {
         verify(wearer, never()).getLocation(); // no snapshot of the wearer
         assertFalse(data.resolve(wearerId.toString()).toFile().exists());
         verify(wearer).teleport(new Location(null, 7, 71, 7));
-        assertEquals(List.of(), writes);
+        assertEquals(List.of(created.toPath()), writes); // only the owner's new file is written
     }
 
     /** Bug 3, offline owner: building the owner's list must not touch a player or the disk. */

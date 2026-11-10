@@ -23,6 +23,7 @@ import io.papermc.paper.registry.data.dialog.type.DialogType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickCallback;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.titles.TitlePermissionGranter;
 import net.sneakycharactermanager.paper.handlers.titles.TitleRegistry;
@@ -67,11 +68,12 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 			return false;
 		}
 
-		openForm(admin, target.getUniqueId(), "");
+		openForm(admin, target.getUniqueId(), character.getKey(), "");
 		return true;
 	}
 
-	private void openForm(Player admin, UUID targetId, String initialDisplay) {
+	/** {@code character} is what the target wore when the admin started; the title is only equipped on that. */
+	private void openForm(Player admin, UUID targetId, CharacterKey character, String initialDisplay) {
 		Player target = Bukkit.getPlayer(targetId);
 		String targetName = target == null ? "player" : target.getName();
 
@@ -86,7 +88,7 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 						if (adminPlayer == null) {
 							return;
 						}
-						handleSubmit(adminPlayer, targetId, rawDisplay);
+						handleSubmit(adminPlayer, targetId, character, rawDisplay);
 					});
 				}, once)).build();
 
@@ -111,11 +113,18 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 		admin.showDialog(dialog);
 	}
 
+	/** Character each pending grant should be equipped on, keyed by admin and target (the round trip carries no key). */
+	private static final java.util.Map<String, CharacterKey> PENDING_EQUIPS = new java.util.concurrent.ConcurrentHashMap<>();
+
+	private static String pendingKey(String admin, String target) {
+		return admin + "|" + target;
+	}
+
 	static String titleKeyFromDisplay(String display) {
 		return TitleRegistry.normalizeTitleKey(display);
 	}
 
-	private void handleSubmit(Player admin, UUID targetId, String rawDisplay) {
+	private void handleSubmit(Player admin, UUID targetId, CharacterKey character, String rawDisplay) {
 		String code = titleKeyFromDisplay(rawDisplay);
 		String display = rawDisplay == null ? "" : rawDisplay.trim();
 		String enteredDisplay = rawDisplay == null ? "" : rawDisplay;
@@ -123,13 +132,13 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 		if (code.isEmpty()) {
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
 					"&cDisplay text must contain letters or numbers to generate a title key."));
-			openForm(admin, targetId, enteredDisplay);
+			openForm(admin, targetId, character, enteredDisplay);
 			return;
 		}
 
 		if (display.isEmpty()) {
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent("&cDisplay text cannot be empty."));
-			openForm(admin, targetId, enteredDisplay);
+			openForm(admin, targetId, character, enteredDisplay);
 			return;
 		}
 
@@ -139,9 +148,9 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 			return;
 		}
 
-		if (Character.get(target) == null) {
+		if (!Character.isWearing(target, character)) {
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
-					"&cThat player is no longer on a character."));
+					"&cThat player is no longer on the same character. Run /titlegrant again."));
 			return;
 		}
 
@@ -150,6 +159,7 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 			return;
 		}
 
+		PENDING_EQUIPS.put(pendingKey(admin.getUniqueId().toString(), targetId.toString()), character);
 		ProxyMessagingUtil.sendByteArray(admin, "createTitle",
 				admin.getUniqueId().toString(),
 				targetId.toString(),
@@ -165,6 +175,7 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 			String code,
 			String display,
 			String error) {
+		CharacterKey character = PENDING_EQUIPS.remove(pendingKey(adminUUID, targetUUID)); // also when the admin left
 		Player admin = Bukkit.getPlayer(UUID.fromString(adminUUID));
 		if (admin == null) {
 			return;
@@ -177,8 +188,7 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 				default -> "&cCould not create title &b" + code + "&c.";
 			};
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(reason));
-			CommandTitleGrant command = new CommandTitleGrant();
-			command.openForm(admin, targetId, display);
+			if (character != null) new CommandTitleGrant().openForm(admin, targetId, character, display);
 			return;
 		}
 
@@ -190,13 +200,8 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 			return;
 		}
 
-		Character character = Character.get(target);
-		if (character == null) {
-			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
-					"&aResolved title &b" + display + "&a (&b" + code
-							+ "&a), but the player is no longer on a character."));
-			return;
-		}
+		// Equip only on the character the grant started for; the permission itself belongs to the account (D4).
+		boolean equip = character != null && Character.isWearing(target, character);
 
 		if (!TitlePermissionGranter.isAvailable()) {
 			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
@@ -213,7 +218,13 @@ public class CommandTitleGrant extends CommandBaseAdmin {
 			return;
 		}
 
-		TitleSelectionMenu.applyTitle(target, character, code);
+		if (!equip) {
+			admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
+					"&aResolved title &b" + display + "&a (&b" + code + "&a) and granted it to &b" + target.getName()
+							+ "&a, but did not equip it: they switched character."));
+			return;
+		}
+		TitleSelectionMenu.applyTitle(target, Character.get(target), code);
 
 		admin.sendMessage(TextUtility.INSTANCE.convertToComponent(
 				"&aResolved title &b" + display + "&a (&b" + code + "&a), granted to &b"

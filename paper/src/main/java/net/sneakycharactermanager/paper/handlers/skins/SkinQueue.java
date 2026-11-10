@@ -186,6 +186,21 @@ public class SkinQueue extends BukkitRunnable {
         });
     }
 
+    /**
+     * A new explicit skin change for this character supersedes this requester's older queued base-skin jobs for it
+     * (preloads, the load job, an earlier /skin), so none of them can finish later and overwrite the new skin.
+     */
+    public void supersede(Player requester, CharacterKey key) {
+        if (requester == null || key == null) return;
+        queue.values().stream().flatMap(List::stream).filter(data -> isFor(data, requester, key)
+                && data.getUniformHash() == null && data.getPriority() <= PRIO_SKIN).toList().forEach(this::remove);
+    }
+
+    /** True while this job is queued; a removed job must not apply its result. */
+    public boolean contains(SkinData data) {
+        return queue.values().stream().anyMatch(list -> list.contains(data));
+    }
+
     /** Raises this requester's base-skin jobs for one character (owner + ID), e.g. when it is being loaded. */
     public synchronized void updatePriority(Player requester, CharacterKey key, int newPriority) {
         queue.values().stream().flatMap(List::stream)

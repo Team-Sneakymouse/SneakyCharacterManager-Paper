@@ -286,8 +286,8 @@ public class CharacterSelectionMenu implements Listener {
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
 
             if (characterUUID == null) return;
-            if (Character.isWearing(this.player, CharacterKey.of(playerUUID, characterUUID))) {
-                this.player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aYou cannot delete the character that you are currently playing."));
+            if (Character.wearerOf(CharacterKey.of(playerUUID, characterUUID)) != null) {
+                this.player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aYou cannot delete a character that is being played."));
                 return;
             }
 
@@ -315,14 +315,17 @@ public class CharacterSelectionMenu implements Listener {
         private OfflinePlayer target;
         private String characterUUID;
         private ItemStack[] contents;
+        /** The stored inventory this editor was opened with; saving is refused if the file has changed since. */
+        private final String storedInventory;
 
         private Inventory inventory;
 
-        public AdminInventoryHolder(Player opener, OfflinePlayer target, String characterUUID, ItemStack[] contents){
+        public AdminInventoryHolder(Player opener, OfflinePlayer target, String characterUUID, ItemStack[] contents, String storedInventory){
             this.opener = opener;
             this.target = target;
             this.characterUUID = characterUUID;
             this.contents = contents;
+            this.storedInventory = storedInventory;
 
             createInventory();
         }
@@ -347,16 +350,21 @@ public class CharacterSelectionMenu implements Listener {
 
             String encoded = InventoryUtility.inventoryToPaperYaml(dummyItems);
 
+            // Read and write through GameplayFile (main thread): it sees saves still queued, and a load right after this
+            // sees the edit before it reaches the disk.
             File characterFile = GameplayFile.of(key);
-            SneakyCharacterManager.getInstance().updateFile(characterFile.toPath(), current -> {
-                YamlConfiguration config = new YamlConfiguration();
-                config.loadFromString(current);
-                config.set("inventory", encoded);
-                return config.saveToString();
-            }).thenRun(() -> Bukkit.getScheduler().runTask(
-                    SneakyCharacterManager.getInstance(),
-                    () -> this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&eSaved character inventory!"))
-            ));
+            String updated;
+            try {
+                updated = editedInventory(GameplayFile.read(characterFile).saveToString(), this.storedInventory, encoded);
+            } catch (org.bukkit.configuration.InvalidConfigurationException e) {
+                updated = null;
+            }
+            if (updated == null) {
+                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Inventory not saved! &eThe character was played while you were editing."));
+                return;
+            }
+            GameplayFile.write(characterFile, updated);
+            this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&eSaved character inventory!"));
         }
 
         @Override
@@ -407,7 +415,7 @@ public class CharacterSelectionMenu implements Listener {
             
             Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
                 File characterFile = GameplayFile.of(key);
-                YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
+                YamlConfiguration config = GameplayFile.read(characterFile);
 
                 ItemStack[] inventoryContents;
                 try {
@@ -418,7 +426,7 @@ public class CharacterSelectionMenu implements Listener {
                     inventoryContents = new ItemStack[0];
                 }
 
-                AdminInventoryHolder holder = new AdminInventoryHolder(this.opener, (this.player == null ? this.offlinePlayer : this.player), characterUUID, inventoryContents);
+                AdminInventoryHolder holder = new AdminInventoryHolder(this.opener, (this.player == null ? this.offlinePlayer : this.player), characterUUID, inventoryContents, config.getString("inventory"));
                 this.opener.openInventory(holder.getInventory());
 
             }, 2);
@@ -427,13 +435,26 @@ public class CharacterSelectionMenu implements Listener {
     }
 
     /**
+     * The gameplay file with the admin's edited inventory, or null if the stored inventory changed since the editor
+     * opened (the character was played meanwhile), so the edit would overwrite newer state.
+     */
+    static String editedInventory(String currentFile, String inventoryWhenOpened, String editedInventory)
+            throws org.bukkit.configuration.InvalidConfigurationException {
+        YamlConfiguration config = new YamlConfiguration();
+        config.loadFromString(currentFile);
+        if (!java.util.Objects.equals(config.getString("inventory"), inventoryWhenOpened)) return null;
+        config.set("inventory", editedInventory);
+        return config.saveToString();
+    }
+
+    /**
      * Why an admin can't edit this character's stored inventory right now, or null if they can. A character someone
-     * wears is live, not stored; a character that has never been loaded has no gameplay file yet, and creating one
-     * here would skip its fresh defaults (spawn location, empty inventory) on first load.
+     * wears is live, not stored; a character that has never been loaded (no file, written or queued) would skip its
+     * fresh defaults (spawn location, empty inventory) on first load if the editor created one.
      */
     static String inventoryEditRefusal(CharacterKey key) {
         if (Character.wearerOf(key) != null) return "Someone is currently on this character. Use direct inventory editing instead.";
-        if (!GameplayFile.of(key).exists()) return "This character has never been loaded on this server, so it has no inventory yet.";
+        if (!GameplayFile.exists(GameplayFile.of(key))) return "This character has never been loaded on this server, so it has no inventory yet.";
         return null;
     }
 
@@ -468,13 +489,15 @@ public class CharacterSelectionMenu implements Listener {
         }
     }
 
-    public void updateInventory(String playerUUID, List<Character> characters) {
+    public void updateInventory(String playerUUID, String ownerUUID, List<Character> characters) {
         if (!menuExists(playerUUID)) {
             SneakyCharacterManager.getInstance().getLogger().warning("Attempted to update invalid inventory!");
             return;
         }
         CharacterMenuHolder holder = activeMenus.get(playerUUID);
         if (holder == null) return; //Also should be possible
+        // A late list for a menu the requester has since closed must not fill another owner's menu.
+        if (!holder.playerUUID.equals(ownerUUID)) return;
         holder.receivedCharacterList(characters);
 
         if (holder.getClass().equals(CharacterMenuHolder.class)) {

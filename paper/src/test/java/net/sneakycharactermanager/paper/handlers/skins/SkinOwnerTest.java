@@ -100,7 +100,7 @@ class SkinOwnerTest {
         cache.verify(() -> SkinCache.updateCharacterSkin(any(), eq(wearersOwn), anyString(), anyBoolean()), never());
         skins.verify(() -> SkinUtil.applySkin(any(), any()), never());
         verify(switchedTo, never()).setSkin(anyString());
-        verify(plugin.skinStateManager).forgetCharacter(wearerId, borrowed);
+        verify(plugin.skinStateManager).forgetCharacter(borrowed);
     }
 
     @Test
@@ -191,7 +191,7 @@ class SkinOwnerTest {
 
         skins.verify(() -> SkinUtil.applySkin(any(), any()), never());
         verify(switchedTo, never()).setSkin(anyString());
-        verify(plugin.skinStateManager).forgetCharacter(wearerId, borrowed);
+        verify(plugin.skinStateManager).forgetCharacter(borrowed);
         cache.verify(() -> SkinCache.updateCharacterSkin(wearer, borrowed, "skin-id", false));
         assertFalse(plugin.skinQueue.getQueue().get(SkinQueue.PRIO_SKIN).contains(job));
     }
@@ -203,7 +203,7 @@ class SkinOwnerTest {
         assertNull(history.latestForCharacter(wearerId, borrowed));
         assertNotNull(history.latestForCharacter(wearerId, wearersOwn));
 
-        history.forgetCharacter(wearerId, wearersOwn);
+        history.forgetCharacter(wearersOwn);
         assertNull(history.latestForCharacter(wearerId, wearersOwn));
         assertNull(history.current(wearerId));
     }

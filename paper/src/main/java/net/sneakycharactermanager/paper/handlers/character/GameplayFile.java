@@ -2,24 +2,33 @@ package net.sneakycharactermanager.paper.handlers.character;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
-import net.sneakycharactermanager.common.io.AtomicFiles;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.character.CharacterKey;
 
 /**
  * A character's Paper-local gameplay state (location, inventory, attributes) lives in
  * {@code characterdata/<owner>/<characterId>.yml}. It is keyed by the owner, never by whoever wears the character.
+ *
+ * <p>Writes go through the plugin's async writer. Until a write lands, {@link #read} and {@link #exists} see the
+ * newest queued content, so loading a character right after it was saved (the same body reloading it, or another
+ * body picking it up) never reads an older file.
  */
 final class GameplayFile {
+
+    /** Newest content queued for each file and not yet on disk. */
+    private static final Map<Path, String> unwritten = new ConcurrentHashMap<>();
 
     private GameplayFile() {}
 
@@ -32,22 +41,36 @@ final class GameplayFile {
         return ownerDirectory(key).exists();
     }
 
+    static boolean exists(File file) {
+        return unwritten.containsKey(path(file)) || file.exists();
+    }
+
+    static YamlConfiguration read(File file) {
+        String pending = unwritten.get(path(file));
+        if (pending == null) return YamlConfiguration.loadConfiguration(file);
+        YamlConfiguration config = new YamlConfiguration();
+        try {
+            config.loadFromString(pending);
+            return config;
+        } catch (InvalidConfigurationException e) {
+            return YamlConfiguration.loadConfiguration(file);
+        }
+    }
+
+    static void write(File file, String content) {
+        file.getParentFile().mkdirs();
+        Path path = path(file);
+        unwritten.put(path, content);
+        SneakyCharacterManager.getInstance().writeFile(path, content)
+                .whenComplete((ignored, failure) -> unwritten.remove(path, content));
+    }
+
     /** A new character's state: world spawn and an empty inventory. */
     static YamlConfiguration fresh(int inventorySize) {
         YamlConfiguration config = new YamlConfiguration();
         config.set("location", Bukkit.getWorlds().get(0).getSpawnLocation());
         config.set("inventory", emptyInventory(inventorySize));
         return config;
-    }
-
-    /** Writes a new file synchronously, so a quick reload can't miss it and start over. */
-    static void create(File file, YamlConfiguration config) {
-        file.getParentFile().mkdirs();
-        try {
-            AtomicFiles.writeUtf8(file.toPath(), config.saveToString());
-        } catch (IOException e) {
-            SneakyCharacterManager.getInstance().getLogger().severe("Could not create " + file + ": " + e.getMessage());
-        }
     }
 
     static String emptyInventory(int size) {
@@ -63,6 +86,10 @@ final class GameplayFile {
         } catch (Exception e) {
             throw new IllegalStateException("Could not convert inventory to base64.", e);
         }
+    }
+
+    private static Path path(File file) {
+        return file.toPath().toAbsolutePath();
     }
 
     private static File ownerDirectory(CharacterKey key) {

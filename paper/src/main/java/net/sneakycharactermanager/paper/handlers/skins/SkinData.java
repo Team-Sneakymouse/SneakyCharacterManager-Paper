@@ -469,6 +469,9 @@ public class SkinData extends BukkitRunnable {
             return;
         }
 
+        // Superseded or cancelled while its HTTP request was running: drop the result.
+        if (!SneakyCharacterManager.getInstance().skinQueue.contains(this)) return;
+
         // Apply to player if:
         // - It's a character load/manual update (priority >= PRIO_LOAD) even if it was originally a menu item
         // - and the player still wears this character. A result for a character it has switched away from is only
@@ -500,7 +503,7 @@ public class SkinData extends BukkitRunnable {
 
             if (!worn && !isUniform) {
                 // The record gets this skin below; older session states must not override it on the next load.
-                SneakyCharacterManager.getInstance().skinStateManager.forgetCharacter(this.player.getUniqueId(), this.characterKey);
+                SneakyCharacterManager.getInstance().skinStateManager.forgetCharacter(this.characterKey);
             }
 
             // PRIO_SKIN is used exclusively for /skin

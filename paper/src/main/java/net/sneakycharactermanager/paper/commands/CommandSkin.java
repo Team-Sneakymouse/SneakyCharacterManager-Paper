@@ -142,6 +142,7 @@ public class CommandSkin extends CommandBase {
 				character.setSignature(state.proxySignature());
 				CharacterUpdates.send(player, character.getKey(), CharacterUpdates.LEGACY_SKIN,
 						state.proxyTextureUrl(), "", state.proxyTexture(), state.proxySignature(), character.isSlim());
+				mgr.recordChanged(player.getUniqueId(), character.getKey());
 			}
 
 			mgr.activateState(player.getUniqueId(), stateId);
@@ -220,7 +221,7 @@ public class CommandSkin extends CommandBase {
 			try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
 				URL url = new URL(
 						String.format("https://sessionserver.mojang.com/session/minecraft/profile/%s?unsigned=false",
-								player.getUniqueId().toString().replace("-", "")));
+								key.owner().toString().replace("-", "")));
 				HttpGet httpGet = new HttpGet(url.toURI());
 				HttpResponse response = httpClient.execute(httpGet);
 				if (response != null) {
@@ -266,7 +267,7 @@ public class CommandSkin extends CommandBase {
 									vehicle.removePassenger(player);
 								player.teleport(player.getLocation().add(0, 1, 0));
 							} else {
-								SneakyCharacterManager.getInstance().skinStateManager.forgetCharacter(player.getUniqueId(), key);
+								SneakyCharacterManager.getInstance().skinStateManager.forgetCharacter(key);
 							}
 
 							SkinCache.resolve(player, textureURL, isSlim).thenAccept(resolveResult -> {

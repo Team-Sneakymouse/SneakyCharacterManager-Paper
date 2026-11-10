@@ -23,6 +23,7 @@ import com.sneakyutils.util.TextUtility;
 
 import net.kyori.adventure.text.Component;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.handlers.character.CharacterUpdates;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 
@@ -51,7 +52,7 @@ public class TitleSelectionMenu implements Listener {
 		}
 
 		int size = Math.min(54, Math.max(9, ((unlocked.size() + 1 + 8) / 9) * 9));
-		TitleMenuHolder holder = new TitleMenuHolder(player, character.getTitle());
+		TitleMenuHolder holder = new TitleMenuHolder(player, character.getKey(), character.getTitle());
 		Inventory inventory = Bukkit.createInventory(holder, size,
 				TextUtility.INSTANCE.convertToComponent("&eSelect Title"));
 		holder.setInventory(inventory);
@@ -94,7 +95,7 @@ public class TitleSelectionMenu implements Listener {
 
 	@EventHandler
 	public void onClick(InventoryClickEvent event) {
-		if (!(event.getInventory().getHolder() instanceof TitleMenuHolder)) {
+		if (!(event.getInventory().getHolder() instanceof TitleMenuHolder holder)) {
 			return;
 		}
 		event.setCancelled(true);
@@ -110,11 +111,13 @@ public class TitleSelectionMenu implements Listener {
 			return;
 		}
 
-		Character character = Character.get(player);
-		if (character == null) {
+		// The menu was built for one character; if another was loaded while it was open, don't equip onto that one.
+		if (!Character.isWearing(player, holder.getCharacterKey())) {
+			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cYour character changed. Open /title again."));
 			player.closeInventory();
 			return;
 		}
+		Character character = Character.get(player);
 
 		if (CLEAR_KEY.equals(key)) {
 			applyTitle(player, character, "");
@@ -149,11 +152,13 @@ public class TitleSelectionMenu implements Listener {
 
 	public static final class TitleMenuHolder implements DisplayOnlyInventoryHolder {
 		private final Player player;
+		private final CharacterKey characterKey;
 		private final String currentTitle;
 		private Inventory inventory;
 
-		public TitleMenuHolder(Player player, String currentTitle) {
+		public TitleMenuHolder(Player player, CharacterKey characterKey, String currentTitle) {
 			this.player = player;
+			this.characterKey = characterKey;
 			this.currentTitle = currentTitle;
 		}
 
@@ -163,6 +168,10 @@ public class TitleSelectionMenu implements Listener {
 
 		public Player getPlayer() {
 			return player;
+		}
+
+		public CharacterKey getCharacterKey() {
+			return characterKey;
 		}
 
 		public String getCurrentTitle() {

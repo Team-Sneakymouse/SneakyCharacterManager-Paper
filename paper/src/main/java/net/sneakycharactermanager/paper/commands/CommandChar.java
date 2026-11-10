@@ -36,8 +36,15 @@ public class CommandChar extends CommandBase {
                 if (deleteConfirmationMap.containsKey(player)) {
                     String[] s = deleteConfirmationMap.get(player).split(";");
                     if (System.currentTimeMillis() < Long.valueOf(s[0]) + 10000) {
-                        // Deleting is the owner's own action on its own list.
-                        CharacterUpdates.send(player, new CharacterKey(player.getUniqueId(), s[1]), CharacterUpdates.ENABLED, false);
+                        // Deleting is the owner's own action on its own list. Re-check now: the character may have been
+                        // loaded (by this player or someone else) since the deletion was started.
+                        CharacterKey key = new CharacterKey(player.getUniqueId(), s[1]);
+                        if (net.sneakycharactermanager.paper.handlers.character.Character.wearerOf(key) != null) {
+                            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4That character is being played right now and can't be deleted."));
+                            deleteConfirmationMap.remove(player);
+                            return false;
+                        }
+                        CharacterUpdates.send(player, key, CharacterUpdates.ENABLED, false);
                         sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aDeleting character..."));
                         deleteConfirmationMap.remove(player);
                         return true;

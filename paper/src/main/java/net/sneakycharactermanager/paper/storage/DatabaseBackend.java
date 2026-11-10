@@ -63,6 +63,8 @@ public final class DatabaseBackend implements CharacterBackend {
         Player target = owner.isEmpty() ? null : Bukkit.getPlayer(UUID.fromString(owner));
         String name = target != null ? target.getName() : "";
         Player destination = request instanceof CharacterRequest.Borrow r ? Bukkit.getPlayer(UUID.fromString(r.body())) : target;
+        // Without an online body there is no session to fence the result to; it could land on a later session.
+        if (request instanceof CharacterRequest.Borrow && destination == null) return;
         if (request instanceof CharacterRequest.Join && target != null) {
             if (failedJoins.contains(target) || !joining.add(target)) return;
         }
