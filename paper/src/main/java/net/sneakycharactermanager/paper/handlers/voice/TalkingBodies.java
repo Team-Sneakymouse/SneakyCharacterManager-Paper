@@ -10,6 +10,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.server.ServiceEvent;
 import org.bukkit.event.server.ServiceRegisterEvent;
 import org.bukkit.event.server.ServiceUnregisterEvent;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.ServicesManager;
 
 import net.sneakycharactermanager.paper.api.voice.TalkingNameplateLookup;
@@ -23,12 +25,18 @@ public final class TalkingBodies implements Listener {
     private final ServicesManager services;
     private final Logger logger;
     private volatile TalkingNameplateLookup lookup;
-    // The lookup that last threw, so a broken lookup logs once instead of on every packet.
+    // The lookup that last threw, so a broken lookup logs once instead of on every packet. Only the latest is kept:
+    // switching between two broken lookups logs again, which is rare and bounded by registrations.
     private volatile TalkingNameplateLookup failed;
 
     public TalkingBodies(ServicesManager services, Logger logger) {
         this.services = services;
         this.logger = logger;
+    }
+
+    /** Listens for lookup changes, then loads the current lookup, so no change can fall between the two. */
+    public void start(PluginManager plugins, Plugin plugin) {
+        plugins.registerEvents(this, plugin);
         refresh();
     }
 
@@ -52,7 +60,7 @@ public final class TalkingBodies implements Listener {
             if (failed != current) {
                 failed = current;
                 logger.log(Level.WARNING, "[SVC] Talking nameplate lookup " + current.getClass().getName()
-                        + " failed; lighting up the sender instead. Further failures are not logged.", failure);
+                        + " failed; lighting up the sender instead. Repeated failures are not logged.", failure);
             }
             return speaker;
         }
@@ -73,7 +81,7 @@ public final class TalkingBodies implements Listener {
     }
 
     // Bukkit fires service events after the change, so each refresh reads a state at least as new as its event.
-    private synchronized void refresh() {
+    synchronized void refresh() {
         lookup = services.load(TalkingNameplateLookup.class);
     }
 }

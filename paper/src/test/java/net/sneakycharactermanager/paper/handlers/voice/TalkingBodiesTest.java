@@ -13,6 +13,7 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.ServicesManager;
@@ -21,6 +22,7 @@ import org.bukkit.event.server.ServiceUnregisterEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 
 import net.sneakycharactermanager.paper.api.voice.TalkingNameplateLookup;
 
@@ -155,10 +157,17 @@ class TalkingBodiesTest {
     }
 
     @Test
-    void aLookupRegisteredBeforeEnableIsPickedUp() {
+    void startListensBeforeLoadingALookupRegisteredEarlier() {
         TalkingNameplateLookup lookup = partnerLookup();
         when(services.load(TalkingNameplateLookup.class)).thenReturn(lookup);
+        PluginManager plugins = mock(PluginManager.class);
+        Plugin scm = mock(Plugin.class);
         TalkingBodies late = new TalkingBodies(services, logger);
+        late.start(plugins, scm);
+
+        InOrder order = inOrder(plugins, services);
+        order.verify(plugins).registerEvents(late, scm);
+        order.verify(services).load(TalkingNameplateLookup.class);
         assertEquals(supporter, late.bodyFor(driver, new byte[] {MARKER}));
     }
 }
