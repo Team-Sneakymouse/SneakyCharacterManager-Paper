@@ -87,6 +87,7 @@ The gameplay file path didn't change. Until now the owner was always the wearer,
 | Nametags, placeholders, LuckPerms tag contexts | They show whoever is in front of you, using the worn character's data. |
 | Title unlock permission (shown on the plate and in the `/title` menu) | LuckPerms nodes belong to accounts. A borrowed character's title is hidden if the wearer hasn't unlocked it. This is a known gap; the equipped title itself is saved on the character. |
 | Character lock permission (`sneakycharacters.character.<id>`) | Checked on the player loading the character. |
+| Character slots (slot permissions, Character Crystal) | LuckPerms nodes belong to accounts. The crystal is an item in the worn character's inventory, so it only works while you wear one of your own characters, and only swaps you if you are still on the character you started it on. |
 | `chardisable` / `charenable` | They lock a player out of their own characters. |
 | Skin undo history (`/skin state`, [Undo]/[Re-apply]) | It is session-only and per player. Each entry names its character key, so it is only restored onto that exact character. |
 | `/charprefix` | It lives in memory on the loaded character and is lost on reload, as before. |
