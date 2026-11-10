@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
@@ -65,7 +66,8 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  * <li>Borrow seam: refused onto another body while held, and refused while the owner wears it.</li>
  * <li>Staff and other plugins (a direct {@code Character.load()}, a forced load onto a non-owner): refused.</li>
  * <li>A load started from inside another load's events (a {@code LoadCharacterEvent} listener) can't put the same
- *     character on a second body.</li>
+ *     character on a second body, and a nested load of the same character (even onto the same body) is refused, so
+ *     it can't end the outer load's reservation.</li>
  * <li>A released holder getting its own last-played character back doesn't take it from a third body; it gets the
  *     character menu. A {@code /char} pick queued behind a borrow of the same character doesn't move last-played.</li>
  * <li>The registry follows switches, quits ({@code Character.remove}, also used by {@code chardisable}) and the
@@ -446,6 +448,28 @@ class HolderRegistryTest {
         doAnswer(call -> {
             if (call.getArgument(0) instanceof LoadCharacterEvent event && event.getPlayer() == supporter)
                 character(borrowed, third).load(); // a listener loading the same character onto another body
+            return null;
+        }).when(events).callEvent(any());
+
+        backend.loadBorrowed(supporter, borrowed);
+
+        assertSame(supporter, CharacterHolders.holderOf(borrowed));
+        assertNull(Character.get(third));
+        verify(third, never()).teleport(any(Location.class));
+    }
+
+    @Test
+    void aCancelledNestedLoadOfTheSameCharacterKeepsTheOuterReservation() {
+        AtomicInteger supporterEvents = new AtomicInteger();
+        doAnswer(call -> {
+            if (call.getArgument(0) instanceof LoadCharacterEvent event && event.getPlayer() == supporter) {
+                if (supporterEvents.getAndIncrement() == 0) {
+                    character(borrowed, supporter).load(); // nested, same body; a listener cancels it
+                    character(borrowed, third).load();     // then another body tries while the outer load runs
+                } else {
+                    event.setCancelled(true);
+                }
+            }
             return null;
         }).when(events).callEvent(any());
 

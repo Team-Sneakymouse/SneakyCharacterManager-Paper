@@ -114,7 +114,7 @@ At most one body wears a character. The holder registry, `CharacterHolders.holde
 | The owner picking it in `/char` (menu or `/char <name>`) | Nothing loads. The handler another plugin registered with `CharacterHolders.setSelectionHandler` gets the pick. With no handler, or if it declines, the owner is told someone else is playing it. In SneakyDB mode the owner's last-played character doesn't change, also when a borrow of that character is still on its way. |
 | Anything else: the internal borrow load, staff tools, another plugin calling `Character.load()`, any load onto a non-owner, forced or not | Refused. |
 
-- A character is held from the moment its load starts, so a load started from a `LoadCharacterEvent` listener can't put it on a second body.
+- A character is held from the moment its load starts, so a load of it started from a `LoadCharacterEvent` listener is refused, whichever body it targets.
 - A released holder getting its own last-played character back is not a login: if a third body wears that character, the return is refused and the released holder gets its character menu.
 - Creating a character gives it a new ID, so it is never held.
 - A held character that its owner disables stays on its holder until the holder switches. (`/char confirm` already refuses to delete a character someone is playing.)

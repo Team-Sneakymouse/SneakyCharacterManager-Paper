@@ -72,8 +72,9 @@ public final class HolderRegistry {
         CharacterKey key = character.getKey();
         // A released holder's join is not the owner logging in: it must not take anything over in turn.
         if (reason == LoadReason.OWN_JOIN && returning.remove(body)) reason = LoadReason.RETURN;
+        // Already being loaded, even onto this body: a nested load could otherwise end the outer load's reservation.
         Player midLoad = loading.get(key);
-        if (midLoad != null && midLoad != body) {
+        if (midLoad != null) {
             refuse(body, key, reason, midLoad);
             return false;
         }
@@ -110,7 +111,7 @@ public final class HolderRegistry {
     private static void refuse(Player body, CharacterKey key, LoadReason reason, Player holder) {
         SneakyCharacterManager plugin = SneakyCharacterManager.getInstance();
         plugin.getLogger().info("Refused to load " + key + " onto " + body.getName() + " (" + reason + "): "
-                + holder.getName() + " is wearing it");
+                + holder.getName() + " is wearing or loading it");
         if (reason == LoadReason.RETURN) {
             // The released holder wears nothing; let it pick another of its characters.
             body.sendMessage(TextUtility.INSTANCE.convertToComponent("&cSomeone else is playing your last character. Pick another one."));
@@ -119,16 +120,10 @@ public final class HolderRegistry {
     }
 
     /**
-     * True if a body other than the owner wears {@code owner}'s character {@code characterId}. Safe to call from any
-     * thread; the answer can be out of date by the time it's used, so {@link #admit} checks again on the main thread.
+     * True if a body other than the owner wears {@code key}. Safe to call from any thread; the answer can be out of
+     * date by the time it's used, so {@link #admit} checks again on the main thread.
      */
-    public static boolean heldAwayFromOwner(String owner, String characterId) {
-        CharacterKey key;
-        try {
-            key = CharacterKey.of(owner, characterId);
-        } catch (IllegalArgumentException e) {
-            return false; // not a character anyone can wear; a failure here would fence the owner's storage
-        }
+    public static boolean heldAwayFromOwner(CharacterKey key) {
         Player holder = Character.wearerOf(key);
         return holder != null && !holder.getUniqueId().equals(key.owner());
     }

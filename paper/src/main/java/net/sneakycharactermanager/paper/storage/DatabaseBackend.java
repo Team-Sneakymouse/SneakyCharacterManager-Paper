@@ -222,13 +222,8 @@ public final class DatabaseBackend implements CharacterBackend {
         submit(null, new CharacterRequest.Borrow(body.getUniqueId().toString(), key.owner().toString(), key.characterId()));
     }
     /** For a /char pick on a storage thread: another body wears the character, or a borrow of it is on its way. */
-    private boolean heldElsewhere(String owner, String character) {
-        if (HolderRegistry.heldAwayFromOwner(owner, character)) return true;
-        try {
-            return borrowsInFlight.containsKey(CharacterKey.of(owner, character));
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
+    private boolean heldElsewhere(CharacterKey key) {
+        return HolderRegistry.heldAwayFromOwner(key) || borrowsInFlight.containsKey(key);
     }
     @Override public void disconnect(Player player) {
         fence.forget(player.getUniqueId().toString()); joining.remove(player); failedJoins.remove(player);

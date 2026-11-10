@@ -2,8 +2,9 @@ package net.sneakycharactermanager.paper.storage;
 
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.common.titles.TitleKeys;
 import net.sneakycharactermanager.proxy.common.SkinContentHash;
 import net.sneakycharactermanager.proxy.common.SkinFetchException;
@@ -27,12 +28,12 @@ public final class DatabaseOperations {
     private record Snapshot(String lastPlayed, long revision, List<CharacterView> characters, List<Map<String,Object>> uniforms) {}
     private final SqlStore store;
     private final Function<String, CompletableFuture<String>> hash;
-    /** (owner, character) → true if a body other than the owner wears it. Called on storage threads. */
-    private final BiPredicate<String, String> heldElsewhere;
+    /** True if a body other than the owner wears the character (or is about to). Called on storage threads. */
+    private final Predicate<CharacterKey> heldElsewhere;
     public DatabaseOperations(SqlStore store, Function<String, CompletableFuture<String>> hash) {
-        this(store, hash, (owner, character) -> false);
+        this(store, hash, key -> false);
     }
-    public DatabaseOperations(SqlStore store, Function<String, CompletableFuture<String>> hash, BiPredicate<String, String> heldElsewhere) {
+    public DatabaseOperations(SqlStore store, Function<String, CompletableFuture<String>> hash, Predicate<CharacterKey> heldElsewhere) {
         this.store = store; this.hash = hash; this.heldElsewhere = heldElsewhere;
     }
     public CompletableFuture<Void> ready() { return store.ready(); }
@@ -114,9 +115,16 @@ public final class DatabaseOperations {
         if (c == null) return done(new NotFound(destination, false));
         // A /char pick (not forced) of a character another body wears must not move last-played: the owner's next
         // join would otherwise take it back from the holder. A join (forced) is the owner taking it back on purpose.
-        if (!forced && heldElsewhere.test(owner, id)) return done(new HeldElsewhere(owner, id));
+        if (!forced && heldElsewhere(owner, id)) return done(new HeldElsewhere(owner, id));
         Loaded loaded = new Loaded(destination, owner, s.revision(), c, forced, false, s.uniforms());
         return store.select(owner, id).thenApply(unused -> List.of(loaded, list(owner, owner, s)));
+    }
+    private boolean heldElsewhere(String owner, String id) {
+        try {
+            return heldElsewhere.test(CharacterKey.of(owner, id));
+        } catch (IllegalArgumentException e) {
+            return false; // not a key anyone can wear; throwing here would fence the owner's storage
+        }
     }
     private CompletableFuture<List<Effect>> update(CharacterRequest.Update r) {
         Object[] v = r.values();
