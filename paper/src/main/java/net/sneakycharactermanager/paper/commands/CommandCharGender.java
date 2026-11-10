@@ -10,9 +10,9 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.handlers.character.CharacterUpdates;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.Gender;
-import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import com.sneakyutils.util.TextUtility;
 
 public class CommandCharGender extends CommandBase {
@@ -55,8 +55,7 @@ public class CommandCharGender extends CommandBase {
 		character.setGender(gender);
 		SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
 
-		ProxyMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(),
-				character.getCharacterUUID(), 5, Gender.toConfigKeyNullable(gender));
+		CharacterUpdates.send(player, character.getKey(), CharacterUpdates.GENDER, Gender.toConfigKeyNullable(gender));
 
 		if (gender == null) {
 			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aCleared gender for this character."));

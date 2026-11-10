@@ -1,5 +1,6 @@
 package net.sneakycharactermanager.paper.commands;
 
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import org.bukkit.entity.Player;
 import org.bukkit.Bukkit;
@@ -24,9 +25,9 @@ class CommandNickTest {
     static class CapturingCommand extends CommandNick {
         String draft;
         String error;
-        String characterId;
-        void openForm(Player player, String characterId, String draft, String error) {
-            this.characterId = characterId;
+        CharacterKey character;
+        void openForm(Player player, CharacterKey character, String draft, String error) {
+            this.character = character;
             this.draft = draft;
             this.error = error;
         }
@@ -69,7 +70,7 @@ class CommandNickTest {
     @MethodSource("nicknames")
     void dialogUsesSameRulesWithoutNormalizingInput(String raw, boolean format, String failure) {
         try (Fixture f = new Fixture(format)) {
-            f.command.handleSubmit(f.player, "character-id", raw);
+            f.command.handleSubmit(f.player, f.key, raw);
             f.verifyMutation(raw, failure == null);
             if (failure != null) {
                 assertEquals(raw, f.command.draft);
@@ -83,7 +84,7 @@ class CommandNickTest {
     @org.junit.jupiter.params.provider.ValueSource(strings = {"   "})
     void clearedFieldReopensWithoutSavingBlankName(String raw) {
         try (Fixture f = new Fixture(false)) {
-            f.command.handleSubmit(f.player, "character-id", raw);
+            f.command.handleSubmit(f.player, f.key, raw);
             assertEquals(raw == null ? "" : raw, f.command.draft);
             assertTrue(f.command.error.contains("empty"));
             f.verifyMutation(raw, false);
@@ -97,7 +98,7 @@ class CommandNickTest {
                 ((CharacterNickChangeEvent) invocation.getArgument(0)).setCancelled(true);
                 return null;
             }).when(f.events).callEvent(any());
-            f.command.handleSubmit(f.player, "character-id", "New name");
+            f.command.handleSubmit(f.player, f.key, "New name");
             assertEquals("New name", f.command.draft);
             assertTrue(f.command.error.contains("cancelled"));
             f.verifyMutation("New name", false);
@@ -120,6 +121,8 @@ class CommandNickTest {
 
     static class Fixture implements AutoCloseable {
         final Player player = mock(Player.class);
+        final UUID id = UUID.randomUUID();
+        final CharacterKey key = new CharacterKey(id, "character-id");
         final Character character = mock(Character.class);
         final SneakyCharacterManager plugin = mock(SneakyCharacterManager.class);
         final PluginManager events = mock(PluginManager.class);
@@ -130,10 +133,11 @@ class CommandNickTest {
         final MockedStatic<ProxyMessagingUtil> proxy = mockStatic(ProxyMessagingUtil.class);
 
         Fixture(boolean format) {
-            when(player.getUniqueId()).thenReturn(UUID.randomUUID());
+            when(player.getUniqueId()).thenReturn(id);
             when(player.hasPermission("sneakycharacters.command.nick")).thenReturn(true);
             when(player.hasPermission("sneakycharacters.formatnames")).thenReturn(format);
             when(character.getCharacterUUID()).thenReturn("character-id");
+            when(character.getKey()).thenReturn(key);
             when(character.getName()).thenReturn("Old name");
             when(character.getDisplayName()).thenReturn("Rendered name");
             characters.when(() -> Character.get(player)).thenReturn(character);
@@ -173,29 +177,38 @@ class CommandNickTest {
         when(player.hasPermission("sneakycharacters.command.nick")).thenReturn(true);
         Character character = mock(Character.class);
         when(character.getCharacterUUID()).thenReturn("character-id");
+        CharacterKey key = new CharacterKey(UUID.randomUUID(), "character-id");
+        when(character.getKey()).thenReturn(key);
         String raw = "  " + "a".repeat(33) + "  ";
         try (var characters = mockStatic(Character.class)) {
             characters.when(() -> Character.get(player)).thenReturn(character);
             CapturingCommand command = new CapturingCommand();
-            command.handleSubmit(player, "character-id", raw);
+            command.handleSubmit(player, key, raw);
             assertEquals(raw, command.draft);
             assertTrue(command.error.contains("32"));
         }
     }
 
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.ValueSource(strings = {"permission", "missing", "switched"})
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"permission", "missing", "switched", "otherOwner"})
     void submissionRechecksContext(String state) {
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(UUID.randomUUID());
         when(player.hasPermission("sneakycharacters.command.nick")).thenReturn(!state.equals("permission"));
+        CharacterKey opened = new CharacterKey(UUID.randomUUID(), "character-id");
         Character character = mock(Character.class);
         when(character.getCharacterUUID()).thenReturn(state.equals("switched") ? "other-id" : "character-id");
+        // otherOwner: now wearing a character with the same ID that belongs to someone else
+        when(character.getKey()).thenReturn(switch (state) {
+            case "switched" -> new CharacterKey(opened.owner(), "other-id");
+            case "otherOwner" -> new CharacterKey(UUID.randomUUID(), "character-id");
+            default -> opened;
+        });
         String raw = "x".repeat(33);
         try (var characters = mockStatic(Character.class)) {
             characters.when(() -> Character.get(player)).thenReturn(state.equals("missing") ? null : character);
             CapturingCommand command = new CapturingCommand();
-            command.handleSubmit(player, "character-id", raw);
+            command.handleSubmit(player, opened, raw);
             assertEquals(raw, command.draft);
             String expected = switch (state) {
                 case "permission" -> "permission";
@@ -215,12 +228,14 @@ class CommandNickTest {
         Character character = mock(Character.class);
         when(character.getCharacterUUID()).thenReturn("character-id");
         when(character.getName()).thenReturn("Current name");
+        CharacterKey key = new CharacterKey(UUID.randomUUID(), "character-id");
+        when(character.getKey()).thenReturn(key);
         try (var characters = mockStatic(Character.class)) {
             characters.when(() -> Character.get(player)).thenReturn(character);
             CapturingCommand command = new CapturingCommand();
             assertTrue(command.execute(player, "nick", new String[0]));
             assertEquals("Current name", command.draft);
-            assertEquals("character-id", command.characterId);
+            assertEquals(key, command.character);
         }
     }
 }

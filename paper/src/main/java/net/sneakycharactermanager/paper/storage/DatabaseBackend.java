@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.directory.CharacterDirectory;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.admincommands.CommandTitleGrant;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
@@ -135,9 +136,9 @@ public final class DatabaseBackend implements CharacterBackend {
     private void apply(DatabaseOperations.Effect effect) {
         switch (effect) {
             case DatabaseOperations.Listed r -> CharacterResultEffects.handleListCompletion("syncCharacters", r.owner(), r.requester(),
-                    r.characters().stream().map(c -> character(r.owner(), c, r.uniforms())).toList());
+                    r.characters().stream().map(c -> character(r.owner(), null, c, r.uniforms())).toList());
             case DatabaseOperations.Loaded r -> {
-                Character character = character(r.destination(), r.character(), r.uniforms());
+                Character character = character(r.source(), Bukkit.getPlayer(UUID.fromString(r.destination())), r.character(), r.uniforms());
                 CharacterResultEffects.load(character, r.forced());
                 if (r.character().skin().isEmpty() && r.character().skinId().isEmpty())
                     CharacterResultEffects.defaultSkin(r.destination(), r.character().id());
@@ -168,8 +169,8 @@ public final class DatabaseBackend implements CharacterBackend {
             }
         }
     }
-    private Character character(String destination, CharacterView c, List<Map<String,Object>> uniforms) {
-        Character character = new Character(destination, c.id(), c.name(), c.skin(), c.skinUuid(), c.texture(), c.signature(),
+    private Character character(String owner, Player wearer, CharacterView c, List<Map<String,Object>> uniforms) {
+        Character character = new Character(CharacterKey.of(owner, c.id()), wearer, c.name(), c.skin(), c.skinUuid(), c.texture(), c.signature(),
                 c.slim(), c.tags(), c.gender(), c.title());
         for (Map<String,Object> row : uniforms) {
             if (SqlStore.text(row, "base_url").equals(c.uniformBase())) character.addUniformVariant(SqlStore.text(row, "uniform_hash"),

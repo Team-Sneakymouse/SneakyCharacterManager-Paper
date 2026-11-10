@@ -7,6 +7,8 @@ import com.sneakyutils.util.TextUtility;
 
 import org.bukkit.entity.Player;
 
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
+
 import javax.annotation.Nullable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,13 +48,13 @@ public final class SkinStateManager {
      * @param name          human label ("Regular", or a formatted uniform name, etc.)
      * @param texture       base64 texture value that was applied
      * @param signature     signature that was applied
-     * @param characterUUID the character this skin belongs to
+     * @param characterKey  the character this skin belongs to (owner + ID)
      * @param textureUrl    the real texture URL for this skin
      * @param isUniform     if true, proxy values are carried from the previous state
      * @return the newly created SkinState
      */
     public SkinState record(Player player, String name, String texture, String signature,
-                            String characterUUID, String textureUrl, boolean isUniform) {
+                            CharacterKey characterKey, String textureUrl, boolean isUniform) {
         UUID uuid = player.getUniqueId();
         List<SkinState> states = statesByPlayer.computeIfAbsent(uuid, _k -> new ArrayList<>());
         int id = nextIdByPlayer.merge(uuid, 2, (old, _v) -> old + 1);
@@ -73,7 +75,7 @@ public final class SkinStateManager {
             proxySignature = signature;
         }
 
-        SkinState state = new SkinState(id, name, texture, signature, characterUUID, proxyTextureUrl, proxyTexture, proxySignature, previousId, null);
+        SkinState state = new SkinState(id, name, texture, signature, characterKey, proxyTextureUrl, proxyTexture, proxySignature, previousId, null);
         states.add(state);
         currentIdByPlayer.put(uuid, id);
         return state;
@@ -131,14 +133,26 @@ public final class SkinStateManager {
      * Returns the most recent state for a specific character, scanning backwards.
      */
     @Nullable
-    public SkinState latestForCharacter(UUID playerUUID, String characterUUID) {
+    public SkinState latestForCharacter(UUID playerUUID, CharacterKey characterKey) {
         List<SkinState> states = statesByPlayer.get(playerUUID);
         if (states == null) return null;
         for (int i = states.size() - 1; i >= 0; i--) {
             SkinState s = states.get(i);
-            if (s.characterUUID().equals(characterUUID)) return s;
+            if (characterKey.equals(s.characterKey())) return s;
         }
         return null;
+    }
+
+    /**
+     * Drops this body's history for one character. Used when that character's record got a newer skin while the body
+     * wasn't wearing it, so a later reload falls back to the record instead of restoring an older session state.
+     */
+    public void forgetCharacter(UUID playerUUID, CharacterKey characterKey) {
+        List<SkinState> states = statesByPlayer.get(playerUUID);
+        if (states == null) return;
+        states.removeIf(s -> characterKey.equals(s.characterKey()));
+        Integer current = currentIdByPlayer.get(playerUUID);
+        if (current != null && get(playerUUID, current) == null) currentIdByPlayer.remove(playerUUID);
     }
 
     public void clearPlayer(UUID playerUUID) {

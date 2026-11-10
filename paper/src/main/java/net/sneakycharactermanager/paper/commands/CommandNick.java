@@ -21,7 +21,8 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
+import net.sneakycharactermanager.paper.handlers.character.CharacterUpdates;
 import com.sneakyutils.util.TextUtility;
 
 public class CommandNick extends CommandBase {
@@ -48,7 +49,7 @@ public class CommandNick extends CommandBase {
                 player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cSorry! Failed to retrieve character!"));
                 return false;
             }
-            openForm(player, character.getCharacterUUID(), character.getName(), null);
+            openForm(player, character.getKey(), character.getName(), null);
             return true;
         }
 
@@ -100,18 +101,18 @@ public class CommandNick extends CommandBase {
             return "Sorry! Failed to retrieve character!";
         }
 
-        CharacterNickChangeEvent event = new CharacterNickChangeEvent(player, character.getCharacterUUID(), character.getName(), nickname);
+        CharacterNickChangeEvent event = new CharacterNickChangeEvent(player, character.getKey(), character.getName(), nickname);
         Bukkit.getPluginManager().callEvent(event);
         if (event.isCancelled()) return CANCELLED;
 
         character.setName(nickname);
         SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
-        ProxyMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), character.getCharacterUUID(), 2, nickname);
+        CharacterUpdates.send(player, character.getKey(), CharacterUpdates.NAME, nickname);
         player.sendMessage(TextUtility.INSTANCE.convertToComponent("&eName updated to: " + nickname));
         return null;
     }
 
-    void handleSubmit(Player player, String characterId, String raw) {
+    void handleSubmit(Player player, CharacterKey character, String raw) {
         String draft = raw == null ? "" : raw;
         String error;
         Character current = Character.get(player);
@@ -119,12 +120,12 @@ public class CommandNick extends CommandBase {
             error = "You no longer have permission to use /nick.";
         } else if (current == null) {
             error = "Sorry! Failed to retrieve character!";
-        } else if (!Objects.equals(characterId, current.getCharacterUUID())) {
+        } else if (!character.equals(current.getKey())) {
             error = "Your character changed while this form was open. Close it and run /nick again.";
         } else {
             error = changeNickname(player, draft);
         }
-        if (error != null) openForm(player, characterId, draft, error);
+        if (error != null) openForm(player, character, draft, error);
     }
 
     static int inputMaxLength(boolean formatNames, String draft) {
@@ -134,7 +135,7 @@ public class CommandNick extends CommandBase {
         return formatNames ? Integer.MAX_VALUE : Math.max(32, draft.length());
     }
 
-    void openForm(Player player, String characterId, String draft, String error) {
+    void openForm(Player player, CharacterKey character, String draft, String error) {
         UUID playerId = player.getUniqueId();
         ClickCallback.Options once = ClickCallback.Options.builder().uses(1)
                 .lifetime(Duration.ofMinutes(30)).build();
@@ -143,7 +144,7 @@ public class CommandNick extends CommandBase {
                     String raw = response.getText("nickname");
                     Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
                         Player current = Bukkit.getPlayer(playerId);
-                        if (current != null) handleSubmit(current, characterId, raw);
+                        if (current != null) handleSubmit(current, character, raw);
                     });
                 }, once)).build();
         ActionButton cancel = ActionButton.builder(Component.text("Cancel")).width(150).build();

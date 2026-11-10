@@ -31,6 +31,7 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
@@ -60,7 +61,7 @@ public class CharacterSelectionMenu implements Listener {
         protected static String LEFT;
         protected static String SWAP_OFFHAND;
 
-        private final String playerUUID;
+        protected final String playerUUID;
 
         protected OfflinePlayer offlinePlayer = null;
         protected Player player = null;
@@ -215,7 +216,7 @@ public class CharacterSelectionMenu implements Listener {
             if (profileProperty == null) {
                 inventory.setItem(index, characterHead);
 
-                SkinApplyService.requestSkin(this.opener, character.getCharacterUUID(), character.getSkin(), character.isSlim(),
+                SkinApplyService.requestSkin(this.opener, character.getKey(), character.getSkin(), character.isSlim(),
                         SkinQueue.PRIO_ONLINE,
                         SkinApplyContext.forMenu(skullMeta, characterHead, inventory, index));
             } else {
@@ -263,10 +264,8 @@ public class CharacterSelectionMenu implements Listener {
 
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
 
-            Character currentChar = Character.get(this.player);
-
             if (characterUUID == null) return;
-            if (currentChar != null && characterUUID.equals(currentChar.getCharacterUUID())) {
+            if (Character.isWearing(this.player, CharacterKey.of(playerUUID, characterUUID))) {
                 this.player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aYou are already playing that character."));
                 return;
             }
@@ -286,10 +285,8 @@ public class CharacterSelectionMenu implements Listener {
 
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
 
-            Character currentChar = Character.get(this.player);
-
             if (characterUUID == null) return;
-            if (currentChar != null && characterUUID.equals(currentChar.getCharacterUUID())) {
+            if (Character.isWearing(this.player, CharacterKey.of(playerUUID, characterUUID))) {
                 this.player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aYou cannot delete the character that you are currently playing."));
                 return;
             }
@@ -336,14 +333,9 @@ public class CharacterSelectionMenu implements Listener {
         }
 
         public void onClose(){
-            Character currentChar = null;
-            Player player = Bukkit.getPlayer(this.target.getUniqueId());
-            if(player != null){
-                currentChar = Character.get(player);
-            }
-
-            if(currentChar != null && currentChar.getCharacterUUID().equals(this.characterUUID)){
-                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Inventory not saved! &ePlayer swapped character while you were editing!"));
+            CharacterKey key = new CharacterKey(this.target.getUniqueId(), this.characterUUID);
+            if(Character.wearerOf(key) != null){
+                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Inventory not saved! &eSomeone loaded this character while you were editing!"));
                 return;
             }
 
@@ -354,8 +346,7 @@ public class CharacterSelectionMenu implements Listener {
 
             String encoded = InventoryUtility.inventoryToPaperYaml(dummyItems);
 
-            File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), this.target.getUniqueId().toString());
-            File characterFile = new File(playerDir, this.characterUUID + ".yml");
+            File characterFile = GameplayFile.of(key);
             SneakyCharacterManager.getInstance().updateFile(characterFile.toPath(), current -> {
                 YamlConfiguration config = new YamlConfiguration();
                 config.loadFromString(current);
@@ -404,27 +395,16 @@ public class CharacterSelectionMenu implements Listener {
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
 
             if (characterUUID == null) return;
-            Character currentChar = null;
-            if(this.player != null){
-                currentChar = Character.get(player);
-            }
-
-            if (currentChar != null && characterUUID.equals(currentChar.getCharacterUUID())) {
-                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&aThe player is currently on this character. Use direct inventory editing instead."));
+            CharacterKey key = CharacterKey.of(playerUUID, characterUUID);
+            if (Character.wearerOf(key) != null) {
+                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&aSomeone is currently on this character. Use direct inventory editing instead."));
                 return;
             }
 
             this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&aEditing inventory for character &b'" + ((TextComponent) meta.displayName()).content() + "'&a."));
             
             Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
-                String playerUUID;
-                if(player == null)
-                    playerUUID = offlinePlayer.getUniqueId().toString();
-                else
-                    playerUUID = player.getUniqueId().toString();
-
-                File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID);
-                File characterFile = new File(playerDir, characterUUID + ".yml");
+                File characterFile = GameplayFile.of(key);
                 YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
 
                 ItemStack[] inventoryContents;

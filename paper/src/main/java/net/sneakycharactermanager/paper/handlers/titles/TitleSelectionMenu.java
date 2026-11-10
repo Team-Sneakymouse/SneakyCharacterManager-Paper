@@ -23,8 +23,8 @@ import com.sneakyutils.util.TextUtility;
 
 import net.kyori.adventure.text.Component;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.handlers.character.CharacterUpdates;
 import net.sneakycharactermanager.paper.handlers.character.Character;
-import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 
 public class TitleSelectionMenu implements Listener {
 
@@ -143,8 +143,7 @@ public class TitleSelectionMenu implements Listener {
 				? ""
 				: TitleRegistry.normalizeTitleKey(titleKey);
 		character.setTitle(key);
-		ProxyMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(),
-				character.getCharacterUUID(), 7, key);
+		CharacterUpdates.send(player, character.getKey(), CharacterUpdates.TITLE, key);
 		SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
 	}
 

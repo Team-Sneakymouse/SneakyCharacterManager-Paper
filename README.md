@@ -61,10 +61,45 @@ See [backend verification and cutover gates](docs/backend-verification.md) for l
   - `plugins/SneakyCharacterManager/characterdata/<playerUUID>.yml`
   - `plugins/SneakyCharacterManager/titles.yml` (title key → display text catalog; synced to backends)
 - Paper stores per-character gameplay state in:
-  - `plugins/SneakyCharacterManager/characterdata/<playerUUID>/<characterUUID>.yml`
+  - `plugins/SneakyCharacterManager/characterdata/<ownerUUID>/<characterUUID>.yml`
 - Messaging channel between proxy and backend:
   - `sneakymouse:sneakycharacters`
 - Character IDs are unique across all accounts. New characters get random UUIDs. In database mode, `db/002_unique_character_id.sql` enforces this with a unique index. Template characters were removed; rows stored under the legacy `template` owner stay in place and keep their IDs reserved.
+
+## Character identity
+
+A character is identified by its owner and its character ID, `CharacterKey(owner, characterId)` in `net.sneakycharactermanager.paper.api.character`. Character IDs are unique across all accounts, but everything stored about a character is filed under its owner, so the key carries both. Usually a player wears their own character, but another player can wear it too, so the player wearing a character (its *wearer*) is not its owner.
+
+**The rule:** everything stored about a character is addressed by its key, never by its wearer:
+
+- the gameplay file `characterdata/<owner>/<characterId>.yml`: load, save, and creating it;
+- every identity edit sent as `updateCharacter` (`/nick`, `/chargender`, `/title`, `/chartag`, `/skin`, skin results, deletion);
+- the skin pipeline: a skin request carries its key from request to result. Queued skin jobs are matched on URL + requester + key, and raising or dropping a job matches the key too;
+- `LoadCharacterEvent`, `CharacterNickChangeEvent` and `CharacterSkinChangeEvent`, which expose `getCharacterKey()`.
+
+The gameplay file path didn't change. Until now the owner was always the wearer, so existing files are already at `<owner>/<characterId>.yml` and no migration is needed.
+
+**Exceptions that stay with the wearer** (the body), by design:
+
+| State | Why |
+| --- | --- |
+| `Character.get(player)`: what a player is wearing | It is a fact about the body. Each save still goes to the worn character's own key. |
+| Nametags, placeholders, LuckPerms tag contexts | They show whoever is in front of you, using the worn character's data. |
+| Title unlock permission (shown on the plate and in the `/title` menu) | LuckPerms nodes belong to accounts. A borrowed character's title is hidden if the wearer hasn't unlocked it. This is a known gap; the equipped title itself is saved on the character. |
+| Character lock permission (`sneakycharacters.character.<id>`) | Checked on the player loading the character. |
+| `chardisable` / `charenable` | They lock a player out of their own characters. |
+| Skin undo history (`/skin state`, [Undo]/[Re-apply]) | It is session-only and per player. Each entry names its character key, so it is only restored onto that exact character. |
+| `/charprefix` | It lives in memory on the loaded character and is lost on reload, as before. |
+| Skin queue requester (priority on join/quit, dropped when offline, menu repaint) | A job is applied to, and messages, the player who asked. |
+| SneakyDB in-flight state per player (join, result fences) | It tracks what is on its way to a body. The owner queue and revision fences are per owner. |
+
+**Other behaviour that follows from the rule:**
+
+- A character with no gameplay file starts from fresh defaults (world spawn, empty inventory). The one exception is the owner's very first character on this server: it still starts from the owner's live inventory and location, as before. A character worn by someone else never copies its wearer.
+- Gameplay files are created when a character is loaded, not when a character list arrives.
+- A skin that resolves after its wearer switched to another character is still saved to the character it was requested for. It is only put on the body if the body still wears that character.
+
+The storage mode is public too: `StorageMode.current()` (same package) returns `LEGACY` or `SNEAKYDB`.
 
 ## Configuration (Paper)
 
@@ -283,13 +318,14 @@ The plugin tracks skin changes during a server session, allowing players to undo
 
 ### How it works
 
-- Every time a skin is applied to a player (via `/skin`, `/uniform`, character load, or `/skin revert`), a **SkinState** is recorded in memory. Each state captures the texture, signature, character UUID, and what the proxy believes the skin to be. Non-uniform states are labeled **Regular**; uniform states use a short label derived from the uniform map key (e.g. `police_officer` → `Police officer`), or **Uniform** when no friendly key exists (e.g. hash-only cache keys).
+- Every time a skin is applied to a player (via `/skin`, `/uniform`, character load, or `/skin revert`), a **SkinState** is recorded in memory. Each state captures the texture, signature, character key (owner + ID), and what the proxy believes the skin to be. Non-uniform states are labeled **Regular**; uniform states use a short label derived from the uniform map key (e.g. `police_officer` → `Police officer`), or **Uniform** when no friendly key exists (e.g. hash-only cache keys).
 - When a skin changes due to `/skin` or `/uniform`, the player receives a clickable chat message:
   - **[Undo]** reverts to the previous skin state.
   - **[Re-apply]** re-applies the current state (useful after further changes).
 - Players can also manually apply any recorded state with `/skin state <id>`.
 - States persist across relogs within the same server session (cleared on server restart).
 - When loading a character that was already used this session, the most recent skin state for that character is restored automatically instead of re-fetching.
+- History is kept per player. If a skin finishes after the player switched away, it is saved to its character and that character's older states are dropped, so the next load uses the saved skin.
 
 ### Proxy awareness
 

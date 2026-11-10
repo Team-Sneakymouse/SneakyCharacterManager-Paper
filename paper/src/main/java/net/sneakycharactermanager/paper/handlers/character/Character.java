@@ -1,8 +1,7 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
-import net.sneakycharactermanager.common.io.AtomicFiles;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -21,7 +20,6 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -31,8 +29,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.permissions.PermissionAttachmentInfo;
-import org.bukkit.util.io.BukkitObjectOutputStream;
-import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
@@ -46,13 +42,25 @@ import com.google.gson.JsonParser;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * A character, and when loaded, the body wearing it.
+ *
+ * <p>Identity rule: a character is its {@link CharacterKey} (owner + character ID). Its gameplay file and every
+ * identity edit go to that key, never to the wearer, who may be another player. The only state keyed by the wearer is
+ * "what this body wears" ({@link #get(Player)}) and the body-level exceptions listed in the README under
+ * "Character identity" (nametags, placeholders, permissions, skin undo history, ...).
+ */
 public class Character {
 
+	/** What each body is wearing. Keyed by the body on purpose; see the class comment. */
 	private static Map<Player, Character> characterMap = new HashMap<>();
 	private static final Map<UUID, List<Character>> playerCharactersCache = new ConcurrentHashMap<>();
 
-	private final Player player;
-	private String characterUUID;
+	/** Owner + character ID: where this character's identity record and gameplay file live. */
+	private final CharacterKey key;
+	/** The body wearing this character, or null for a list entry, which is never loaded. */
+	@Nullable private final Player player;
+	private final String characterUUID;
 	private String name;
 	private String namePrefix = "";
 	private String skin;
@@ -67,11 +75,16 @@ public class Character {
 
 	private boolean firstLoad = false;
 
-	public Character(String playerUUID, String characterUUID, String characterName, String skin, String skinUUID, String texture, String signature, boolean slim,
-			String tags, String gender, String title) {
-		this.player = Bukkit.getPlayer(UUID.fromString(playerUUID));
+	/**
+	 * @param key    the character's owner and ID
+	 * @param wearer the body that wears it once {@link #load()} runs, or null for a list entry
+	 */
+	public Character(CharacterKey key, @Nullable Player wearer, String characterName, String skin, String skinUUID,
+			String texture, String signature, boolean slim, String tags, String gender, String title) {
+		this.key = key;
+		this.player = wearer;
 		this.name = characterName;
-		this.characterUUID = characterUUID;
+		this.characterUUID = key.characterId();
 		this.skin = skin;
 		this.skinUUID = skinUUID;
 		this.texture = texture;
@@ -80,76 +93,38 @@ public class Character {
 		this.tags = tags.isEmpty() ? new JsonObject() : JsonParser.parseString(tags).getAsJsonObject();
 		this.gender = Gender.fromString(gender);
 		this.title = title == null ? "" : title;
-
-		File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID);
-		boolean firstLogin = false;
-
-		if (!playerDir.exists()) {
-			firstLogin = true;
-			playerDir.mkdirs();
-		}
-
-		File characterFile = new File(playerDir, this.characterUUID + ".yml");
-
-		if (!characterFile.exists()) {
-			this.firstLoad = true;
-			if (firstLogin && !SneakyCharacterManager.getInstance().getConfig()
-					.getBoolean("deleteCharacterDataOnServerStart", false)) {
-				this.save();
-			} else {
-				YamlConfiguration config = new YamlConfiguration();
-
-				config.set("location", Bukkit.getWorlds().get(0).getSpawnLocation());
-
-				try {
-					ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-					BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream);
-
-					dataOutput.writeInt(this.player.getInventory().getSize());
-
-					for (int i = 0; i < this.player.getInventory().getSize(); i++) {
-						dataOutput.writeObject(new ItemStack(Material.AIR));
-					}
-
-					dataOutput.close();
-					config.set("inventory", Base64Coder.encodeLines(outputStream.toByteArray()));
-
-					// Converts the inventory and its contents to base64, This also saves item
-					// meta-data and inventory type
-				} catch (Exception e) {
-					throw new IllegalStateException("Could not convert inventory to base64.", e);
-				}
-
-				try {
-					AtomicFiles.writeUtf8(characterFile.toPath(), config.saveToString());
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
 	}
 
+	/**
+	 * Puts this character on its wearer: saves whatever the wearer had on, then applies this character's gameplay
+	 * file. The file belongs to the owner ({@link GameplayFile#of}); a character that has no file yet gets one here.
+	 */
 	public void load() {
-		if (this.player != null && characterMap.containsKey(this.player)) {
-			Character character = get(this.player);
-			if (character != null)
-				character.save();
-		}
-
-		File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(),
-				this.player.getUniqueId().toString());
-		File characterFile = new File(playerDir, this.characterUUID + ".yml");
-
-		if (!characterFile.exists()) {
-			SneakyCharacterManager.getInstance().getLogger()
-					.severe("SneakyCharacterManager attempted to load character data from a file that does not exist: "
-							+ this.characterUUID);
+		if (this.player == null) {
+			SneakyCharacterManager.getInstance().getLogger().severe("Attempted to load character " + this.key + " without a wearer");
 			return;
 		}
+		Character current = get(this.player);
+		if (current != null) current.save();
+
+		File characterFile = GameplayFile.of(this.key);
+		this.firstLoad = !characterFile.exists();
+		// Only the owner's very first character on this server starts from the body's live state, as before
+		// files moved to load time. Anyone else starts fresh: a borrowed character must not copy its wearer.
+		boolean seedFromBody = this.firstLoad && current == null
+				&& this.player.getUniqueId().equals(this.key.owner())
+				&& !GameplayFile.ownerHasFiles(this.key)
+				&& !SneakyCharacterManager.getInstance().getConfig().getBoolean("deleteCharacterDataOnServerStart", false);
 
 		if (CharacterLoader.loadCharacter(this)) {
-			SneakyCharacterManager.getInstance().skinQueue.updatePriority(this.player, this.characterUUID, SkinQueue.PRIO_LOAD);
-			YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
+			SneakyCharacterManager.getInstance().skinQueue.updatePriority(this.player, this.key, SkinQueue.PRIO_LOAD);
+			YamlConfiguration config;
+			if (characterFile.exists()) {
+				config = YamlConfiguration.loadConfiguration(characterFile);
+			} else {
+				config = seedFromBody ? snapshot() : GameplayFile.fresh(this.player.getInventory().getSize());
+				GameplayFile.create(characterFile, config);
+			}
 
 			if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageLocations", true)) {
 				Location playerLocation = config.getLocation("location");
@@ -480,16 +455,16 @@ public class Character {
 		return this.firstLoad;
 	}
 
+	/** Writes the wearer's live location, inventory and attributes to this character's (the owner's) file. */
 	public void save() {
-		File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(),
-				this.player.getUniqueId().toString());
+		if (this.player == null) return;
+		File characterFile = GameplayFile.of(this.key);
+		characterFile.getParentFile().mkdirs();
+		SneakyCharacterManager.getInstance().writeFile(characterFile.toPath(), snapshot().saveToString());
+	}
 
-		if (!playerDir.exists()) {
-			playerDir.mkdirs();
-		}
-
-		File characterFile = new File(playerDir, this.characterUUID + ".yml");
-
+	/** The wearer's live gameplay state, in the gameplay file's format. */
+	private YamlConfiguration snapshot() {
 		YamlConfiguration config = new YamlConfiguration();
 
 		Location playerLocation = this.player.getLocation();
@@ -503,8 +478,15 @@ public class Character {
 		if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageAttributes", false)) {
 			config.set("attributes", serializeAttributes());
 		}
+		return config;
+	}
 
-		SneakyCharacterManager.getInstance().writeFile(characterFile.toPath(), config.saveToString());
+	public CharacterKey getKey() {
+		return this.key;
+	}
+
+	public UUID getOwnerUUID() {
+		return this.key.owner();
 	}
 
 	@Nullable
@@ -546,6 +528,31 @@ public class Character {
 
 	public static boolean isPlayedMapped(Player player) {
 		return characterMap.containsKey(player);
+	}
+
+	/** True if {@code body} is wearing exactly this character (same owner and ID) right now. */
+	public static boolean isWearing(Player body, CharacterKey key) {
+		Character worn = characterMap.get(body);
+		return worn != null && worn.key.equals(key);
+	}
+
+	/**
+	 * Resolves a bare character ID against what {@code body} is wearing: the worn character's key if the IDs match,
+	 * otherwise null. Only for old entry points that pass an ID without an owner; never guess the owner from the body.
+	 */
+	@Nullable
+	public static CharacterKey wornKey(Player body, String characterId) {
+		Character worn = characterMap.get(body);
+		return worn != null && worn.characterUUID.equals(characterId) ? worn.key : null;
+	}
+
+	/** The body wearing this character right now, or null. */
+	@Nullable
+	public static Player wearerOf(CharacterKey key) {
+		for (Map.Entry<Player, Character> entry : characterMap.entrySet()) {
+			if (entry.getValue().key.equals(key)) return entry.getKey();
+		}
+		return null;
 	}
 
 	public static boolean canPlayerLoadCharacter(Player player, String characterUUID) {

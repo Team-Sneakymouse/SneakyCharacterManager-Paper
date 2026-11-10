@@ -44,7 +44,7 @@ import net.sneakycharactermanager.paper.handlers.titles.TitleRegistry;
 import net.sneakycharactermanager.paper.handlers.titles.TitlePermissionRefresh;
 import net.sneakycharactermanager.paper.handlers.titles.TitleSelectionMenu;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
-import net.sneakycharactermanager.paper.storage.StorageMode;
+import net.sneakycharactermanager.paper.api.character.StorageMode;
 import net.sneakycharactermanager.paper.storage.CharacterBackend;
 import net.sneakycharactermanager.paper.storage.SneakyDbBootstrap;
 import net.sneakycharactermanager.common.io.AsyncAtomicFileWriter;
@@ -77,6 +77,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
     private StorageMode storageMode = StorageMode.LEGACY;
     private CharacterBackend characterBackend;
     public CharacterBackend getCharacterBackend() { return characterBackend; }
+    /** Public API: where character identity is stored this enable. See {@link StorageMode#current()}. */
     public StorageMode getStorageMode() { return storageMode; }
     public boolean validateStorageReload() {
         try {

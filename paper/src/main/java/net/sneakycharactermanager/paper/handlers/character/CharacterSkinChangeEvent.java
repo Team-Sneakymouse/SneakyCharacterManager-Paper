@@ -1,5 +1,6 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.handlers.skins.SkinState;
 
 import org.bukkit.entity.Player;
@@ -18,7 +19,7 @@ public class CharacterSkinChangeEvent extends PlayerEvent implements Cancellable
 
 	/**
 	 * @param player    The player changing their skin
-	 * @param skinState A <strong>pending</strong> snapshot from {@link SkinState#pendingCharacterSkinChange(String, String, Boolean)}.
+	 * @param skinState A <strong>pending</strong> snapshot from {@link SkinState#pendingCharacterSkinChange(CharacterKey, String, Boolean)}.
 	 *                  {@link SkinState#proxyTextureUrl()} is the skin URL to fetch or the literal {@code "default"} for Mojang revert;
 	 *                  {@link SkinState#slimModel()} is slim/classic when known, or {@code null} to auto-detect.
 	 */
@@ -56,6 +57,15 @@ public class CharacterSkinChangeEvent extends PlayerEvent implements Cancellable
 
 	public String getCharacterUUID() {
 		return skinState.characterUUID();
+	}
+
+	/**
+	 * The character whose skin changes; its owner can differ from {@link #getPlayer()}, who is wearing it. Null only if
+	 * the event was built from a bare character ID that isn't what the player is wearing.
+	 */
+	public @Nullable CharacterKey getCharacterKey() {
+		if (skinState.characterKey() != null) return skinState.characterKey();
+		return Character.wornKey(getPlayer(), skinState.characterUUID());
 	}
 
 	/** @return Requested skin URL, or {@code "default"} when reverting to Mojang skin */

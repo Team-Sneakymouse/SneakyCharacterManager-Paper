@@ -1,6 +1,7 @@
 package net.sneakycharactermanager.paper.handlers.skins;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -145,14 +146,17 @@ public class SkinQueue extends BukkitRunnable {
     }
 
     /**
-     * Drops queued MineSkin jobs for a specific character (e.g. after applying a stored texture/signature).
+     * Drops this requester's queued base-skin jobs for one character (e.g. after applying a stored texture/signature).
+     * Matches the character by owner and ID: another owner's character with the same ID is left alone.
      */
-    public void removePendingForCharacter(Player player, String characterUUID) {
-        if (player == null || characterUUID == null || characterUUID.isEmpty()) return;
-        queue.values().stream().flatMap(List::stream).filter(data ->
-                data.getPlayer().getUniqueId().equals(player.getUniqueId())
-                        && Objects.equals(data.getCharacterUUID(), characterUUID)
-                        && data.getUniformHash() == null).toList().forEach(this::remove);
+    public void removePendingForCharacter(Player requester, CharacterKey key) {
+        if (requester == null || key == null) return;
+        queue.values().stream().flatMap(List::stream).filter(data -> isFor(data, requester, key)
+                && data.getUniformHash() == null).toList().forEach(this::remove);
+    }
+
+    private static boolean isFor(SkinData data, Player requester, CharacterKey key) {
+        return data.getPlayer().getUniqueId().equals(requester.getUniqueId()) && key.equals(data.getCharacterKey());
     }
 
     public synchronized void updatePriority(Player player, int newPriority) {
@@ -181,24 +185,24 @@ public class SkinQueue extends BukkitRunnable {
         });
     }
 
-    public synchronized void updatePriority(Player player, String characterUUID, int newPriority) {
-        boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
-        queue.values().forEach(list -> {
-            Optional<SkinData> dataOpt = list.stream()
-                .filter(d -> d.getPlayer().getUniqueId().equals(player.getUniqueId()) && Objects.equals(d.getCharacterUUID(), characterUUID))
-                .findFirst();
-            if (dataOpt.isPresent()) {
-                SkinData data = dataOpt.get();
-                if (data.getPriority() < newPriority) {
-                    if (debug) {
-                        SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Moving single item for " + player.getName() + " (Char: " + characterUUID + ") P" + data.getPriority() + " -> P" + newPriority);
-                    }
-                    list.remove(data);
-                    queue.get(newPriority).add(data);
-                    data.setPriority(newPriority);
-                }
-            }
-        });
+    /** Raises this requester's base-skin jobs for one character (owner + ID), e.g. when it is being loaded. */
+    public synchronized void updatePriority(Player requester, CharacterKey key, int newPriority) {
+        queue.values().stream().flatMap(List::stream)
+                .filter(data -> isFor(data, requester, key) && data.getUniformHash() == null)
+                .toList().forEach(data -> raise(data, newPriority));
+    }
+
+    /** Raises exactly this job, if it is queued below {@code newPriority}. */
+    public synchronized void raise(SkinData data, int newPriority) {
+        if (data.getPriority() >= newPriority) return;
+        List<SkinData> current = queue.get(data.getPriority());
+        if (current == null || !current.remove(data)) return;
+        if (SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false)) {
+            SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] Moving single item for " + data.getPlayer().getName()
+                    + " (Char: " + data.getCharacterKey() + ") P" + data.getPriority() + " -> P" + newPriority);
+        }
+        queue.get(newPriority).add(data);
+        data.setPriority(newPriority);
     }
 
     public void updateRateLimit(int limit, int remaining, long nextReset, int delayMillis) {

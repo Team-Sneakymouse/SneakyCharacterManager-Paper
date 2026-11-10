@@ -2,6 +2,8 @@ package net.sneakycharactermanager.paper.handlers.skins;
 
 import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
+import net.sneakycharactermanager.paper.handlers.character.CharacterUpdates;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 import net.sneakycharactermanager.proxy.common.SkinFetchException;
@@ -166,9 +168,9 @@ public final class SkinCache {
         }
     }
 
-    public static void updateCharacterSkin(Player player, String characterUUID, String skinId, boolean slim) {
-        ProxyMessagingUtil.sendByteArray(player, "updateCharacter",
-                player.getUniqueId().toString(), characterUUID, 6, skinId, slim);
+    /** Saves a resolved skin id to the character's record. {@code via} only routes the message. */
+    public static void updateCharacterSkin(Player via, CharacterKey key, String skinId, boolean slim) {
+        CharacterUpdates.send(via, key, CharacterUpdates.SKIN_ID, skinId, slim);
     }
 
     /** @deprecated Use {@link #resolve(Player, String, boolean)} */

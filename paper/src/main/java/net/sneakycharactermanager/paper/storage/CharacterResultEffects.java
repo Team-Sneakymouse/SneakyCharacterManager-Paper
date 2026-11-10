@@ -77,9 +77,9 @@ public final class CharacterResultEffects {
 						if (cacheKey == null || cacheKey.isEmpty()) cacheKey = skinUrl;
 						SkinCache.put(playerUUID, cacheKey, p);
 						SkinCache.put(playerUUID, skinUrl, p);
-						SneakyCharacterManager.getInstance().skinQueue.removePendingForCharacter(pl, c.getCharacterUUID());
+						SneakyCharacterManager.getInstance().skinQueue.removePendingForCharacter(pl, c.getKey());
 					} else {
-						SkinApplyService.requestSkin(pl, c.getCharacterUUID(), skinUrl, c.isSlim(),
+						SkinApplyService.requestSkin(pl, c.getKey(), skinUrl, c.isSlim(),
 								skinPrio, SkinApplyContext.preload());
 					}
 				}
@@ -100,7 +100,7 @@ public final class CharacterResultEffects {
 					}
 
 					if (vp == null) {
-						SkinData.getOrCreate(vUrl, vUUID, c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName())
+						SkinData.getOrCreate(vUrl, vUUID, c.isSlim(), skinPrio, pl, c.getKey(), c.getName())
 							.setUniformCacheInfo(c.getSkin(), entry.getKey(), entry.getKey());
 					}
 				}
