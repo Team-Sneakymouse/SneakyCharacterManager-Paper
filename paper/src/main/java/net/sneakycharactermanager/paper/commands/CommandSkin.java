@@ -134,8 +134,9 @@ public class CommandSkin extends CommandBase {
 			ProfileProperty stateProperty = new ProfileProperty("textures", state.texture(), state.signature());
 			SkinUtil.applySkin(player, stateProperty);
 
-			if (!state.proxyTextureUrl().equals(character.getSkin()) ||
-					!state.proxySignature().equals(character.getSignature())) {
+			// An empty saved skin means "unknown" (a uniform with no base in this character's history): keep the record.
+			if (!state.proxyTextureUrl().isEmpty() && (!state.proxyTextureUrl().equals(character.getSkin()) ||
+					!state.proxySignature().equals(character.getSignature()))) {
 				character.setSkin(state.proxyTextureUrl());
 				character.setTexture(state.proxyTexture());
 				character.setSignature(state.proxySignature());

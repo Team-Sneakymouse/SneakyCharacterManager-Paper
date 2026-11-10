@@ -208,6 +208,26 @@ class SkinOwnerTest {
         assertNull(history.current(wearerId));
     }
 
+    /** A uniform keeps its character's saved base skin, never the skin of the character worn before it. */
+    @Test
+    void uniformHistoryNeverCarriesAnotherCharactersBaseSkin() {
+        SkinStateManager history = new SkinStateManager();
+        history.record(wearer, "Regular", "own-texture", "own-sig", wearersOwn, "own-url", false);
+
+        // Then a skinless borrowed character: nothing recorded on load, so "current" is still the previous character.
+        SkinState first = history.record(wearer, "U1", "u1", "u1-sig", borrowed, "u1-url", true);
+        SkinState second = history.record(wearer, "U2", "u2", "u2-sig", borrowed, "u2-url", true);
+        assertEquals("", first.proxyTextureUrl());
+        assertEquals("", second.proxyTexture());
+
+        // With a base of its own, a uniform keeps that base.
+        history.record(wearer, "Regular", "b-texture", "b-sig", borrowed, "b-url", false);
+        history.record(wearer, "Regular", "own-texture", "own-sig", wearersOwn, "own-url", false);
+        SkinState third = history.record(wearer, "U3", "u3", "u3-sig", borrowed, "u3-url", true);
+        assertEquals("b-url", third.proxyTextureUrl());
+        assertEquals("b-texture", third.proxyTexture());
+    }
+
     private static SkinCache.ResolveResult hit(String skinId) {
         return new SkinCache.ResolveResult(SkinCache.ResolveStatus.HIT, skinId, TEXTURE_URL, "texture", "signature", "");
     }

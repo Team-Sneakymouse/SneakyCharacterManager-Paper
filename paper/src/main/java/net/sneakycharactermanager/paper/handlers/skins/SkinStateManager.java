@@ -65,10 +65,14 @@ public final class SkinStateManager {
         String proxyTextureUrl;
         String proxyTexture;
         String proxySignature;
-        if (isUniform && previous != null) {
-            proxyTextureUrl = previous.proxyTextureUrl();
-            proxyTexture = previous.proxyTexture();
-            proxySignature = previous.proxySignature();
+        if (isUniform) {
+            // A uniform keeps the character's saved base skin. Take it only from this same character's history: the
+            // current entry can belong to the character the body wore before. Unknown stays empty, never another's.
+            SkinState base = previous != null && characterKey.equals(previous.characterKey())
+                    ? previous : latestForCharacter(uuid, characterKey);
+            proxyTextureUrl = base != null ? base.proxyTextureUrl() : "";
+            proxyTexture = base != null ? base.proxyTexture() : "";
+            proxySignature = base != null ? base.proxySignature() : "";
         } else {
             proxyTextureUrl = textureUrl;
             proxyTexture = texture;
