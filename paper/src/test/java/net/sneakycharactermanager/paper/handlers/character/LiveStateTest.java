@@ -68,7 +68,7 @@ class LiveStateTest {
 
     @Test
     void pluginModifiersMoveWhenManagedAndMinecraftsStayWithTheBody() {
-        LiveState.capture(a, true, true).apply(b);
+        LiveState.capture(a, true, true).apply(b, () -> true);
 
         verify(scaleB).setBaseValue(0.8);
         verify(scaleB).removeModifier(buffB);
@@ -79,7 +79,7 @@ class LiveStateTest {
 
     @Test
     void withoutManagedAttributesOnlyTheBaseValueMoves() {
-        LiveState.capture(a, true, false).apply(b);
+        LiveState.capture(a, true, false).apply(b, () -> true);
 
         verify(scaleB).setBaseValue(0.8);
         verify(scaleB, never()).removeModifier(any(AttributeModifier.class));
@@ -88,7 +88,7 @@ class LiveStateTest {
 
     @Test
     void anUnmanagedInventoryStaysWithTheBody() {
-        LiveState.capture(a, false, false).apply(b);
+        LiveState.capture(a, false, false).apply(b, () -> true);
 
         verify(b.getInventory(), never()).setContents(any());
         verify(b, never()).setItemOnCursor(any());
@@ -98,7 +98,7 @@ class LiveStateTest {
 
     @Test
     void aManagedInventoryMovesWithItsCursorAndGrid() {
-        LiveState.capture(a, true, false).apply(b);
+        LiveState.capture(a, true, false).apply(b, () -> true);
 
         verify(b.getInventory()).setContents(any());
         verify(b).setItemOnCursor(any());

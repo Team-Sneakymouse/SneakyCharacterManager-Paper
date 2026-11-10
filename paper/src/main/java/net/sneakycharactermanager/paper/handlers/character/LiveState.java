@@ -3,6 +3,7 @@ package net.sneakycharactermanager.paper.handlers.character;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -76,12 +77,22 @@ public record LiveState(Location location, Vector velocity, float fallDistance, 
 
     /**
      * Puts this state on {@code body}, which the swap already teleported to {@link #location()}: everything except
-     * the location and the skin (the swap puts the skin on last). Attributes, inventory and effects go first, so
+     * the location and the skin (the swap puts the skin on last). Effects, attributes and inventory go first, so
      * maximum health and absorption are as right as they can be this tick before health and absorption are set;
      * velocity and fall distance go after the teleport, which resets them. Bonuses from the incoming equipment only
      * reach the body on its next tick, so health above the body's maximum now is capped ({@link #topUpHealth}).
+     *
+     * <p>Effects go first because removing and adding them fire {@code EntityPotionEffectEvent}, the only call-out
+     * here: a listener may take the body off the character (a release, a quit). Nothing goes on before it, nor after it
+     * unless {@code stillWearing} says the body still wears the character, so no item of the character is left on a
+     * body that doesn't wear it.
      */
-    void apply(Player body) {
+    void apply(Player body, BooleanSupplier stillWearing) {
+        if (!stillWearing.getAsBoolean()) return;
+        // An effect a listener keeps or refuses stays as the listener decided (how a plugin forbids an effect on a body).
+        body.clearActivePotionEffects();
+        body.addPotionEffects(effects);
+        if (!stillWearing.getAsBoolean()) return;
         for (AttributeState state : attributes) {
             AttributeInstance instance = body.getAttribute(state.attribute());
             if (instance == null) continue;
@@ -95,10 +106,6 @@ public record LiveState(Location location, Vector velocity, float fallDistance, 
         if (inventory != null) body.getInventory().setContents(inventory);
         if (cursor != null) body.setItemOnCursor(cursor);
         if (craftingGrid != null && ownGrid(body) instanceof CraftingInventory grid) grid.setMatrix(craftingGrid);
-        // Removing and adding effects fire EntityPotionEffectEvent; an effect a listener keeps or refuses stays as the
-        // listener decided (how a plugin forbids an effect on a body).
-        body.clearActivePotionEffects();
-        body.addPotionEffects(effects);
         setHealth(body, health);
         body.setAbsorptionAmount(absorption);
         body.setFoodLevel(foodLevel); // before saturation, which can't exceed it

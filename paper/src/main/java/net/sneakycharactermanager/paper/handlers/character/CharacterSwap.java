@@ -3,6 +3,7 @@ package net.sneakycharactermanager.paper.handlers.character;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -41,7 +42,8 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  *     as they were: {@code REFUSED}.</li>
  * <li>Exchange what each body wears ({@link Character#exchange}): the holder registry and puppet bookkeeping, with no
  *     call-out in between, so listeners see either the old pairs (during the teleports) or the new ones.</li>
- * <li>Apply each live state to the other body, then the worn skin last (the live signed property, so uniforms move
+ * <li>Apply each live state to the other body, then the worn skin last (each step only while the body still wears
+ *     its new character: a listener may have released it or it may have quit) (the live signed property, so uniforms move
  *     too and nothing waits on the network), then hand over each character's skin history. Health capped by a
  *     maximum that the incoming equipment only raises next tick is set again then.</li>
  * <li>Put poses back (SneakyPoses) and re-seat bodies that rode a vehicle, then show the new names on the same
@@ -138,22 +140,28 @@ public final class CharacterSwap {
         }
 
         Character.exchange(a, b);
-        stateY.apply(a);
-        stateX.apply(b);
+        // From here a listener of the swap's own events (effects, poses, vehicles) may take a body off its new
+        // character (a release, a quit). Each step for a body runs only while it still wears it, so nothing of a
+        // character goes on a body that no longer wears it (its saved copy would duplicate those items).
+        BooleanSupplier aWears = () -> wears(a, y);
+        BooleanSupplier bWears = () -> wears(b, x);
+        stateY.apply(a, aWears);
+        stateX.apply(b, bWears);
         // Skin last, where each body now stands; both were allowed above. No skin moves as no skin.
-        SkinUtil.putSkin(a, skinY);
-        SkinUtil.putSkin(b, skinX);
+        if (aWears.getAsBoolean()) SkinUtil.putSkin(a, skinY);
+        if (bWears.getAsBoolean()) SkinUtil.putSkin(b, skinX);
+        // The history moves with each character either way, as a release leaves a body's history where it is.
         plugin.skinStateManager.swapped(a.getUniqueId(), y.getKey(), b.getUniqueId(), x.getKey());
 
-        restore(a, poseY, rideY, b);
-        restore(b, poseX, rideX, a);
-        if (online(a)) plugin.nametagManager.showWornCharacter(a);
-        if (online(b)) plugin.nametagManager.showWornCharacter(b);
+        if (aWears.getAsBoolean()) restore(a, poseY, rideY, b);
+        if (bWears.getAsBoolean()) restore(b, poseX, rideX, a);
+        if (aWears.getAsBoolean()) plugin.nametagManager.showWornCharacter(a);
+        if (bWears.getAsBoolean()) plugin.nametagManager.showWornCharacter(b);
         topUpHealthLater(a, y.getKey(), stateY);
         topUpHealthLater(b, x.getKey(), stateX);
 
         // A quit takes the character off, so this also covers a body that left.
-        boolean done = Character.isWearing(a, y.getKey()) && Character.isWearing(b, x.getKey());
+        boolean done = aWears.getAsBoolean() && bWears.getAsBoolean();
         if (!done) plugin.getLogger().warning("A swap of " + a.getName() + " and " + b.getName()
                 + " was interrupted by another plugin; both characters were saved where they stood before it");
         return done ? SwapResult.SWAPPED : SwapResult.INTERRUPTED;
@@ -173,7 +181,7 @@ public final class CharacterSwap {
      * it again then, unless the body changed character or its health changed meanwhile.
      */
     private static void topUpHealthLater(Player body, CharacterKey key, LiveState state) {
-        if (!online(body) || !state.healthCapped(body)) return;
+        if (!online(body) || !Character.isWearing(body, key) || !state.healthCapped(body)) return;
         double capped = body.getHealth();
         Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
             if (online(body) && Character.isWearing(body, key) && body.getHealth() == capped) state.topUpHealth(body);
@@ -186,6 +194,11 @@ public final class CharacterSwap {
         if (at.getWorld() != spot.getWorld()) return false;
         double dx = at.getX() - spot.getX(), dy = at.getY() - spot.getY(), dz = at.getZ() - spot.getZ();
         return dx * dx + dy * dy + dz * dz < 1.0E-6;
+    }
+
+    /** {@code body} is online and wears {@code character}. */
+    private static boolean wears(Player body, Character character) {
+        return online(body) && Character.isWearing(body, character.getKey());
     }
 
     /** Both still online, still wearing what they wore, and still able to swap where they are. */
