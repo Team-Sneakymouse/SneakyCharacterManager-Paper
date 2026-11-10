@@ -1,5 +1,10 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 
@@ -17,8 +22,9 @@ import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 
 /**
  * The holder rule: at most one body wears a character. Every load passes through {@link #admit} before it touches the
- * body, so the rule holds whichever path the load takes. The index itself is what each body wears
- * ({@link Character#wearerOf}).
+ * body and holds a reservation on the character until it finishes ({@link #reserve}), so the rule holds whichever path
+ * the load takes, including a load started from inside another load's events. The index itself is what each body
+ * wears ({@link Character#wearerOf}).
  *
  * <p>When another body (the holder) already wears the character:
  * <ul>
@@ -26,8 +32,10 @@ import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
  *     released, and the owner loads the character where the holder stood;</li>
  * <li>the owner picking it in {@code /char} ({@link LoadReason#OWN_SELECT}) loads nothing and goes to the selection
  *     handler, or is refused without one;</li>
- * <li>anything else (a borrow, staff tools, another plugin, a non-owner, forced or not) is refused.</li>
+ * <li>anything else (a borrow, a released holder returning to its own character, staff tools, another plugin, a
+ *     non-owner, forced or not) is refused.</li>
  * </ul>
+ * All of this runs on the main thread, except {@link #heldAwayFromOwner}.
  */
 @ApiStatus.Internal
 public final class HolderRegistry {
@@ -36,8 +44,13 @@ public final class HolderRegistry {
 
     static final String BEING_PLAYED = "&cSomeone else is playing that character right now.";
 
-    private static @Nullable Plugin handlerPlugin;
-    private static @Nullable HeldCharacterSelectionHandler handler;
+    private record Registration(Plugin plugin, HeldCharacterSelectionHandler handler) {}
+
+    private static @Nullable Registration selection;
+    /** Characters being put on a body right now, by that body. */
+    private static final Map<CharacterKey, Player> loading = new HashMap<>();
+    /** Holders released for an owner, until their own last-played character comes back. */
+    private static final Set<Player> returning = Collections.newSetFromMap(new IdentityHashMap<>());
 
     private HolderRegistry() {}
 
@@ -57,6 +70,13 @@ public final class HolderRegistry {
     static boolean admit(Character character, LoadReason reason) {
         Player body = character.getPlayer();
         CharacterKey key = character.getKey();
+        // A released holder's join is not the owner logging in: it must not take anything over in turn.
+        if (reason == LoadReason.OWN_JOIN && returning.remove(body)) reason = LoadReason.RETURN;
+        Player midLoad = loading.get(key);
+        if (midLoad != null && midLoad != body) {
+            refuse(body, key, reason, midLoad);
+            return false;
+        }
         Player holder = Character.wearerOf(key);
         switch (decide(reason, body.getUniqueId(), key, holder == null ? null : holder.getUniqueId())) {
             case LOAD:
@@ -68,9 +88,33 @@ public final class HolderRegistry {
                 offerToHandler(body, key, holder);
                 return false;
             default:
-                SneakyCharacterManager.getInstance().getLogger().info("Refused to load " + key + " onto " + body.getName()
-                        + " (" + reason + "): " + holder.getName() + " is wearing it");
+                refuse(body, key, reason, holder);
                 return false;
+        }
+    }
+
+    /** Holds {@code key} for {@code body} while its load runs; see {@link Character#load(LoadReason)}. */
+    static void reserve(CharacterKey key, Player body) {
+        loading.put(key, body);
+    }
+
+    static void unreserve(CharacterKey key, Player body) {
+        loading.remove(key, body);
+    }
+
+    /** {@code body} left or was locked out: drop what the registry tracks for it. */
+    static void forget(Player body) {
+        returning.remove(body);
+    }
+
+    private static void refuse(Player body, CharacterKey key, LoadReason reason, Player holder) {
+        SneakyCharacterManager plugin = SneakyCharacterManager.getInstance();
+        plugin.getLogger().info("Refused to load " + key + " onto " + body.getName() + " (" + reason + "): "
+                + holder.getName() + " is wearing it");
+        if (reason == LoadReason.RETURN) {
+            // The released holder wears nothing; let it pick another of its characters.
+            body.sendMessage(TextUtility.INSTANCE.convertToComponent("&cSomeone else is playing your last character. Pick another one."));
+            plugin.selectionMenu.openMenu(body);
         }
     }
 
@@ -105,15 +149,14 @@ public final class HolderRegistry {
     }
 
     private static void offerToHandler(Player owner, CharacterKey key, Player holder) {
-        HeldCharacterSelectionHandler current = handler;
-        Plugin currentPlugin = handlerPlugin;
+        Registration current = selection;
         boolean handled = false;
         if (current != null) {
             try {
-                handled = current.onOwnerSelect(owner, key, holder);
+                handled = current.handler().onOwnerSelect(owner, key, holder);
             } catch (RuntimeException | LinkageError e) {
                 SneakyCharacterManager.getInstance().getLogger().log(Level.SEVERE,
-                        "Held-character selection handler of " + currentPlugin.getName() + " failed", e);
+                        "Held-character selection handler of " + current.plugin().getName() + " failed", e);
             }
         }
         if (!handled) owner.sendMessage(TextUtility.INSTANCE.convertToComponent(BEING_PLAYED));
@@ -128,8 +171,9 @@ public final class HolderRegistry {
 
     /**
      * Takes the holder off the character right away, so the owner can load it in the same tick, then loads the
-     * holder's own last-played character. Stand-in until ticket 04's {@code release(body)}, which must also free the
-     * character before it returns. Until the holder's own character arrives it wears nothing, like after
+     * holder's own last-played character. That load is a {@link LoadReason#RETURN}: if someone else wears it, it is
+     * refused and the holder gets its character menu. Stand-in until ticket 04's {@code release(body)}, which must
+     * also free the character before it returns. Until the holder's own character arrives it wears nothing, like after
      * {@code chardisable}; its inventory is cleared so the borrowed items aren't left on two bodies.
      */
     private static void releaseForOwner(Player holder) {
@@ -137,21 +181,21 @@ public final class HolderRegistry {
         Character.takeOff(holder);
         plugin.nametagManager.unnicknamePlayer(holder);
         if (plugin.getConfig().getBoolean("manageInventories", true)) holder.getInventory().clear();
+        returning.add(holder);
         ProxyMessagingUtil.sendByteArray(holder, "playerJoin", holder.getUniqueId().toString());
     }
 
-    public static void setSelectionHandler(Plugin plugin, HeldCharacterSelectionHandler selectionHandler) {
-        if (handlerPlugin != null && handlerPlugin != plugin) {
+    public static void setSelectionHandler(Plugin plugin, HeldCharacterSelectionHandler handler) {
+        Registration current = selection;
+        if (current != null && current.plugin() != plugin) {
             SneakyCharacterManager.getInstance().getLogger().warning("Held-character selection handler of "
-                    + handlerPlugin.getName() + " replaced by " + plugin.getName());
+                    + current.plugin().getName() + " replaced by " + plugin.getName());
         }
-        handlerPlugin = plugin;
-        handler = selectionHandler;
+        selection = new Registration(plugin, handler);
     }
 
     public static void clearSelectionHandler(Plugin plugin) {
-        if (handlerPlugin != plugin) return;
-        handlerPlugin = null;
-        handler = null;
+        Registration current = selection;
+        if (current != null && current.plugin() == plugin) selection = null;
     }
 }

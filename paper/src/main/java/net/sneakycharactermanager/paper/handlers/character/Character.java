@@ -126,6 +126,16 @@ public class Character {
 			return false;
 		}
 		if (!HolderRegistry.admit(this, reason)) return false;
+		// Held until this load ends: a load started from its events can't put this character on another body.
+		HolderRegistry.reserve(this.key, this.player);
+		try {
+			return applyToWearer();
+		} finally {
+			HolderRegistry.unreserve(this.key, this.player);
+		}
+	}
+
+	private boolean applyToWearer() {
 		Character current = get(this.player);
 		if (current != null) current.save();
 
@@ -524,6 +534,7 @@ public class Character {
 
 	public static void remove(Player player) {
 		takeOff(player);
+		HolderRegistry.forget(player);
 		playerCharactersCache.remove(player.getUniqueId());
 	}
 

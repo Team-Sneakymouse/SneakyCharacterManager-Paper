@@ -43,6 +43,7 @@ class HolderRuleTest {
     void everythingElseOnAHeldCharacterIsRefused() {
         assertEquals(Decision.REFUSE, HolderRegistry.decide(LoadReason.BORROW, owner, key, other));
         assertEquals(Decision.REFUSE, HolderRegistry.decide(LoadReason.OTHER, owner, key, other));
+        assertEquals(Decision.REFUSE, HolderRegistry.decide(LoadReason.RETURN, owner, key, other)); // released holder coming back
         for (LoadReason reason : LoadReason.values()) {
             // A non-owner never gets the owner's exceptions, whatever the reason claims (a forced staff load included).
             assertEquals(Decision.REFUSE, HolderRegistry.decide(reason, third, key, other), reason.name());

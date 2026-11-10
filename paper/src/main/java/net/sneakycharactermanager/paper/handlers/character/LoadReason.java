@@ -15,6 +15,11 @@ public enum LoadReason {
     OWN_JOIN,
     /** The owner picking one of their own characters (the {@code /char} menu or {@code /char <name>}). */
     OWN_SELECT,
+    /**
+     * A holder released for the owner getting its own last-played character back. Arrives as a join, but it isn't
+     * one: if someone else wears that character, it is refused rather than taken over.
+     */
+    RETURN,
     /** Another player's character put on this body through the internal borrow seam. */
     BORROW,
     /** Any other load: a direct {@link Character#load()} call by another plugin, staff tooling, or a non-owner. */

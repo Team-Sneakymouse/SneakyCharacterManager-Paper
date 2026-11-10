@@ -38,6 +38,7 @@ import net.sneakycharactermanager.paper.api.character.HeldCharacterSelectionHand
 import net.sneakycharactermanager.paper.api.character.StorageMode;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
+import net.sneakycharactermanager.paper.handlers.character.LoadCharacterEvent;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
@@ -63,6 +64,10 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  * <li>A pick the storage check refused, but the holder left before the result arrived: selected normally.</li>
  * <li>Borrow seam: refused onto another body while held, and refused while the owner wears it.</li>
  * <li>Staff and other plugins (a direct {@code Character.load()}, a forced load onto a non-owner): refused.</li>
+ * <li>A load started from inside another load's events (a {@code LoadCharacterEvent} listener) can't put the same
+ *     character on a second body.</li>
+ * <li>A released holder getting its own last-played character back doesn't take it from a third body; it gets the
+ *     character menu. A {@code /char} pick queued behind a borrow of the same character doesn't move last-played.</li>
  * <li>The registry follows switches, quits ({@code Character.remove}, also used by {@code chardisable}) and the
  *     offline purge in {@code saveAll}.</li>
  * <li>An owner disabling a held character leaves it on the holder, whose saves still reach the owner's file.</li>
@@ -87,6 +92,10 @@ class HolderRegistryTest {
     final List<Object[]> handled = new ArrayList<>();
     boolean holdWrites;
     Runnable beforeNextTask;
+    /** While set, main-thread tasks wait in {@link #deferred} until the test runs them. */
+    boolean deferTasks;
+    final List<Runnable> deferred = new ArrayList<>();
+    PluginManager events;
     Player owner, supporter, third;
     DatabaseBackend backend;
     MockedStatic<SneakyCharacterManager> plugins;
@@ -151,6 +160,10 @@ class HolderRegistryTest {
         plugin.titleRegistry = mock(TitleRegistry.class);
         BukkitScheduler scheduler = mock(BukkitScheduler.class);
         when(scheduler.runTask(eq(plugin), any(Runnable.class))).thenAnswer(call -> {
+            if (deferTasks) {
+                deferred.add(call.getArgument(1));
+                return null;
+            }
             Runnable before = beforeNextTask;
             beforeNextTask = null;
             if (before != null) before.run();
@@ -160,7 +173,7 @@ class HolderRegistryTest {
         bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
         bukkit.when(Bukkit::isPrimaryThread).thenReturn(true);
         bukkit.when(Bukkit::getOnlinePlayers).thenAnswer(call -> List.of());
-        PluginManager events = mock(PluginManager.class);
+        events = mock(PluginManager.class);
         Server server = mock(Server.class);
         when(server.getPluginManager()).thenReturn(events);
         bukkit.when(Bukkit::getServer).thenReturn(server);
@@ -227,6 +240,20 @@ class HolderRegistryTest {
         assertSame(supporter, CharacterHolders.holderOf(supportersOwn));
         assertSame(owner, CharacterHolders.holderOf(borrowed));
         assertEquals(new Location(null, 88, 5, 0), queuedLocation(borrowed));
+    }
+
+    @Test
+    void aReleasedHolderDoesNotTakeItsOwnCharacterBackFromAnotherBody() {
+        holdBorrowed();
+        backend.loadBorrowed(third, supportersOwn); // someone else wears the supporter's own last-played character
+        api.lastPlayed.put(ownerId.toString(), "second");
+
+        join(owner);
+
+        assertEquals(borrowed, Character.get(owner).getKey());
+        assertSame(third, CharacterHolders.holderOf(supportersOwn), "the released holder's return is not a login");
+        assertNull(Character.get(supporter));
+        verify(plugin.selectionMenu).openMenu(supporter);
     }
 
     // 2. /char menu pick
@@ -352,6 +379,23 @@ class HolderRegistryTest {
         assertTrue(api.selected());
     }
 
+    @Test
+    void aPickQueuedBehindABorrowOfTheSameCharacterDoesNotMoveLastPlayed() {
+        wearMain();
+        CharacterHolders.setSelectionHandler(dancing, recordingHandler(true));
+        deferTasks = true;
+        backend.loadBorrowed(supporter, borrowed); // storage step done, not applied on the main thread yet
+        api.forget();
+
+        backend.submit(owner, new CharacterRequest.Select(ownerId.toString(), "second"));
+        runDeferred();
+
+        assertFalse(api.selected(), "the owner's last-played must not move to a character on its way to another body");
+        assertSame(supporter, CharacterHolders.holderOf(borrowed));
+        assertEquals(main, Character.get(owner).getKey());
+        assertEquals(1, handled.size());
+    }
+
     // 6. Borrow seam
 
     @Test
@@ -397,6 +441,21 @@ class HolderRegistryTest {
         assertSame(supporter, CharacterHolders.holderOf(borrowed));
     }
 
+    @Test
+    void aLoadStartedFromAnotherLoadsEventCannotTakeTheSameCharacter() {
+        doAnswer(call -> {
+            if (call.getArgument(0) instanceof LoadCharacterEvent event && event.getPlayer() == supporter)
+                character(borrowed, third).load(); // a listener loading the same character onto another body
+            return null;
+        }).when(events).callEvent(any());
+
+        backend.loadBorrowed(supporter, borrowed);
+
+        assertSame(supporter, CharacterHolders.holderOf(borrowed));
+        assertNull(Character.get(third));
+        verify(third, never()).teleport(any(Location.class));
+    }
+
     // 8. The registry follows what each body wears
 
     @Test
@@ -428,6 +487,11 @@ class HolderRegistryTest {
         assertEquals(borrowed, Character.get(supporter).getKey());
         assertSame(supporter, CharacterHolders.holderOf(borrowed));
         assertEquals(List.of(data.resolve(ownerId.toString()).resolve("second.yml")), writes.stream().map(PendingWrite::target).toList());
+    }
+
+    private void runDeferred() {
+        deferTasks = false;
+        while (!deferred.isEmpty()) deferred.remove(0).run();
     }
 
     private void join(Player player) {

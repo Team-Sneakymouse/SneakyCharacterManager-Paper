@@ -26,6 +26,8 @@ public final class DatabaseBackend implements CharacterBackend {
     private final RevisionFence revisions = new RevisionFence();
     private final Set<Player> joining = Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<Player> failedJoins = Collections.newSetFromMap(new IdentityHashMap<>());
+    /** Borrows submitted and not yet applied on the main thread, by character. Read on storage threads. */
+    private final Map<CharacterKey, Integer> borrowsInFlight = new ConcurrentHashMap<>();
     private final ThreadPoolExecutor http;
     private CompletableFuture<?> skinBarrier = CompletableFuture.completedFuture(null);
     private long titleCompletion;
@@ -42,7 +44,7 @@ public final class DatabaseBackend implements CharacterBackend {
         }, new ThreadPoolExecutor.AbortPolicy());
         // Player-supplied URLs go through the shared safe fetcher (issue #28); policy is read per fetch.
         operations = new DatabaseOperations(store, url -> CompletableFuture.supplyAsync(
-                () -> SkinFetching.skinId(url, SkinFetching.policy()), http), HolderRegistry::heldAwayFromOwner);
+                () -> SkinFetching.skinId(url, SkinFetching.policy()), http), this::heldElsewhere);
         operations.ready().whenComplete((unused, error) -> {
             if (error != null && !closed) plugin.getLogger().severe(
                     "SneakyDB SCM initialization failed. Apply db/001_scm.sql, check SneakyDB, then restart; no legacy fallback.");
@@ -67,6 +69,9 @@ public final class DatabaseBackend implements CharacterBackend {
         Player destination = request instanceof CharacterRequest.Borrow r ? Bukkit.getPlayer(UUID.fromString(r.body())) : target;
         // Without an online body there is no session to fence the result to; it could land on a later session.
         if (request instanceof CharacterRequest.Borrow && destination == null) return;
+        // Counts as held from now on, so an owner's pick queued behind it can't move last-played to it.
+        CharacterKey borrowing = request instanceof CharacterRequest.Borrow r ? CharacterKey.of(r.owner(), r.character()) : null;
+        if (borrowing != null) borrowsInFlight.merge(borrowing, 1, Integer::sum);
         if (request instanceof CharacterRequest.Join && target != null) {
             if (failedJoins.contains(target) || !joining.add(target)) return;
         }
@@ -136,7 +141,10 @@ public final class DatabaseBackend implements CharacterBackend {
                     if (effect instanceof DatabaseOperations.Listed listed && !revisions.accept(listed.owner(), listed.revision())) continue;
                     apply(effect);
                 }
-                } finally { revisions.finish(owner); }
+                } finally {
+                    revisions.finish(owner);
+                    if (borrowing != null) borrowsInFlight.computeIfPresent(borrowing, (k, n) -> n == 1 ? null : n - 1);
+                }
             });
         });
     }
@@ -213,10 +221,19 @@ public final class DatabaseBackend implements CharacterBackend {
     public void loadBorrowed(Player body, CharacterKey key) {
         submit(null, new CharacterRequest.Borrow(body.getUniqueId().toString(), key.owner().toString(), key.characterId()));
     }
+    /** For a /char pick on a storage thread: another body wears the character, or a borrow of it is on its way. */
+    private boolean heldElsewhere(String owner, String character) {
+        if (HolderRegistry.heldAwayFromOwner(owner, character)) return true;
+        try {
+            return borrowsInFlight.containsKey(CharacterKey.of(owner, character));
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
     @Override public void disconnect(Player player) {
         fence.forget(player.getUniqueId().toString()); joining.remove(player); failedJoins.remove(player);
     }
     @Override public void close() {
-        closed = true; fence.close(); revisions.clear(); queue.close(); operations.close(); http.shutdownNow(); joining.clear(); failedJoins.clear();
+        closed = true; fence.close(); revisions.clear(); queue.close(); operations.close(); http.shutdownNow(); joining.clear(); failedJoins.clear(); borrowsInFlight.clear();
     }
 }
