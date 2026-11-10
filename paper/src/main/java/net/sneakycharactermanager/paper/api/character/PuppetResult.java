@@ -15,8 +15,9 @@ public enum PuppetResult {
     /** The owner has no such character, or it is disabled. */
     NOT_FOUND,
     /**
-     * The load was cut short and nothing was put on the body: the owner or the body logged in or out while it was on
-     * its way, a newer load for the body replaced it, or the owner's character changed while it loaded. Trying again
+     * The load was cut short and the body doesn't wear the character: the owner or the body logged in or out while it
+     * was on its way, a newer load for the body replaced it, the owner's character changed while it loaded, or a
+     * listener of the load's own events (such as a {@link PuppetLeaveEvent}) took it off again at once. Trying again
      * may work.
      */
     INTERRUPTED,

@@ -47,7 +47,9 @@ public final class Puppets {
         return backend.loadBorrowed(body, character).handle((outcome, error) -> {
             if (error != null) return PuppetResult.FAILED;
             return switch (outcome) {
-                case LOADED -> PuppetResult.PUPPETED;
+                // A listener of the load's own events (the previous puppet's leave event, say) may already have
+                // taken it off again; only what the body wears now counts.
+                case LOADED -> Character.isWearing(body, character) ? PuppetResult.PUPPETED : PuppetResult.INTERRUPTED;
                 case REFUSED -> heldAway(body, character) ? PuppetResult.HELD : PuppetResult.REFUSED;
                 case NOT_FOUND -> PuppetResult.NOT_FOUND;
                 case INTERRUPTED -> PuppetResult.INTERRUPTED;

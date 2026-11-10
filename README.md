@@ -154,7 +154,7 @@ Another plugin can put a player's character on a different body (a *puppet*) and
 | `OWN_CHARACTER` | The body owns the character; that's a `/char` switch, not a puppet. |
 | `HELD` | Another body, the owner included, wears it, when asked or by the time the load arrived. |
 | `NOT_FOUND` | No such character, or it's disabled. |
-| `INTERRUPTED` | Cut short, nothing loaded: the owner or the body logged in or out while it was on its way, a newer load for the body replaced it, or the owner's character changed while it loaded. Trying again may work. |
+| `INTERRUPTED` | Cut short, the body doesn't wear it: the owner or the body logged in or out while it was on its way, a newer load for the body replaced it, the owner's character changed while it loaded, or a listener of the load's own events (such as the previous puppet's `PuppetLeaveEvent`) took it off again at once. Trying again may work. |
 | `REFUSED` | Refused when it arrived, for example a `LoadCharacterEvent` listener cancelled it. |
 | `FAILED` | Storage failed, or SCM is shutting down. |
 

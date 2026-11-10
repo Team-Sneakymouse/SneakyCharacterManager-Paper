@@ -80,7 +80,8 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  * <li>F5 No such character, or a disabled one: {@code NOT_FOUND}.</li>
  * <li>F6 The owner logs in or out while the load is on its way: {@code INTERRUPTED}.</li>
  * <li>F7 The body quits mid-load, or a newer load for the body replaces it: {@code INTERRUPTED}.</li>
- * <li>F8 The owner's record changes while the load is on its way (a stale read): {@code INTERRUPTED}.</li>
+ * <li>F8 The owner's record changes while the load is on its way (a stale read), or a listener of the load's own
+ *     events takes the character off again at once: {@code INTERRUPTED}.</li>
  * <li>F9 A {@code LoadCharacterEvent} listener cancels the load: {@code REFUSED}.</li>
  * <li>F10 Storage fails, or SCM closes mid-load: {@code FAILED}. F11 Called off the main thread: throws.</li>
  * </ol>
@@ -552,6 +553,19 @@ class PuppetApiTest {
 
         assertLeft(supporter, second, Reason.QUIT, null);
         assertNull(CharacterHolders.holderOf(second));
+    }
+
+    @Test
+    void aListenerThatTakesTheNewCharacterOffAgainMeansThePuppetDidNotHappen() {
+        puppet(supporter, second);
+        doAnswer(call -> {
+            if (call.getArgument(0) instanceof PuppetLeaveEvent event && event.getReason() == Reason.LOADED_OTHER)
+                Puppets.release(event.getPlayer()); // e.g. ending the old dance releases the body
+            return null;
+        }).when(events).callEvent(any());
+
+        assertEquals(PuppetResult.INTERRUPTED, puppet(supporter, main));
+        assertNull(CharacterHolders.holderOf(main));
     }
 
     // E4 Owner joins as it
