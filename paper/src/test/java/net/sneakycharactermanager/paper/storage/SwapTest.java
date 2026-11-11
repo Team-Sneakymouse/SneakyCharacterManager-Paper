@@ -926,6 +926,23 @@ class SwapTest {
     }
 
     @Test
+    void aGridClosedDuringItsOwnTakeIsntTakenTwice() {
+        // The Driver's first grid write closes the Driver's own view: torch goes back into main's inventory.
+        ItemStack rope = item("rope"), torch = item("torch");
+        driver.matrix[0] = rope; driver.matrix[1] = torch;
+        List<String> closed = new ArrayList<>();
+        callOut = (body, what) -> {
+            if (body == driver && what.equals("grid") && closed.isEmpty()) { closed.add("closed"); driver.closeOwnGrid(); }
+        };
+
+        assertEquals(SwapResult.SWAPPED, Puppets.swap(driver.player, supporter.player));
+
+        assertEquals(1, supporter.count(rope), "main's grid item, through the grid");
+        assertEquals(1, supporter.count(torch), "main's returned item, through main's inventory");
+        assertEquals(0, driver.count(rope) + driver.count(torch));
+    }
+
+    @Test
     void aGridClosedIntoAFullInventoryDropsItsItemsAndNoCopyMoves() {
         ItemStack diamonds = item("diamonds");
         supporter.matrix[0] = diamonds;

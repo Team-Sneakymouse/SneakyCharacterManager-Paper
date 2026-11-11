@@ -6,10 +6,13 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
@@ -134,6 +137,18 @@ class LiveStateTest {
         verify(gridB).setItem(1, stick);
         verify(gridB, never()).setItem(2, rope);
         verify(b.getInventory()).addItem(rope);
+    }
+
+    @Test
+    void aGridItemThatFitsNowhereDropsAtTheBodysFeet() {
+        ItemStack stick = item("stick");
+        World world = mock(World.class);
+        when(b.getWorld()).thenReturn(world);
+        when(b.getInventory().addItem(stick)).thenReturn(new HashMap<>(Map.of(0, stick)));
+
+        LiveState.giveGrid(b, null, new LiveState.TakenGrid(gridA, new ItemStack[]{stick, null, null, null}));
+
+        verify(world).dropItemNaturally(b.getLocation(), stick);
     }
 
     @Test
