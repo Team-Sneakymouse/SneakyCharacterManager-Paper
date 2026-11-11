@@ -86,8 +86,9 @@ public final class Puppets {
      * Exchanges the characters {@code a} and {@code b} wear, in this one call (a single tick, in memory): each body
      * takes over the other's character exactly where it stood, so onlookers see no change. Teleport first, skin last.
      * Moves location and facing, velocity, fall distance, health, absorption, hunger, effects, fire, freezing, air,
-     * attributes, the inventory with the cursor item and crafting grid (when SCM manages inventories), the held slot,
-     * the worn skin, SneakyPoses poses and the name on the nameplate.
+     * attributes, the inventory (when SCM manages inventories), the held slot, the worn skin, SneakyPoses poses and
+     * the name on the nameplate. Each body's inventory is closed first, so its cursor item and crafting grid go into
+     * the inventory (what doesn't fit drops at its feet, as in vanilla) and move with it.
      *
      * <p>Both bodies must be online, alive, out of bed and in the same world, each wearing a character. Nothing else
      * can save, load or quit them in the middle. Each character is saved once, where it stood. Afterwards each body

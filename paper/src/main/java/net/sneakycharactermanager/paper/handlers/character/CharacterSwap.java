@@ -32,29 +32,31 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  * <li>Check: both online, distinct, alive, out of bed, in one world, each wearing a character, neither in a load or
  *     another swap.</li>
  * <li>Lock: X is reserved for {@code b} and Y for {@code a}, so no load can put either on any body, and both bodies
- *     are marked as swapping, so nothing can load onto them or save them, and their teleports don't rebuild their
- *     nameplates, until the swap returns. A release asked for meanwhile ({@code Puppets.release}) waits until the
- *     swap is done. Everything else that could save, load or quit them (autosave, quits, commands, storage results)
- *     runs on the main thread too, so it can't run in between.</li>
- * <li>Close any open container (its cursor item goes back into the inventory, as in vanilla) and take both crafting
- *     grids off, slot by slot ({@link LiveState#takeGrid}), then check again. Fire {@code CharacterSkinAppliedEvent}
- *     for both skins: a veto refuses the swap before anything moves. A refused swap gives each grid back.</li>
+ *     are marked as swapping, so nothing can load onto them and their teleports don't rebuild their nameplates, until
+ *     the swap returns. A release asked for meanwhile ({@code Puppets.release}) waits until the swap is done.
+ *     Everything else that could save, load or quit them (autosave, quits, commands, storage results) runs on the
+ *     main thread too, so it can't run in between.</li>
+ * <li>Close each body's inventory, whatever is open: as in vanilla, the cursor item and the crafting grid go back
+ *     into the inventory, and what doesn't fit drops at the body's feet. Check again. Fire
+ *     {@code CharacterSkinAppliedEvent} for both skins: a veto refuses the swap before anything moves.</li>
  * <li>Read both bodies' live state and poses, and save X from {@code a} and Y from {@code b}: the one save each
- *     character gets, of exactly the state that moves. No later save can land in the middle (step 2).</li>
+ *     character gets, of exactly the state that moves, items included. From here until the swap returns, no other
+ *     save of them can land (before it, a save writes a body's own state, which nothing has changed yet).</li>
  * <li>Teleport first: get both off any vehicle, then each to the other's exact location and facing (no +1 Y). If a
  *     listener refuses or redirects either teleport, or a body goes offline, both go back where they stood, moving
  *     as they were: {@code REFUSED}.</li>
  * <li>Exchange what each body wears ({@link Character#exchange}): the holder registry and puppet bookkeeping, with no
  *     call-out in between, so listeners see either the old pairs (during the teleports) or the new ones.</li>
- * <li>Hand the inventory and cursor over, both ways at once ({@link LiveState#handOverItems}), put each taken grid
- *     on the other body ({@link LiveState#giveGrid}), then apply the rest of each live state to the other body, then the worn skin last (the live signed property, so uniforms move too and nothing
- *     waits on the network), then hand over each character's skin history. Health capped by a maximum that the
+ * <li>Hand the inventories over, both ways at once ({@link LiveState#handOverItems}), then apply the rest of each
+ *     live state to the other body, then the worn skin last (the live signed property, so uniforms move too and
+ *     nothing waits on the network), then hand over each character's skin history. Health capped by a maximum that the
  *     incoming equipment only raises next tick is set again then. From the items on, a listener of the swap's own
  *     events may take a body off its new character (a quit, a lock-out): that body gets nothing more of it.</li>
  * <li>Put poses back (SneakyPoses) and re-seat bodies that rode a vehicle, then show the new names on the same
  *     nameplates.</li>
- * <li>Unlock, run the releases asked for during the swap, then write the last-played pointer of each body that now wears its own character, through its owner's
- *     queue. A body wearing someone else's character keeps its pointer.</li>
+ * <li>Unlock, run the releases asked for during the swap, then write the last-played pointer of each body that now
+ *     wears its own character, through its owner's queue. A body wearing someone else's character keeps its
+ *     pointer.</li>
  * </ol>
  * Fires no {@code LoadCharacterEvent} (its listeners treat it as a switch: MagicSpells' load spells cure effects and
  * reset XP, scale and hunger, which would undo what a swap moves) and no {@code PuppetLeaveEvent}.
@@ -64,20 +66,31 @@ public final class CharacterSwap {
 
     /** Bodies in the middle of a swap. Main thread only. */
     private static final Set<Player> swapping = Collections.newSetFromMap(new IdentityHashMap<>());
+    /** Swapping bodies whose characters the swap has saved: no other save of them may land until it returns. */
+    private static final Set<Player> saved = Collections.newSetFromMap(new IdentityHashMap<>());
     /** Releases asked for while a body was swapping, by body: they run as soon as its swap is done. */
     private static final Map<Player, PuppetLeaveEvent.Reason> releaseAfter = new IdentityHashMap<>();
 
     private CharacterSwap() {}
 
-    /** True while {@code body} is in the middle of a swap: nothing may load onto it or save it. */
+    /** True while {@code body} is in the middle of a swap: nothing may load onto it. */
     public static boolean isSwapping(@Nullable Player body) {
         return body != null && swapping.contains(body);
     }
 
     /**
+     * True while {@code body}'s swap has saved its character and not yet returned: a save now would write a
+     * half-swapped state over the swap's own, so {@link Character#save} skips it. Before the swap's save nothing has
+     * moved, so a save (a quit's, say) writes the body's own state as usual.
+     */
+    public static boolean blocksSave(@Nullable Player body) {
+        return body != null && saved.contains(body);
+    }
+
+    /**
      * {@link HolderRegistry#release} for a body in the middle of a swap: the release runs as soon as the swap is
-     * done, on whatever the body wears then. Run now, it would skip its save (a swapping body isn't saved) and clear
-     * the inventory, losing what the swap moved since its own save, such as the crafting grid, which no save holds.
+     * done, on whatever the body wears then. Run in the middle, it would skip its save ({@link #blocksSave}) and
+     * clear the inventory, losing whatever reached the body after the swap's own save.
      */
     static void releaseAfterSwap(Player body, PuppetLeaveEvent.Reason reason) {
         releaseAfter.putIfAbsent(body, reason);
@@ -107,6 +120,8 @@ public final class CharacterSwap {
         } finally {
             swapping.remove(a);
             swapping.remove(b);
+            saved.remove(a);
+            saved.remove(b);
             HolderRegistry.unreserve(x.getKey(), b);
             HolderRegistry.unreserve(y.getKey(), a);
             runRelease(a);
@@ -128,23 +143,7 @@ public final class CharacterSwap {
     private static SwapResult exchange(Player a, Player b, Character x, Character y) {
         closeContainer(a);
         closeContainer(b);
-        boolean inventories = SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true);
-        // The grids come off first, while each body still wears its own character: a listener of a slot's event may
-        // close a grid, which puts its items into that body's own inventory, so they stay with its character.
-        LiveState.TakenGrid gridX = inventories ? LiveState.takeGrid(a) : null;
-        LiveState.TakenGrid gridY = inventories ? LiveState.takeGrid(b) : null;
-        SwapResult result = trade(a, b, x, y, inventories, gridX, gridY);
-        if (result == SwapResult.REFUSED) {
-            // Nothing was exchanged: each body gets its own grid back.
-            LiveState.giveGrid(a, gridX, gridX);
-            LiveState.giveGrid(b, gridY, gridY);
-        }
-        return result;
-    }
-
-    private static SwapResult trade(Player a, Player b, Character x, Character y, boolean inventories,
-            @Nullable LiveState.TakenGrid gridX, @Nullable LiveState.TakenGrid gridY) {
-        // A close or grid listener may have done anything; nothing has changed yet, so just stop.
+        // A close listener may have done anything; nothing has changed yet, so just stop.
         if (!ready(a, b, x, y)) return SwapResult.REFUSED;
         // Skin listeners may veto a skin: ask before anything moves, so a veto refuses the whole swap.
         ProfileProperty skinX = SkinUtil.wornTextures(a);
@@ -153,6 +152,7 @@ public final class CharacterSwap {
                 || !ready(a, b, x, y)) return SwapResult.REFUSED;
 
         SneakyCharacterManager plugin = SneakyCharacterManager.getInstance();
+        boolean inventories = plugin.getConfig().getBoolean("manageInventories", true);
         boolean attributeModifiers = plugin.getConfig().getBoolean("manageAttributes", false);
         LiveState stateX = LiveState.capture(a, attributeModifiers);
         LiveState stateY = LiveState.capture(b, attributeModifiers);
@@ -162,6 +162,8 @@ public final class CharacterSwap {
         Entity rideY = ride(b);
         x.write();
         y.write();
+        saved.add(a);
+        saved.add(b);
 
         // Teleport first: the skin change that comes last re-adds each body for its onlookers at its new spot.
         a.leaveVehicle();
@@ -179,16 +181,12 @@ public final class CharacterSwap {
         }
 
         Character.exchange(a, b);
-        // From here a listener of the swap's own events (crafting grids, effects, air, poses, vehicles, the nameplate)
-        // may take a body off its new character (a release, a quit). The items move first, both ways, so none is ever
-        // on both bodies or lost; after that each step for a body runs only while it still wears its new character.
+        // From here a listener of the swap's own events (effects, air, poses, vehicles, the nameplate) may take a body
+        // off its new character (a quit, a lock-out). The inventories move first, both ways at once, holding exactly
+        // what the saves hold; after that each step for a body runs only while it still wears its new character.
         BooleanSupplier aWears = () -> wears(a, y);
         BooleanSupplier bWears = () -> wears(b, x);
-        if (inventories) {
-            LiveState.handOverItems(a, b);
-            LiveState.giveGrid(a, gridX, gridY);
-            LiveState.giveGrid(b, gridY, gridX);
-        }
+        if (inventories) LiveState.handOverItems(a, b);
         stateY.apply(a, aWears);
         stateX.apply(b, bWears);
         // Skin last, where each body now stands; both were allowed above. No skin moves as no skin.
@@ -281,9 +279,13 @@ public final class CharacterSwap {
         return null;
     }
 
-    /** Closes any container view; the player's own inventory view (with its crafting grid) stays. */
+    /**
+     * Closes {@code body}'s inventory, whatever is open, so its cursor item and crafting grid go back into the
+     * inventory (what doesn't fit drops at its feet), as vanilla does: from here on every item the character has is in
+     * the inventory, which the save holds and the exchange moves. Nothing else holds an item mid-swap.
+     */
     private static void closeContainer(Player body) {
-        if (LiveState.ownGrid(body) == null) body.closeInventory();
+        body.closeInventory();
     }
 
     /** {@code body} owns {@code character} and still wears it: its last-played character becomes this one. */

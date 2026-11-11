@@ -184,11 +184,11 @@ Only `SWAPPED`, `REFUSED` and `INTERRUPTED` can change anything. The others are 
 
 **What moves, in order.** Body `a` wears X and body `b` wears Y:
 
-1. Any open container is closed (its cursor item goes back into the inventory, as in vanilla). The player's own inventory view stays open, and, when `manageInventories` is on, both 2x2 crafting grids are taken off, one slot at a time. Each slot write fires `PrepareItemCraftEvent`; a listener that closes a grid meanwhile puts its items into that body's own inventory (or drops them, if it is full), as vanilla does, and they then stay with that body's character. `CharacterSkinAppliedEvent` fires for both skins; a veto refuses the swap here. A refused swap gives each body its own grid back.
-2. Both bodies' live state is read, and X is saved from `a` and Y from `b`. That is the one save each character gets, of exactly the state that moves.
+1. Each body's inventory is closed, whatever is open (a container, or its own inventory screen). As in vanilla, the cursor item and the 2x2 crafting grid go back into the inventory, and what doesn't fit drops at the body's feet. From here every item a character has is in its inventory. `CharacterSkinAppliedEvent` fires for both skins; a veto refuses the swap here.
+2. Both bodies' live state is read, and X is saved from `a` and Y from `b`. That is the one save each character gets, of exactly the state that moves, the items from the cursor and grid included.
 3. **Teleport first:** both get off any vehicle, then each goes to the other's exact location and facing (no +1 Y). A teleport a listener cancels or sends elsewhere refuses the swap.
 4. The holder registry and puppet bookkeeping swap in one step: `a` wears Y and `b` wears X.
-5. **Items, both ways** (when `manageInventories` is on): each body gets the other's inventory and cursor item as they are right now, all in one go, with no event in between. Then each body gets the other's crafting grid, one slot at a time. A slot a listener filled meanwhile keeps its item, and the incoming one goes into the inventory, or drops at the body's feet if it is full. So whenever a listener runs, no item is on both bodies, and none is lost.
+5. **Items, both ways** (when `manageInventories` is on): each body gets the other's inventory as it is right now, both in one go, with no event in between. So whenever a listener runs, no item is on both bodies, and none is lost.
 6. Each body gets the rest of the other's: effects, attribute base values (scale, maximum health), plugin attribute modifiers when `manageAttributes` is on (Minecraft's own modifiers, from equipment and effects, stay with the body), health, absorption, food, saturation, exhaustion, fire, freezing, fall distance, held hotbar slot, velocity, and air last. Health above the body's maximum this tick (the incoming equipment's bonus only counts on its next tick) is capped, then set again on that tick unless the body changed character or its health changed. An effect that an `EntityPotionEffectEvent` listener keeps or refuses stays as the listener decided: that is how a plugin forbids an effect on a body.
 7. **Skin last:** the signed skin property each body wore moves as it is (uniforms included, nothing waits on the network); a body with no skin property hands over none. None of `SkinUtil.applySkin`'s dismount or +1 Y. Each character's latest skin-history entry moves to its new body.
 8. SneakyPoses poses (sit, sleep, crawl) are put back on the body that now wears the character, at the same spot, after the skin so a sleeping pose copies the new one. A body that rode a vehicle hands its seat to the other.
@@ -197,15 +197,15 @@ Only `SWAPPED`, `REFUSED` and `INTERRUPTED` can change anything. The others are 
 
 **What stays with the body:** game mode and flight, XP, ender chest, spawn point, permissions (so title unlocks and character locks), the account name that viewers with names ON see, skin-undo chat buttons, voice effect chains (SneakyShadowDancing swaps those itself), and anything another plugin keeps per player (for example MagicSpells buffs and mana). Inventory and plugin attribute modifiers also stay when SCM doesn't manage them, as for a normal load.
 
-**Nothing can run in the middle.** Autosave, quits, commands and storage results all run on the main thread, so they can't run during the call. For the swap's own events (teleports, crafting grids, effects, air, poses, vehicles, nameplate placement), until it returns:
+**Nothing can run in the middle.** Autosave, quits, commands and storage results all run on the main thread, so they can't run during the call. For the swap's own events (inventory closes, skins, teleports, effects, air, poses, vehicles, nameplate placement), until it returns:
 
 - no load can put anything on either body, and no load can put X or Y on any body;
-- `Character.save()` does nothing for either body (step 2 already saved both), so a listener can't add a save or write a half-swapped state;
+- from step 2 on, `Character.save()` does nothing for either body (step 2 saved both), so a listener can't write a half-swapped state. Before step 2 nothing has moved, so a save then (a quit's, say) writes the body's own state as usual;
 - `Puppets.release` of either body waits until the swap is done, then runs as usual: it saves the borrowed character with everything the swap moved (crafting-grid items a listener's close put back into the inventory included), clears the inventory and leaves the cursor and grid. Run in the middle, it would skip its save and lose what the swap moved since step 2. The result is `INTERRUPTED`;
-- a body kicked by a listener saves nothing more, and the result is `INTERRUPTED`;
+- a body kicked by a listener loses no item: before step 2 its quit saves it as any quit does; from step 2 on its character's save holds every item it had or was handed (the cursor and grid among them). The result is `REFUSED` before the exchange and `INTERRUPTED` after it;
 - a body a quit or a lock-out takes off its new character after step 5 gets nothing more of it: no further effect, state, skin, pose, seat or nameplate. It is checked after every call that fires an event. The effects the body hands to the other are still all taken off, so they aren't on both bodies. The result is `INTERRUPTED`.
 
-So each swap writes exactly two gameplay files, X and Y, and one last-played pointer for each body that ends up in its own character.
+So each swap writes two gameplay files, X and Y (plus any save a listener asks for before step 2), and one last-played pointer for each body that ends up in its own character.
 
 **Events.** A swap fires no `LoadCharacterEvent`: its listeners treat it as a character switch, and MagicSpells' load spells cure effects, reset XP and scale, and add a hunger penalty, which would undo what a swap moves. It fires no `PuppetLeaveEvent` either: the plugin that swaps knows it did.
 
@@ -222,7 +222,7 @@ So each swap writes exactly two gameplay files, X and Y, and one last-played poi
 **Known gaps:**
 
 - A skin change still resolving when the swap happens (`/skin`, a uniform) is saved to its character but shown only on the body that asked, so the character's new wearer shows it at its next load.
-- A body that quits during the swap's own events loses its cursor item and crafting grid (the one taken off in step 1 or handed over in step 5): SCM saves neither, and the quit's save is skipped (its inventory is in the character's step-2 save).
+- An item a listener adds to a swapping body's inventory after step 2 isn't in that save: if the body that gets it is then kicked before the swap returns, it is lost with the kick.
 - What each swapping player sees on their own screen, and whether onlookers see a one-frame blink, is client behaviour that tests can't show (Shadow Dancing ticket 14).
 
 The cases are tested in `SwapTest` (its header lists them), with `LiveStateTest`, `PoseTransferTest` and focused tests for the skin history, nameplate and skin helper.

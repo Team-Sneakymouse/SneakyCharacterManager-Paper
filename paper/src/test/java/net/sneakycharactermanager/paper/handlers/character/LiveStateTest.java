@@ -101,72 +101,14 @@ class LiveStateTest {
     }
 
     @Test
-    void theInventoryAndCursorMoveBothWaysAsTheyAreNow() {
+    void theInventoriesMoveBothWaysAsTheyAreNow() {
         ItemStack[] contentsA = a.getInventory().getContents(), contentsB = b.getInventory().getContents();
-        ItemStack cursorA = a.getItemOnCursor(), cursorB = b.getItemOnCursor();
 
         LiveState.handOverItems(a, b);
 
         verify(b.getInventory()).setContents(contentsA);
         verify(a.getInventory()).setContents(contentsB);
-        verify(b).setItemOnCursor(cursorA);
-        verify(a).setItemOnCursor(cursorB);
-    }
-
-    @Test
-    void takingAGridEmptiesItsSlotsOneAtATime() {
-        ItemStack stick = item("stick");
-        when(gridA.getItem(2)).thenReturn(stick); // matrix slot 1: the result slot comes first
-
-        LiveState.TakenGrid taken = LiveState.takeGrid(a);
-
-        assertSame(gridA, taken.grid());
-        assertArrayEquals(new ItemStack[]{null, stick, null, null}, taken.items());
-        verify(gridA).setItem(2, null);
-        verify(gridA, times(1)).setItem(anyInt(), any());
-    }
-
-    @Test
-    void aGivenGridFillsOnlyEmptySlotsAndTheRestGoesIntoTheInventory() {
-        ItemStack stick = item("stick"), rope = item("rope"), placed = item("placed by a listener");
-        when(gridB.getItem(2)).thenReturn(placed);
-        LiveState.TakenGrid own = new LiveState.TakenGrid(gridB, new ItemStack[4]);
-
-        LiveState.giveGrid(b, own, new LiveState.TakenGrid(gridA, new ItemStack[]{stick, rope, null, null}));
-
-        verify(gridB).setItem(1, stick);
-        verify(gridB, never()).setItem(2, rope);
-        verify(b.getInventory()).addItem(rope);
-    }
-
-    @Test
-    void aGridItemThatFitsNowhereDropsAtTheBodysFeet() {
-        ItemStack stick = item("stick");
-        World world = mock(World.class);
-        when(b.getWorld()).thenReturn(world);
-        when(b.getInventory().addItem(stick)).thenReturn(new HashMap<>(Map.of(0, stick)));
-
-        LiveState.giveGrid(b, null, new LiveState.TakenGrid(gridA, new ItemStack[]{stick, null, null, null}));
-
-        verify(world).dropItemNaturally(b.getLocation(), stick);
-    }
-
-    @Test
-    void withoutItsOwnGridABodyGetsTheGridIntoItsInventory() {
-        ItemStack stick = item("stick");
-
-        LiveState.giveGrid(b, null, new LiveState.TakenGrid(gridA, new ItemStack[]{stick, null, null, null}));
-
-        verify(b.getInventory()).addItem(stick);
-        verify(gridB, never()).setItem(anyInt(), any());
-    }
-
-    @Test
-    void onlyThePlayersOwnGridIsTheirs() {
-        assertSame(gridA, LiveState.ownGrid(a));
-        CraftingInventory table = grid(9);
-        when(b.getOpenInventory().getTopInventory()).thenReturn(table);
-        assertNull(LiveState.ownGrid(b), "a crafting table is a container, closed before a swap");
+        verify(a, never()).setItemOnCursor(any()); // the swap put the cursor item into the inventory before
     }
 
     private static AttributeInstance attribute(double base, AttributeModifier... modifiers) {

@@ -504,11 +504,11 @@ public class Character {
 
 	/**
 	 * Writes the wearer's live location, inventory and attributes to this character's (the owner's) file. Does
-	 * nothing while the wearer is in the middle of a swap, which saves both characters itself ({@link CharacterSwap}).
+	 * nothing while the wearer is in a swap that already saved it ({@link CharacterSwap#blocksSave}).
 	 */
 	public void save() {
 		if (this.player == null) return;
-		if (CharacterSwap.isSwapping(this.player)) {
+		if (CharacterSwap.blocksSave(this.player)) {
 			SneakyCharacterManager.getInstance().getLogger().fine("Skipped saving " + this.key + ": "
 					+ this.player.getName() + " is in the middle of a swap");
 			return;
