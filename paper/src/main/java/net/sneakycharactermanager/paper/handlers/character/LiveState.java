@@ -115,7 +115,6 @@ public record LiveState(Location location, Vector velocity, float fallDistance, 
      * an event, and the air goes last.
      */
     void apply(Player body, BooleanSupplier stillWearing) {
-        if (!body.isOnline()) return;
         // The removals take off the effects this body hands to the other: they run even if a listener released the
         // body before or during them, so the outgoing effects aren't left on both bodies.
         body.clearActivePotionEffects();
