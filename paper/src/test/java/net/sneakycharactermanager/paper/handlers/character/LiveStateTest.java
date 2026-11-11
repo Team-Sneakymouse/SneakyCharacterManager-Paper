@@ -2,6 +2,7 @@ package net.sneakycharactermanager.paper.handlers.character;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 import java.util.Arrays;
@@ -68,7 +69,7 @@ class LiveStateTest {
 
     @Test
     void pluginModifiersMoveWhenManagedAndMinecraftsStayWithTheBody() {
-        LiveState.capture(a, true, true).apply(b, () -> true);
+        LiveState.capture(a, true).apply(b, () -> true);
 
         verify(scaleB).setBaseValue(0.8);
         verify(scaleB).removeModifier(buffB);
@@ -79,7 +80,7 @@ class LiveStateTest {
 
     @Test
     void withoutManagedAttributesOnlyTheBaseValueMoves() {
-        LiveState.capture(a, true, false).apply(b, () -> true);
+        LiveState.capture(a, false).apply(b, () -> true);
 
         verify(scaleB).setBaseValue(0.8);
         verify(scaleB, never()).removeModifier(any(AttributeModifier.class));
@@ -87,36 +88,62 @@ class LiveStateTest {
     }
 
     @Test
-    void anUnmanagedInventoryStaysWithTheBody() {
-        LiveState.handOverItems(a, LiveState.capture(b, false, false), b, LiveState.capture(a, false, false));
-        LiveState.capture(a, false, false).apply(b, () -> true);
+    void theStateCarriesNoItems() {
+        LiveState.capture(a, false).apply(b, () -> true);
 
         verify(b.getInventory(), never()).setContents(any());
         verify(b, never()).setItemOnCursor(any());
-        verify(gridB, never()).setMatrix(any());
+        verify(gridB, never()).setItem(anyInt(), any());
         verify(b.getInventory()).setHeldItemSlot(3);
     }
 
     @Test
-    void aManagedInventoryMovesWithItsCursorAndGrid() {
-        LiveState.handOverItems(a, LiveState.capture(b, true, false), b, LiveState.capture(a, true, false));
+    void theInventoryAndCursorMoveBothWaysAsTheyAreNow() {
+        ItemStack[] contentsA = a.getInventory().getContents(), contentsB = b.getInventory().getContents();
+        ItemStack cursorA = a.getItemOnCursor(), cursorB = b.getItemOnCursor();
 
-        verify(b.getInventory()).setContents(any());
-        verify(b).setItemOnCursor(any());
-        verify(gridB, times(2)).setMatrix(any()); // emptied, then filled
-        verify(a.getInventory()).setContents(any());
-        verify(gridA, times(2)).setMatrix(any());
+        LiveState.handOverItems(a, b);
+
+        verify(b.getInventory()).setContents(contentsA);
+        verify(a.getInventory()).setContents(contentsB);
+        verify(b).setItemOnCursor(cursorA);
+        verify(a).setItemOnCursor(cursorB);
     }
 
     @Test
-    void gridsStayWhenOneBodyHasNoOwnGrid() {
-        LiveState toB = LiveState.capture(a, true, false);
-        CraftingInventory table = grid(9);
-        when(b.getOpenInventory().getTopInventory()).thenReturn(table); // a listener opened a table on b
-        LiveState.handOverItems(a, LiveState.capture(b, true, false), b, toB);
+    void takingAGridEmptiesItsSlotsOneAtATime() {
+        ItemStack stick = item("stick");
+        when(gridA.getItem(2)).thenReturn(stick); // matrix slot 1: the result slot comes first
 
-        verify(gridA, never()).setMatrix(any());
-        verify(gridB, never()).setMatrix(any());
+        LiveState.TakenGrid taken = LiveState.takeGrid(a);
+
+        assertSame(gridA, taken.grid());
+        assertArrayEquals(new ItemStack[]{null, stick, null, null}, taken.items());
+        verify(gridA).setItem(2, null);
+        verify(gridA, times(1)).setItem(anyInt(), any());
+    }
+
+    @Test
+    void aGivenGridFillsOnlyEmptySlotsAndTheRestGoesIntoTheInventory() {
+        ItemStack stick = item("stick"), rope = item("rope"), placed = item("placed by a listener");
+        when(gridB.getItem(2)).thenReturn(placed);
+        LiveState.TakenGrid own = new LiveState.TakenGrid(gridB, new ItemStack[4]);
+
+        LiveState.giveGrid(b, own, new LiveState.TakenGrid(gridA, new ItemStack[]{stick, rope, null, null}));
+
+        verify(gridB).setItem(1, stick);
+        verify(gridB, never()).setItem(2, rope);
+        verify(b.getInventory()).addItem(rope);
+    }
+
+    @Test
+    void withoutItsOwnGridABodyGetsTheGridIntoItsInventory() {
+        ItemStack stick = item("stick");
+
+        LiveState.giveGrid(b, null, new LiveState.TakenGrid(gridA, new ItemStack[]{stick, null, null, null}));
+
+        verify(b.getInventory()).addItem(stick);
+        verify(gridB, never()).setItem(anyInt(), any());
     }
 
     @Test
@@ -137,7 +164,14 @@ class LiveStateTest {
     private static CraftingInventory grid(int size) {
         CraftingInventory grid = mock(CraftingInventory.class);
         when(grid.getMatrix()).thenReturn(new ItemStack[size]);
+        when(grid.getSize()).thenReturn(size + 1);
         return grid;
+    }
+
+    private static ItemStack item(String name) {
+        ItemStack item = mock(ItemStack.class, name);
+        when(item.clone()).thenReturn(item);
+        return item;
     }
 
     private static Player body(AttributeInstance scale, CraftingInventory grid) {

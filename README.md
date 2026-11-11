@@ -184,11 +184,11 @@ Only `SWAPPED`, `REFUSED` and `INTERRUPTED` can change anything. The others are 
 
 **What moves, in order.** Body `a` wears X and body `b` wears Y:
 
-1. Any open container is closed (its cursor item goes back into the inventory, as in vanilla). The player's own inventory view, with its crafting grid, stays open. `CharacterSkinAppliedEvent` fires for both skins; a veto refuses the swap here.
+1. Any open container is closed (its cursor item goes back into the inventory, as in vanilla). The player's own inventory view stays open, and, when `manageInventories` is on, both 2x2 crafting grids are taken off, one slot at a time. Each slot write fires `PrepareItemCraftEvent`; a listener that closes a grid meanwhile puts its items into that body's own inventory (or drops them, if it is full), as vanilla does, and they then stay with that body's character. `CharacterSkinAppliedEvent` fires for both skins; a veto refuses the swap here. A refused swap gives each body its own grid back.
 2. Both bodies' live state is read, and X is saved from `a` and Y from `b`. That is the one save each character gets, of exactly the state that moves.
 3. **Teleport first:** both get off any vehicle, then each goes to the other's exact location and facing (no +1 Y). A teleport a listener cancels or sends elsewhere refuses the swap.
 4. The holder registry and puppet bookkeeping swap in one step: `a` wears Y and `b` wears X.
-5. **Items, both ways at once** (when `manageInventories` is on): each body gets the other's inventory and cursor item, which fires no event, then both 2x2 crafting grids are emptied and then filled (each fires `PrepareItemCraftEvent`). So whenever a listener runs, no item is on both bodies, and none is lost.
+5. **Items, both ways** (when `manageInventories` is on): each body gets the other's inventory and cursor item as they are right now, all in one go, with no event in between. Then each body gets the other's crafting grid, one slot at a time. A slot a listener filled meanwhile keeps its item, and the incoming one goes into the inventory, or drops at the body's feet if it is full. So whenever a listener runs, no item is on both bodies, and none is lost.
 6. Each body gets the rest of the other's: effects, attribute base values (scale, maximum health), plugin attribute modifiers when `manageAttributes` is on (Minecraft's own modifiers, from equipment and effects, stay with the body), health, absorption, food, saturation, exhaustion, fire, freezing, fall distance, held hotbar slot, velocity, and air last. Health above the body's maximum this tick (the incoming equipment's bonus only counts on its next tick) is capped, then set again on that tick unless the body changed character or its health changed. An effect that an `EntityPotionEffectEvent` listener keeps or refuses stays as the listener decided: that is how a plugin forbids an effect on a body.
 7. **Skin last:** the signed skin property each body wore moves as it is (uniforms included, nothing waits on the network); a body with no skin property hands over none. None of `SkinUtil.applySkin`'s dismount or +1 Y. Each character's latest skin-history entry moves to its new body.
 8. SneakyPoses poses (sit, sleep, crawl) are put back on the body that now wears the character, at the same spot, after the skin so a sleeping pose copies the new one. A body that rode a vehicle hands its seat to the other.
@@ -221,7 +221,7 @@ So each swap writes exactly two gameplay files, X and Y, and one last-played poi
 **Known gaps:**
 
 - A skin change still resolving when the swap happens (`/skin`, a uniform) is saved to its character but shown only on the body that asked, so the character's new wearer shows it at its next load.
-- A body that quits during the swap's own events loses the cursor item and crafting grid it was handed in step 5: SCM saves neither, and the quit's save is skipped (its inventory is in the character's step-2 save).
+- A body that quits during the swap's own events loses its cursor item and crafting grid (the one taken off in step 1 or handed over in step 5): SCM saves neither, and the quit's save is skipped (its inventory is in the character's step-2 save).
 - What each swapping player sees on their own screen, and whether onlookers see a one-frame blink, is client behaviour that tests can't show (Shadow Dancing ticket 14).
 
 The cases are tested in `SwapTest` (its header lists them), with `LiveStateTest`, `PoseTransferTest` and focused tests for the skin history, nameplate and skin helper.

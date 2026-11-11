@@ -33,8 +33,9 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  *     are marked as swapping, so nothing can load onto them or save them, and their teleports don't rebuild their
  *     nameplates, until the swap returns. Everything else that could save, load or quit them (autosave, quits,
  *     commands, storage results) runs on the main thread too, so it can't run in between.</li>
- * <li>Close any open container (its cursor item goes back into the inventory, as in vanilla), then check again.
- *     Fire {@code CharacterSkinAppliedEvent} for both skins: a veto refuses the swap before anything moves.</li>
+ * <li>Close any open container (its cursor item goes back into the inventory, as in vanilla) and take both crafting
+ *     grids off, slot by slot ({@link LiveState#takeGrid}), then check again. Fire {@code CharacterSkinAppliedEvent}
+ *     for both skins: a veto refuses the swap before anything moves. A refused swap gives each grid back.</li>
  * <li>Read both bodies' live state and poses, and save X from {@code a} and Y from {@code b}: the one save each
  *     character gets, of exactly the state that moves. No later save can land in the middle (step 2).</li>
  * <li>Teleport first: get both off any vehicle, then each to the other's exact location and facing (no +1 Y). If a
@@ -42,8 +43,8 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  *     as they were: {@code REFUSED}.</li>
  * <li>Exchange what each body wears ({@link Character#exchange}): the holder registry and puppet bookkeeping, with no
  *     call-out in between, so listeners see either the old pairs (during the teleports) or the new ones.</li>
- * <li>Hand the items over, both ways at once ({@link LiveState#handOverItems}), then apply the rest of each live
- *     state to the other body, then the worn skin last (the live signed property, so uniforms move too and nothing
+ * <li>Hand the inventory and cursor over, both ways at once ({@link LiveState#handOverItems}), put each taken grid
+ *     on the other body ({@link LiveState#giveGrid}), then apply the rest of each live state to the other body, then the worn skin last (the live signed property, so uniforms move too and nothing
  *     waits on the network), then hand over each character's skin history. Health capped by a maximum that the
  *     incoming equipment only raises next tick is set again then. From the items on, a listener of the swap's own
  *     events may take a body off its new character (a release, a quit): that body gets nothing more of it.</li>
@@ -105,7 +106,23 @@ public final class CharacterSwap {
     private static SwapResult exchange(Player a, Player b, Character x, Character y) {
         closeContainer(a);
         closeContainer(b);
-        // A close listener may have done anything; nothing has changed yet, so just stop.
+        boolean inventories = SneakyCharacterManager.getInstance().getConfig().getBoolean("manageInventories", true);
+        // The grids come off first, while each body still wears its own character: a listener of a slot's event may
+        // close a grid, which puts its items into that body's own inventory, so they stay with its character.
+        LiveState.TakenGrid gridX = inventories ? LiveState.takeGrid(a) : null;
+        LiveState.TakenGrid gridY = inventories ? LiveState.takeGrid(b) : null;
+        SwapResult result = trade(a, b, x, y, inventories, gridX, gridY);
+        if (result == SwapResult.REFUSED) {
+            // Nothing was exchanged: each body gets its own grid back.
+            LiveState.giveGrid(a, gridX, gridX);
+            LiveState.giveGrid(b, gridY, gridY);
+        }
+        return result;
+    }
+
+    private static SwapResult trade(Player a, Player b, Character x, Character y, boolean inventories,
+            @Nullable LiveState.TakenGrid gridX, @Nullable LiveState.TakenGrid gridY) {
+        // A close or grid listener may have done anything; nothing has changed yet, so just stop.
         if (!ready(a, b, x, y)) return SwapResult.REFUSED;
         // Skin listeners may veto a skin: ask before anything moves, so a veto refuses the whole swap.
         ProfileProperty skinX = SkinUtil.wornTextures(a);
@@ -114,10 +131,9 @@ public final class CharacterSwap {
                 || !ready(a, b, x, y)) return SwapResult.REFUSED;
 
         SneakyCharacterManager plugin = SneakyCharacterManager.getInstance();
-        boolean inventories = plugin.getConfig().getBoolean("manageInventories", true);
         boolean attributeModifiers = plugin.getConfig().getBoolean("manageAttributes", false);
-        LiveState stateX = LiveState.capture(a, inventories, attributeModifiers);
-        LiveState stateY = LiveState.capture(b, inventories, attributeModifiers);
+        LiveState stateX = LiveState.capture(a, attributeModifiers);
+        LiveState stateY = LiveState.capture(b, attributeModifiers);
         PoseTransfer.Pose poseX = PoseTransfer.capture(a);
         PoseTransfer.Pose poseY = PoseTransfer.capture(b);
         Entity rideX = ride(a);
@@ -142,11 +158,15 @@ public final class CharacterSwap {
 
         Character.exchange(a, b);
         // From here a listener of the swap's own events (crafting grids, effects, air, poses, vehicles, the nameplate)
-        // may take a body off its new character (a release, a quit). The items move first, both ways at once, so none
-        // is ever on both bodies; after that each step for a body runs only while it still wears its new character.
+        // may take a body off its new character (a release, a quit). The items move first, both ways, so none is ever
+        // on both bodies or lost; after that each step for a body runs only while it still wears its new character.
         BooleanSupplier aWears = () -> wears(a, y);
         BooleanSupplier bWears = () -> wears(b, x);
-        LiveState.handOverItems(a, stateY, b, stateX);
+        if (inventories) {
+            LiveState.handOverItems(a, b);
+            LiveState.giveGrid(a, gridX, gridY);
+            LiveState.giveGrid(b, gridY, gridX);
+        }
         stateY.apply(a, aWears);
         stateX.apply(b, bWears);
         // Skin last, where each body now stands; both were allowed above. No skin moves as no skin.

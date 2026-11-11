@@ -151,6 +151,8 @@ class SwapTest {
      * "grid" (PrepareItemCraftEvent), "air" (EntityAirChangeEvent). Null for none.
      */
     BiConsumer<Body, String> callOut;
+    /** Items dropped on the ground, in order. */
+    final List<ItemStack> dropped = new ArrayList<>();
     PluginManager events;
     Body driver, supporter, third;
     DatabaseBackend backend;
@@ -259,8 +261,21 @@ class SwapTest {
             doAnswer(call -> { cursor = call.getArgument(0); return null; }).when(player).setItemOnCursor(any());
             when(player.getOpenInventory()).thenReturn(view);
             when(view.getTopInventory()).thenAnswer(call -> chestOpen ? chest : grid);
+            // As Paper's CraftInventoryCrafting: slot 0 is the result, 1-4 the matrix; each slot write fires an event.
             when(grid.getMatrix()).thenAnswer(call -> matrix.clone());
-            doAnswer(call -> { matrix = ((ItemStack[]) call.getArgument(0)).clone(); callOut("grid"); return null; }).when(grid).setMatrix(any());
+            when(grid.getSize()).thenReturn(5);
+            when(grid.getItem(anyInt())).thenAnswer(call -> (int) call.getArgument(0) == 0 ? null : matrix[(int) call.getArgument(0) - 1]);
+            doAnswer(call -> {
+                matrix[(int) call.getArgument(0) - 1] = call.getArgument(1);
+                callOut("grid");
+                return null;
+            }).when(grid).setItem(anyInt(), any());
+            when(inventory.addItem(any(ItemStack[].class))).thenAnswer(call -> {
+                java.util.HashMap<Integer, ItemStack> left = new java.util.HashMap<>();
+                ItemStack[] given = (ItemStack[]) call.getRawArguments()[0];
+                for (int i = 0; i < given.length; i++) if (!store(given[i])) left.put(i, given[i]);
+                return left;
+            });
             doAnswer(call -> { chestOpen = false; log("close"); return null; }).when(player).closeInventory();
             when(player.getAttribute(any())).thenReturn(scaleInstance);
             when(scaleInstance.getBaseValue()).thenAnswer(call -> scaleBase);
@@ -295,6 +310,27 @@ class SwapTest {
             if (SwapTest.this.callOut != null) SwapTest.this.callOut.accept(this, what);
         }
 
+        /** Into the first free main-inventory slot; false if it is full. */
+        boolean store(ItemStack item) {
+            for (int i = 0; i < 36; i++) {
+                if (contents[i] == null) { contents[i] = item; return true; }
+            }
+            return false;
+        }
+
+        /** As vanilla when the player's own inventory view closes: the grid goes into the inventory, or drops. */
+        void closeOwnGrid() {
+            for (int i = 0; i < matrix.length; i++) {
+                if (matrix[i] != null && !store(matrix[i])) dropped.add(matrix[i]);
+                matrix[i] = null;
+            }
+        }
+
+        long count(ItemStack item) {
+            return java.util.stream.Stream.concat(Arrays.stream(contents), Arrays.stream(matrix)).filter(item::equals).count()
+                    + (item.equals(cursor) ? 1 : 0);
+        }
+
         void offline() {
             bukkit.when(() -> Bukkit.getPlayer(player.getUniqueId())).thenReturn(null);
         }
@@ -303,6 +339,10 @@ class SwapTest {
     @BeforeEach
     void setUp() throws Exception {
         when(world.key()).thenReturn(NamespacedKey.minecraft("world")); // a save writes the world's key
+        when(world.dropItemNaturally(any(Location.class), any(ItemStack.class))).thenAnswer(call -> {
+            dropped.add(call.getArgument(1));
+            return null;
+        });
         api.ready.complete(null);
         api.characters.put(driverId.toString(), List.of(new String[]{"main", "Main Hero"}, new String[]{"second", "Second Self"},
                 new String[]{"spare", "Spare Self"}));
@@ -853,19 +893,103 @@ class SwapTest {
             for (ItemStack item : List.of(diamonds, rope)) {
                 assertFalse(Arrays.asList(driver.matrix).contains(item) && Arrays.asList(supporter.matrix).contains(item), item.toString());
             }
-            if (Puppets.borrowedBy(supporter.player) != null) Puppets.release(supporter.player); // at the first grid event
+            // At the first grid event after the exchange.
+            if (main.equals(Puppets.borrowedBy(supporter.player))) Puppets.release(supporter.player);
         };
 
         assertEquals(SwapResult.INTERRUPTED, Puppets.swap(driver.player, supporter.player));
         runDeferred();
 
-        assertEquals(4, seen.size(), "both grids emptied, then both filled");
+        assertEquals(4, seen.size(), "both grids taken off, then both given");
         assertSame(diamonds, driver.matrix[0]);
         assertNull(driver.matrix[1]);
         assertSame(rope, supporter.matrix[1], "filled although its body was released: a release leaves the grid");
         assertNull(supporter.matrix[0]);
         assertNull(supporter.contents[0], "main's inventory was cleared by the release; its save holds it");
         assertTrue(writes.get(0).content().contains("sword"));
+    }
+
+    @Test
+    void aGridClosedWhileTheOtherIsTakenKeepsItsItemsWithItsCharacter() {
+        // A listener of the Driver's first grid write closes the Supporter's inventory view, as vanilla returns its grid.
+        ItemStack diamonds = item("diamonds"), rope = item("rope");
+        supporter.matrix[0] = diamonds; driver.matrix[0] = rope;
+        callOut = (body, what) -> { if (body == driver && what.equals("grid")) supporter.closeOwnGrid(); };
+
+        assertEquals(SwapResult.SWAPPED, Puppets.swap(driver.player, supporter.player));
+
+        assertEquals(1, driver.count(diamonds), "second's diamonds went with second's inventory, once");
+        assertEquals(0, supporter.count(diamonds));
+        assertNull(driver.matrix[0]);
+        assertSame(rope, supporter.matrix[0]);
+        assertEquals(List.of(), dropped);
+    }
+
+    @Test
+    void aGridClosedIntoAFullInventoryDropsItsItemsAndNoCopyMoves() {
+        ItemStack diamonds = item("diamonds");
+        supporter.matrix[0] = diamonds;
+        for (int i = 0; i < 36; i++) supporter.contents[i] = item("filler " + i);
+        callOut = (body, what) -> { if (body == driver && what.equals("grid")) supporter.closeOwnGrid(); };
+        driver.matrix[0] = item("rope");
+
+        assertEquals(SwapResult.SWAPPED, Puppets.swap(driver.player, supporter.player));
+
+        assertEquals(List.of(diamonds), dropped, "vanilla dropped them");
+        assertEquals(0, driver.count(diamonds), "and the Driver got no copy");
+        assertEquals(0, supporter.count(diamonds));
+    }
+
+    @Test
+    void aGridClosedWhileItIsGivenKeepsEveryItemOnItsNewBodyOnce() {
+        ItemStack diamonds = item("diamonds"), gold = item("gold");
+        supporter.matrix[0] = diamonds; supporter.matrix[1] = gold;
+        List<String> closed = new ArrayList<>();
+        callOut = (body, what) -> {
+            // At the Driver's first grid write after the exchange: close its view.
+            if (body == driver && what.equals("grid") && second.equals(Character.get(driver.player).getKey()) && closed.isEmpty()) {
+                closed.add("closed");
+                driver.closeOwnGrid();
+            }
+        };
+
+        assertEquals(SwapResult.SWAPPED, Puppets.swap(driver.player, supporter.player));
+
+        assertEquals(List.of("closed"), closed);
+        assertEquals(1, driver.count(diamonds), "back in the inventory, once");
+        assertTrue(Arrays.asList(driver.contents).contains(diamonds));
+        assertSame(gold, driver.matrix[1]);
+        assertEquals(0, supporter.count(diamonds) + supporter.count(gold));
+    }
+
+    @Test
+    void anIncomingGridItemWhoseSlotAListenerFilledGoesIntoTheInventory() {
+        ItemStack gold = item("gold"), diamonds = item("diamonds"), placed = item("placed by a listener");
+        supporter.matrix[0] = gold; supporter.matrix[1] = diamonds;
+        callOut = (body, what) -> {
+            // While the Driver's slot 0 is given, a listener puts an item into its slot 1.
+            if (body == driver && what.equals("grid") && driver.matrix[0] == gold && driver.matrix[1] == null) driver.matrix[1] = placed;
+        };
+
+        assertEquals(SwapResult.SWAPPED, Puppets.swap(driver.player, supporter.player));
+
+        assertSame(placed, driver.matrix[1], "not overwritten");
+        assertEquals(1, driver.count(diamonds));
+        assertTrue(Arrays.asList(driver.contents).contains(diamonds));
+    }
+
+    @Test
+    void aRefusedSwapGivesEachBodyItsOwnGridBack() {
+        ItemStack rope = item("rope"), torch = item("torch");
+        driver.matrix[0] = rope; supporter.matrix[2] = torch;
+        skinVetoed.add(supporter.player);
+
+        assertEquals(SwapResult.REFUSED, Puppets.swap(driver.player, supporter.player));
+
+        assertSame(rope, driver.matrix[0]);
+        assertSame(torch, supporter.matrix[2]);
+        assertEquals(1, driver.count(rope));
+        assertEquals(0, supporter.count(rope) + driver.count(torch));
     }
 
     @Test
@@ -1156,7 +1280,9 @@ class SwapTest {
     }
 
     private static ItemStack item(String name) {
-        return mock(ItemStack.class, name);
+        ItemStack item = mock(ItemStack.class, name);
+        when(item.clone()).thenReturn(item); // a taken grid holds copies; one mock stands for the item and its copy
+        return item;
     }
 
     private Character character(CharacterKey key, Player wearer) {
