@@ -42,8 +42,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SkinData extends BukkitRunnable {
+
+    /** Whether the missing-key warning was logged; once per server run is enough. */
+    private static final AtomicBoolean warnedNoAuth = new AtomicBoolean();
 
     private final String url;
     private String skinUUID;
@@ -207,10 +211,9 @@ public class SkinData extends BukkitRunnable {
     public void run() {
         boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
         String auth = getAuth();
-        if (auth == null || auth.isEmpty()) {
-            SneakyCharacterManager.getInstance().getLogger().warning("You must set a mineskin auth token in the config.yml file to apply skins.");
-            SneakyCharacterManager.getInstance().skinQueue.remove(this);
-            return;
+        if ((auth == null || auth.isEmpty()) && !warnedNoAuth.getAndSet(true)) {
+            SneakyCharacterManager.getInstance().getLogger().warning("No mineskinAuth key in config.yml: using MineSkin's"
+                    + " anonymous API, which allows about 10 skins a minute.");
         }
 
         if (player == null || !player.isOnline()) {

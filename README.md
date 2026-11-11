@@ -242,7 +242,7 @@ The cases are tested in `SwapTest` (its header lists them), with `LiveStateTest`
 - `bannedWords`
 - `mineskinQueueUrl` (Mineskin v2 queue endpoint)
 - `mineskinSkinsUrl` (Mineskin v2 skins endpoint)
-- `mineskinAuth` (Mineskin API Key)
+- `mineskinAuth` (Mineskin API key; optional: without one, skins use the anonymous API, about 10 a minute)
 - `mineskinUserAgent`
 - `mineskin`:
   - `logging.enabled`: Toggle Mineskin API logging

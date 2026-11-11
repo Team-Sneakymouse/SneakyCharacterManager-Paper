@@ -20,6 +20,7 @@ see-own-nameplate: false
 titlePrefix: '<gray>'
 mineskinQueueUrl: 'https://api.mineskin.org/v2/queue'
 mineskinSkinsUrl: 'https://api.mineskin.org/v2/skins'
+# Optional. Without a key, skins go through MineSkin's anonymous API (about 10 a minute).
 mineskinAuth: ''
 mineskinUserAgent: 'SneakyCharacterManager/1.0'
 skin:
