@@ -769,6 +769,7 @@ class SwapTest {
         assertNotEquals(7, supporter.health);
         assertEquals("tex-second-uniform", supporter.skin.getValue(), "main's skin isn't put on it either");
         assertFalse(supporter.effects.contains(speed), "nor its effects");
+        assertTrue(supporter.effects.isEmpty(), "and the effects it handed to the Driver came off it all the same");
         verify(horse, never()).addPassenger(supporter.player);
         verify(plugin.nametagManager, never()).showWornCharacter(supporter.player);
         assertEquals(List.of(file(main), file(second)), writes.stream().map(PendingWrite::target).toList(),

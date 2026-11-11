@@ -115,9 +115,9 @@ public record LiveState(Location location, Vector velocity, float fallDistance, 
      * an event, and the air goes last.
      */
     void apply(Player body, BooleanSupplier stillWearing) {
-        if (!stillWearing.getAsBoolean()) return;
-        // The removals take off the effects this body hands to the other: they finish even if a listener of one
-        // releases the body, so the outgoing effects aren't left on both bodies.
+        if (!body.isOnline()) return;
+        // The removals take off the effects this body hands to the other: they run even if a listener released the
+        // body before or during them, so the outgoing effects aren't left on both bodies.
         body.clearActivePotionEffects();
         // An effect a listener keeps or refuses stays as the listener decided (how a plugin forbids an effect on a body).
         for (PotionEffect effect : effects) {
