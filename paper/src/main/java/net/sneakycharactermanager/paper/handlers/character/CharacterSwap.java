@@ -42,10 +42,11 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  *     as they were: {@code REFUSED}.</li>
  * <li>Exchange what each body wears ({@link Character#exchange}): the holder registry and puppet bookkeeping, with no
  *     call-out in between, so listeners see either the old pairs (during the teleports) or the new ones.</li>
- * <li>Apply each live state to the other body, then the worn skin last (each step only while the body still wears
- *     its new character: a listener may have released it or it may have quit) (the live signed property, so uniforms move
- *     too and nothing waits on the network), then hand over each character's skin history. Health capped by a
- *     maximum that the incoming equipment only raises next tick is set again then.</li>
+ * <li>Hand the items over, both ways at once ({@link LiveState#handOverItems}), then apply the rest of each live
+ *     state to the other body, then the worn skin last (the live signed property, so uniforms move too and nothing
+ *     waits on the network), then hand over each character's skin history. Health capped by a maximum that the
+ *     incoming equipment only raises next tick is set again then. From the items on, a listener of the swap's own
+ *     events may take a body off its new character (a release, a quit): that body gets nothing more of it.</li>
  * <li>Put poses back (SneakyPoses) and re-seat bodies that rode a vehicle, then show the new names on the same
  *     nameplates.</li>
  * <li>Unlock, then write the last-played pointer of each body that now wears its own character, through its owner's
@@ -134,17 +135,18 @@ public final class CharacterSwap {
                 || !Character.isWearing(a, x.getKey()) || !Character.isWearing(b, y.getKey())) {
             if (movedA && online(a)) putBack(a, stateX);
             if (movedB && online(b)) putBack(b, stateY);
-            restore(a, poseX, rideX, b);
-            restore(b, poseY, rideY, a);
+            restore(a, poseX, rideX, b, () -> online(a));
+            restore(b, poseY, rideY, a, () -> online(b));
             return SwapResult.REFUSED;
         }
 
         Character.exchange(a, b);
-        // From here a listener of the swap's own events (effects, poses, vehicles) may take a body off its new
-        // character (a release, a quit). Each step for a body runs only while it still wears it, so nothing of a
-        // character goes on a body that no longer wears it (its saved copy would duplicate those items).
+        // From here a listener of the swap's own events (crafting grids, effects, air, poses, vehicles, the nameplate)
+        // may take a body off its new character (a release, a quit). The items move first, both ways at once, so none
+        // is ever on both bodies; after that each step for a body runs only while it still wears its new character.
         BooleanSupplier aWears = () -> wears(a, y);
         BooleanSupplier bWears = () -> wears(b, x);
+        LiveState.handOverItems(a, stateY, b, stateX);
         stateY.apply(a, aWears);
         stateX.apply(b, bWears);
         // Skin last, where each body now stands; both were allowed above. No skin moves as no skin.
@@ -153,8 +155,8 @@ public final class CharacterSwap {
         // The history moves with each character either way, as a release leaves a body's history where it is.
         plugin.skinStateManager.swapped(a.getUniqueId(), y.getKey(), b.getUniqueId(), x.getKey());
 
-        if (aWears.getAsBoolean()) restore(a, poseY, rideY, b);
-        if (bWears.getAsBoolean()) restore(b, poseX, rideX, a);
+        restore(a, poseY, rideY, b, aWears);
+        restore(b, poseX, rideX, a, bWears);
         if (aWears.getAsBoolean()) plugin.nametagManager.showWornCharacter(a);
         if (bWears.getAsBoolean()) plugin.nametagManager.showWornCharacter(b);
         topUpHealthLater(a, y.getKey(), stateY);
@@ -207,11 +209,17 @@ public final class CharacterSwap {
                 && blocked(a, b) == null;
     }
 
-    /** Puts {@code pose} on {@code body}, or seats it on {@code ride}, where the character it wears now was. */
-    private static void restore(Player body, @Nullable PoseTransfer.Pose pose, @Nullable Entity ride, Player other) {
-        if (!online(body)) return;
+    /**
+     * Puts {@code pose} on {@code body}, or seats it on {@code ride}, where the character it wears now was; only while
+     * {@code still} holds (the pose command may run any listener).
+     */
+    private static void restore(Player body, @Nullable PoseTransfer.Pose pose, @Nullable Entity ride, Player other,
+            BooleanSupplier still) {
+        if (!still.getAsBoolean()) return;
         PoseTransfer.apply(pose, body);
-        if (ride != null && ride.isValid() && ride != other && !body.isInsideVehicle()) ride.addPassenger(body);
+        if (ride != null && still.getAsBoolean() && ride.isValid() && ride != other && !body.isInsideVehicle()) {
+            ride.addPassenger(body);
+        }
     }
 
     /** What {@code body} rides that isn't a pose seat (a pose is put back as a pose), or null. */

@@ -326,6 +326,23 @@ class NametagManagerAttachmentTest {
     }
 
     @Test
+    void aSwapShowsNoNameOnABodyAPlacementListenerReleased() {
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        // A mount listener releases the owner while the swap re-places the plate.
+        when(plate.entity.mountOn(any(Entity.class))).thenAnswer(invocation -> {
+            f.removeCharacter(owner);
+            f.manager.unnicknamePlayer(owner);
+            return true;
+        });
+
+        f.manager.showWornCharacter(owner);
+
+        assertNull(f.manager.getNickname(owner), "no plate rebuilt with the character it no longer wears");
+        assertEquals(1, f.plates.size());
+    }
+
+    @Test
     void aSwapBuildsAPlateForAnOwnerWithout() {
         f.manager.showWornCharacter(owner);
 

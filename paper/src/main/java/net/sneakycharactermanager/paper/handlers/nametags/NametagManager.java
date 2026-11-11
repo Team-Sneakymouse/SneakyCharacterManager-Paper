@@ -151,6 +151,8 @@ public class NametagManager implements PlateAttachment.Operations {
         Character character = Character.get(owner);
         if (character == null) return;
         ensurePlacement(owner);
+        // Placing the plate can run listeners (spawn, mount); one may have taken the character off (a release).
+        if (Character.get(owner) != character) return;
         Nickname name = livePlate(owner);
         if (name == null) {
             nicknamePlayer(owner, character.getDisplayName());

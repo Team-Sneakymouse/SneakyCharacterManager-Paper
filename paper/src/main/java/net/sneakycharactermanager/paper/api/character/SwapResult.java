@@ -35,7 +35,8 @@ public enum SwapResult {
     /**
      * Something took a body off its new character, or a body quit, while the swap ran (a listener of one of the
      * swap's own events). Both characters were saved where they stood before the exchange began; whatever each body
-     * wears now is what it wears.
+     * wears now is what it wears. The items had already moved both ways, so none is on both bodies; a body taken off
+     * its new character got nothing more of it, and keeps the cursor item and crafting grid as a release leaves them.
      */
     INTERRUPTED;
 

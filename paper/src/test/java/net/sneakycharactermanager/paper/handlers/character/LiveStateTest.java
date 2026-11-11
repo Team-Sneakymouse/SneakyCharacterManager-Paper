@@ -88,6 +88,7 @@ class LiveStateTest {
 
     @Test
     void anUnmanagedInventoryStaysWithTheBody() {
+        LiveState.handOverItems(a, LiveState.capture(b, false, false), b, LiveState.capture(a, false, false));
         LiveState.capture(a, false, false).apply(b, () -> true);
 
         verify(b.getInventory(), never()).setContents(any());
@@ -98,11 +99,24 @@ class LiveStateTest {
 
     @Test
     void aManagedInventoryMovesWithItsCursorAndGrid() {
-        LiveState.capture(a, true, false).apply(b, () -> true);
+        LiveState.handOverItems(a, LiveState.capture(b, true, false), b, LiveState.capture(a, true, false));
 
         verify(b.getInventory()).setContents(any());
         verify(b).setItemOnCursor(any());
-        verify(gridB).setMatrix(any());
+        verify(gridB, times(2)).setMatrix(any()); // emptied, then filled
+        verify(a.getInventory()).setContents(any());
+        verify(gridA, times(2)).setMatrix(any());
+    }
+
+    @Test
+    void gridsStayWhenOneBodyHasNoOwnGrid() {
+        LiveState toB = LiveState.capture(a, true, false);
+        CraftingInventory table = grid(9);
+        when(b.getOpenInventory().getTopInventory()).thenReturn(table); // a listener opened a table on b
+        LiveState.handOverItems(a, LiveState.capture(b, true, false), b, toB);
+
+        verify(gridA, never()).setMatrix(any());
+        verify(gridB, never()).setMatrix(any());
     }
 
     @Test
