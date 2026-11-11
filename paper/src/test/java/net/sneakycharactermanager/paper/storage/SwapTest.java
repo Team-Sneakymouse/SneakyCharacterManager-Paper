@@ -102,10 +102,10 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  * <li>I1 No save in the middle: a save from a listener during the swap writes nothing.</li>
  * <li>I2 No load in the middle: loads onto either body, or of either character onto any body, are refused; so is a
  *     nested swap ({@code BUSY}), and a swap from inside a load.</li>
- * <li>I3 No quit in the middle: a body kicked by a listener mid-swap saves nothing more ({@code INTERRUPTED}). A body
- *     a listener releases mid-swap (grid, effect, pose events) gets nothing more of its new character, and no item is
- *     on both bodies or lost: the items move both ways first, so it is left as a release right after the swap would
- *     leave it ({@code INTERRUPTED}).</li>
+ * <li>I3 No quit or release in the middle: a body kicked by a listener mid-swap saves nothing more; a release asked
+ *     for mid-swap waits until the swap is done, then saves and takes off as usual, so nothing the swap moved is lost;
+ *     a body locked out mid-swap (grid, effect, pose events) gets nothing more of its new character. No item is ever
+ *     on both bodies or lost, whatever a grid listener closes ({@code INTERRUPTED}).</li>
  * <li>I4 One save per character: exactly two gameplay writes, X from the Driver and Y from the Supporter, both before
  *     anything moves.</li>
  * <li>I5 Last-played: the Driver's names Y, through the owner queue; the Supporter's is untouched; a stale load of the
@@ -782,39 +782,38 @@ class SwapTest {
     }
 
     @Test
-    void aBodyReleasedDuringTheOthersEffectsGetsNothingOfItsNewCharacter() {
+    void aReleaseFromInsideASwapWaitsUntilTheSwapIsDone() {
         // After the exchange the Supporter puppets main; a listener of the Driver's effects releases the Supporter.
         ItemStack sword = item("sword"), stick = item("stick");
-        driver.contents[0] = sword; driver.cursor = stick; driver.health = 7;
+        driver.contents[0] = sword; driver.cursor = stick;
         ItemStack bread = item("bread");
         supporter.contents[0] = bread;
-        PotionEffect speed = mock(PotionEffect.class, "speed");
-        driver.effects = new ArrayList<>(List.of(speed));
-        Entity horse = mock(Entity.class, "horse");
-        when(horse.isValid()).thenReturn(true);
-        driver.vehicle = horse;
         supporter.effects = new ArrayList<>(List.of(mock(PotionEffect.class, "glow"))); // the Driver gets these: their event releases
         deferTasks = true; // the Supporter's return load arrives after the swap, as storage results do
         List<ReleaseResult> released = new ArrayList<>();
+        List<CharacterKey> borrowedThen = new ArrayList<>();
         callOut = (body, what) -> {
-            if (body == driver && what.equals("effect") && released.isEmpty()) released.add(Puppets.release(supporter.player));
+            if (body != driver || !what.equals("effect") || !released.isEmpty()) return;
+            released.add(Puppets.release(supporter.player));
+            borrowedThen.add(Puppets.borrowedBy(supporter.player));
         };
 
         assertEquals(SwapResult.INTERRUPTED, Puppets.swap(driver.player, supporter.player));
 
         assertEquals(List.of(ReleaseResult.RELEASED), released);
-        assertNull(supporter.contents[0], "none of main's items on the released Supporter");
-        assertSame(stick, supporter.cursor, "main's cursor item was handed over before the release, which leaves the cursor");
-        assertNull(driver.cursor, "and the Driver keeps no copy");
-        assertNotEquals(7, supporter.health);
-        assertEquals("tex-second-uniform", supporter.skin.getValue(), "main's skin isn't put on it either");
-        assertFalse(supporter.effects.contains(speed), "nor its effects");
-        assertTrue(supporter.effects.isEmpty(), "and the effects it handed to the Driver came off it all the same");
-        verify(horse, never()).addPassenger(supporter.player);
-        verify(plugin.nametagManager, never()).showWornCharacter(supporter.player);
-        assertEquals(List.of(file(main), file(second)), writes.stream().map(PendingWrite::target).toList(),
-                "the release's save was skipped; main keeps the save from where the Driver stood");
-        assertTrue(writes.get(0).content().contains("sword"));
+        assertEquals(List.of(main), borrowedThen, "still worn until the swap is done");
+        assertEquals(List.of(file(main), file(second), file(main)), writes.stream().map(PendingWrite::target).toList(),
+                "the release saved main as usual, once the swap was done");
+        assertEquals(new Location(null, 10, 65, 0), location(writes.get(2)), "where the Supporter now stood");
+        assertTrue(writes.get(2).content().contains("sword"), "with what the swap moved");
+        assertNull(supporter.contents[0], "then cleared, as a release does");
+        assertSame(stick, supporter.cursor, "and the cursor stays, as a release leaves it");
+        assertNull(driver.cursor, "the Driver keeps no copy");
+        assertNull(Character.get(supporter.player));
+        List<PuppetLeaveEvent> leaves = fired.stream().filter(e -> e instanceof PuppetLeaveEvent).map(e -> (PuppetLeaveEvent) e).toList();
+        assertEquals(1, leaves.size());
+        assertEquals(main, leaves.get(0).getCharacterKey());
+        assertEquals(Reason.RELEASED, leaves.get(0).getReason());
         // The Driver's half went through.
         assertEquals(second, Character.get(driver.player).getKey());
         assertSame(bread, driver.contents[0]);
@@ -825,32 +824,52 @@ class SwapTest {
     }
 
     @Test
-    void aBodyReleasedDuringItsOwnEffectsGetsNothingMoreOfItsNewCharacter() {
-        // The Supporter goes first and takes main; a listener of its own effects releases it.
+    void aGridItemReturnedByAClosedGridSurvivesARelease() {
+        // A listener of the Supporter's grid write (main's gold, from the Driver) closes the Supporter's grid, which
+        // returns the gold to main's inventory, and releases the Supporter. No save held the gold.
+        ItemStack gold = item("gold");
+        driver.matrix[0] = gold;
+        deferTasks = true;
+        List<String> done = new ArrayList<>();
+        callOut = (body, what) -> {
+            if (body != supporter || !what.equals("grid") || supporter.matrix[0] != gold || !done.isEmpty()) return;
+            done.add("closed and released");
+            supporter.closeOwnGrid();
+            Puppets.release(supporter.player);
+        };
+
+        assertEquals(SwapResult.INTERRUPTED, Puppets.swap(driver.player, supporter.player));
+
+        assertEquals(List.of("closed and released"), done);
+        assertFalse(writes.get(0).content().contains("gold"), "the grid came off before the swap's save");
+        assertEquals(3, writes.size());
+        assertEquals(file(main), writes.get(2).target());
+        assertTrue(writes.get(2).content().contains("gold"), "the release's save holds it");
+        assertEquals(0, supporter.count(gold) + driver.count(gold), "and no body keeps a copy");
+        assertEquals(List.of(), dropped);
+    }
+
+    @Test
+    void aBodyLockedOutDuringItsOwnEffectsGetsNothingMoreOfItsNewCharacter() {
+        // The Supporter goes first and takes main; a listener of its own effects locks it out (no save, nothing waits).
         ItemStack sword = item("sword"), stick = item("stick"), rope = item("rope");
         driver.contents[0] = sword; driver.cursor = stick; driver.matrix[0] = rope; driver.health = 7; driver.scaleBase = 0.8;
         driver.effects = new ArrayList<>(List.of(mock(PotionEffect.class, "speed"))); // the Supporter gets these
-        deferTasks = true;
-        List<ReleaseResult> released = new ArrayList<>();
         callOut = (body, what) -> {
-            if (body == supporter && what.equals("effect") && released.isEmpty()) released.add(Puppets.release(supporter.player));
+            if (body == supporter && what.equals("effect") && Character.get(supporter.player) != null) lockOut(supporter);
         };
 
         assertEquals(SwapResult.INTERRUPTED, Puppets.swap(supporter.player, driver.player));
 
-        assertEquals(List.of(ReleaseResult.RELEASED), released);
-        assertNull(supporter.contents[0], "the release cleared the inventory it was handed");
-        assertSame(stick, supporter.cursor, "as a release right after the swap leaves it");
+        assertNull(Character.get(supporter.player));
+        assertSame(stick, supporter.cursor, "the items had moved before");
         assertSame(rope, supporter.matrix[0]);
         assertNull(driver.cursor, "and the Driver keeps no copy");
         assertNull(driver.matrix[0]);
-        assertNotEquals(7, supporter.health);
+        assertNotEquals(7, supporter.health, "nothing after the lock-out");
         assertNotEquals(0.8, supporter.scaleBase);
         assertEquals(2, writes.size());
         assertEquals(second, Character.get(driver.player).getKey());
-
-        runDeferred();
-        assertEquals(supportersOwn, Character.get(supporter.player).getKey());
     }
 
     @Test
@@ -906,7 +925,7 @@ class SwapTest {
         assertSame(rope, supporter.matrix[1], "filled although its body was released: a release leaves the grid");
         assertNull(supporter.matrix[0]);
         assertNull(supporter.contents[0], "main's inventory was cleared by the release; its save holds it");
-        assertTrue(writes.get(0).content().contains("sword"));
+        assertTrue(writes.get(2).content().contains("sword"));
     }
 
     @Test
@@ -1010,12 +1029,11 @@ class SwapTest {
     }
 
     @Test
-    void aBodyReleasedByAnEffectRemovalGetsNoneOfItsNewEffects() {
+    void aBodyLockedOutByAnEffectRemovalGetsNoneOfItsNewEffects() {
         PotionEffect speed = mock(PotionEffect.class, "speed");
         driver.effects = new ArrayList<>(List.of(speed));
-        deferTasks = true;
         callOut = (body, what) -> {
-            if (body == supporter && what.equals("clear") && Puppets.borrowedBy(supporter.player) != null) Puppets.release(supporter.player);
+            if (body == supporter && what.equals("clear") && Character.get(supporter.player) != null) lockOut(supporter);
         };
 
         assertEquals(SwapResult.INTERRUPTED, Puppets.swap(driver.player, supporter.player));
@@ -1024,24 +1042,42 @@ class SwapTest {
     }
 
     @Test
-    void aBodyReleasedByItsFirstNewEffectGetsNoMore() {
+    void aBodyLockedOutBeforeItsTurnStillHandsOffItsEffects() {
         PotionEffect speed = mock(PotionEffect.class, "speed"), glow = mock(PotionEffect.class, "glow");
-        driver.effects = new ArrayList<>(List.of(speed, glow));
-        driver.food = 3;
-        deferTasks = true;
+        driver.effects = new ArrayList<>(List.of(speed));
+        supporter.effects = new ArrayList<>(List.of(glow)); // the Driver gets these; their event locks the Supporter out
+        driver.health = 7;
         callOut = (body, what) -> {
-            if (body == supporter && what.equals("effect") && Puppets.borrowedBy(supporter.player) != null) Puppets.release(supporter.player);
+            if (body == driver && what.equals("effect") && Character.get(supporter.player) != null) lockOut(supporter);
         };
 
         assertEquals(SwapResult.INTERRUPTED, Puppets.swap(driver.player, supporter.player));
 
-        assertTrue(supporter.effects.contains(speed), "the one whose event released it");
+        assertTrue(supporter.effects.isEmpty(), "glow came off it, and speed never went on");
+        assertNotEquals(7, supporter.health);
+        assertEquals("tex-second-uniform", supporter.skin.getValue(), "main's skin isn't put on it either");
+        verify(plugin.nametagManager, never()).showWornCharacter(supporter.player);
+        assertTrue(driver.effects.contains(glow));
+    }
+
+    @Test
+    void aBodyLockedOutByItsFirstNewEffectGetsNoMore() {
+        PotionEffect speed = mock(PotionEffect.class, "speed"), glow = mock(PotionEffect.class, "glow");
+        driver.effects = new ArrayList<>(List.of(speed, glow));
+        driver.food = 3;
+        callOut = (body, what) -> {
+            if (body == supporter && what.equals("effect") && Character.get(supporter.player) != null) lockOut(supporter);
+        };
+
+        assertEquals(SwapResult.INTERRUPTED, Puppets.swap(driver.player, supporter.player));
+
+        assertTrue(supporter.effects.contains(speed), "the one whose event locked it out");
         assertFalse(supporter.effects.contains(glow));
         assertNotEquals(3, supporter.food, "nor the rest of main's state");
     }
 
     @Test
-    void aBodyReleasedByItsPoseCommandIsntSeatedOnTheRide() {
+    void aBodyLockedOutByItsPoseCommandIsntSeatedOnTheRide() {
         Plugin poses = mock(Plugin.class);
         when(poses.isEnabled()).thenReturn(true);
         when(poses.getConfig()).thenReturn(new YamlConfiguration());
@@ -1053,11 +1089,10 @@ class SwapTest {
         Entity horse = mock(Entity.class, "horse");
         when(horse.isValid()).thenReturn(true);
         driver.vehicle = horse; // the Driver crawls on a horse: main's pose and ride both go to the Supporter
-        deferTasks = true;
         bukkit.when(Bukkit::getConsoleSender).thenReturn(mock(ConsoleCommandSender.class));
         bukkit.when(() -> Bukkit.dispatchCommand(any(), anyString())).thenAnswer(call -> {
             log.add("command:" + call.getArgument(1));
-            if (((String) call.getArgument(1)).contains("Supporter")) Puppets.release(supporter.player);
+            if (((String) call.getArgument(1)).contains("Supporter")) lockOut(supporter);
             return true;
         });
 
@@ -1304,6 +1339,11 @@ class SwapTest {
 
     private Character character(CharacterKey key, Player wearer) {
         return new Character(key, wearer, key.characterId(), "", "", "", "", false, "", "", "");
+    }
+
+    /** Locks a body out of its characters, as SCM's character locks do: it stops wearing its character, unsaved. */
+    private static void lockOut(Body body) {
+        Character.remove(body.player, Reason.LOCKED_OUT);
     }
 
     private void runDeferred() {

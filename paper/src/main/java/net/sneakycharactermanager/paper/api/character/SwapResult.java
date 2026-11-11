@@ -33,10 +33,11 @@ public enum SwapResult {
      */
     REFUSED,
     /**
-     * Something took a body off its new character, or a body quit, while the swap ran (a listener of one of the
-     * swap's own events). Both characters were saved where they stood before the exchange began; whatever each body
-     * wears now is what it wears. The items had already moved both ways, so none is on both bodies; a body taken off
-     * its new character got nothing more of it, and keeps the cursor item and crafting grid as a release leaves them.
+     * A listener of one of the swap's own events took a body off its new character: a {@code Puppets.release} (which
+     * waits until the swap is done, then saves and takes off the character as usual), a quit or a lock-out. Both
+     * characters were saved where they stood before the exchange began; whatever each body wears now is what it
+     * wears. No item is on both bodies. A body that quit or was locked out mid-swap got nothing more of its new
+     * character.
      */
     INTERRUPTED;
 

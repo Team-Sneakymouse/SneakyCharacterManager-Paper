@@ -2,6 +2,7 @@ package net.sneakycharactermanager.paper.handlers.character;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 
@@ -16,6 +17,7 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.character.CharacterKey;
+import net.sneakycharactermanager.paper.api.character.PuppetLeaveEvent;
 import net.sneakycharactermanager.paper.api.character.SwapResult;
 import net.sneakycharactermanager.paper.storage.DatabaseBackend;
 import net.sneakycharactermanager.paper.util.SkinUtil;
@@ -31,8 +33,9 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  *     another swap.</li>
  * <li>Lock: X is reserved for {@code b} and Y for {@code a}, so no load can put either on any body, and both bodies
  *     are marked as swapping, so nothing can load onto them or save them, and their teleports don't rebuild their
- *     nameplates, until the swap returns. Everything else that could save, load or quit them (autosave, quits,
- *     commands, storage results) runs on the main thread too, so it can't run in between.</li>
+ *     nameplates, until the swap returns. A release asked for meanwhile ({@code Puppets.release}) waits until the
+ *     swap is done. Everything else that could save, load or quit them (autosave, quits, commands, storage results)
+ *     runs on the main thread too, so it can't run in between.</li>
  * <li>Close any open container (its cursor item goes back into the inventory, as in vanilla) and take both crafting
  *     grids off, slot by slot ({@link LiveState#takeGrid}), then check again. Fire {@code CharacterSkinAppliedEvent}
  *     for both skins: a veto refuses the swap before anything moves. A refused swap gives each grid back.</li>
@@ -47,10 +50,10 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  *     on the other body ({@link LiveState#giveGrid}), then apply the rest of each live state to the other body, then the worn skin last (the live signed property, so uniforms move too and nothing
  *     waits on the network), then hand over each character's skin history. Health capped by a maximum that the
  *     incoming equipment only raises next tick is set again then. From the items on, a listener of the swap's own
- *     events may take a body off its new character (a release, a quit): that body gets nothing more of it.</li>
+ *     events may take a body off its new character (a quit, a lock-out): that body gets nothing more of it.</li>
  * <li>Put poses back (SneakyPoses) and re-seat bodies that rode a vehicle, then show the new names on the same
  *     nameplates.</li>
- * <li>Unlock, then write the last-played pointer of each body that now wears its own character, through its owner's
+ * <li>Unlock, run the releases asked for during the swap, then write the last-played pointer of each body that now wears its own character, through its owner's
  *     queue. A body wearing someone else's character keeps its pointer.</li>
  * </ol>
  * Fires no {@code LoadCharacterEvent} (its listeners treat it as a switch: MagicSpells' load spells cure effects and
@@ -61,12 +64,23 @@ public final class CharacterSwap {
 
     /** Bodies in the middle of a swap. Main thread only. */
     private static final Set<Player> swapping = Collections.newSetFromMap(new IdentityHashMap<>());
+    /** Releases asked for while a body was swapping, by body: they run as soon as its swap is done. */
+    private static final Map<Player, PuppetLeaveEvent.Reason> releaseAfter = new IdentityHashMap<>();
 
     private CharacterSwap() {}
 
     /** True while {@code body} is in the middle of a swap: nothing may load onto it or save it. */
     public static boolean isSwapping(@Nullable Player body) {
         return body != null && swapping.contains(body);
+    }
+
+    /**
+     * {@link HolderRegistry#release} for a body in the middle of a swap: the release runs as soon as the swap is
+     * done, on whatever the body wears then. Run now, it would skip its save (a swapping body isn't saved) and clear
+     * the inventory, losing what the swap moved since its own save, such as the crafting grid, which no save holds.
+     */
+    static void releaseAfterSwap(Player body, PuppetLeaveEvent.Reason reason) {
+        releaseAfter.putIfAbsent(body, reason);
     }
 
     /** Swaps what {@code a} and {@code b} wear; see the class comment. Main thread, SneakyDB mode. */
@@ -95,6 +109,14 @@ public final class CharacterSwap {
             swapping.remove(b);
             HolderRegistry.unreserve(x.getKey(), b);
             HolderRegistry.unreserve(y.getKey(), a);
+            runRelease(a);
+            runRelease(b);
+        }
+        // A release that waited for the swap (or a quit or lock-out during it) took a body off what it got.
+        if (result == SwapResult.SWAPPED && !(wears(a, y) && wears(b, x))) {
+            SneakyCharacterManager.getInstance().getLogger().warning("A swap of " + a.getName() + " and " + b.getName()
+                    + " was interrupted by another plugin; both characters were saved where they stood before it");
+            result = SwapResult.INTERRUPTED;
         }
         // After the tick's work, and only for a body that ended up in its own character: only the pointer moves, so a
         // body that rejoins comes back as what it wears now.
@@ -181,12 +203,13 @@ public final class CharacterSwap {
         if (bWears.getAsBoolean()) plugin.nametagManager.showWornCharacter(b);
         topUpHealthLater(a, y.getKey(), stateY);
         topUpHealthLater(b, x.getKey(), stateX);
+        return SwapResult.SWAPPED; // swap() checks that both still wear what they got
+    }
 
-        // A quit takes the character off, so this also covers a body that left.
-        boolean done = aWears.getAsBoolean() && bWears.getAsBoolean();
-        if (!done) plugin.getLogger().warning("A swap of " + a.getName() + " and " + b.getName()
-                + " was interrupted by another plugin; both characters were saved where they stood before it");
-        return done ? SwapResult.SWAPPED : SwapResult.INTERRUPTED;
+    /** Runs the release {@code body} asked for during its swap, if any. */
+    private static void runRelease(Player body) {
+        PuppetLeaveEvent.Reason reason = releaseAfter.remove(body);
+        if (reason != null) HolderRegistry.release(body, reason);
     }
 
     /** A refused swap moves {@code body} back where it stood, moving as it was (a teleport stops it). */

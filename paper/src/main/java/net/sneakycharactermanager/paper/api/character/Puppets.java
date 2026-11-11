@@ -68,6 +68,12 @@ public final class Puppets {
      * <p>Until its own character arrives, the body wears nothing and its inventory is cleared, so the borrowed items
      * aren't on two bodies. If someone else wears that character by then, the body gets its character menu instead.
      * A puppet still on its way to the body isn't cancelled: release once its future completes.
+     *
+     * <p>Called from a listener of one of a {@link #swap}'s own events, for one of the swapping bodies, the release
+     * waits until the swap is done (still inside the {@code swap} call) and then takes off whatever borrowed character
+     * the body wears, saving it first as usual; the swap returns {@link SwapResult#INTERRUPTED}. Until then
+     * {@link #borrowedBy} still names the character. If the body wears its own character once the swap is done,
+     * nothing is released.
      */
     public static ReleaseResult release(Player body) {
         Objects.requireNonNull(body, "body");

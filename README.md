@@ -130,7 +130,7 @@ The storage mode is public too: `StorageMode.current()` (same package) returns `
 Another plugin can put a player's character on a different body (a *puppet*) and take it off again, through `Puppets` in the same package. A body is puppeting while it wears a character it doesn't own. SneakyDB mode only: in legacy mode `puppet` and `release` return `UNSUPPORTED`, and `Puppets.isSupported()` is false. Every method runs on the main thread, and futures complete on it.
 
 - `Puppets.puppet(body, CharacterKey)` returns a `CompletableFuture<PuppetResult>` that always completes. It is a normal switch for the body: what it wore is saved first, then the character loads from its owner's gameplay file with its owner's name and skin. The owner may be offline. It never writes a last-played character (neither the body's nor the owner's), doesn't block commands, and isn't re-applied on rejoin. Everything saved or edited while wearing it goes to the owner (see "Character identity").
-- `Puppets.release(body)` returns `RELEASED`, `NOT_PUPPETED` or `UNSUPPORTED`. It saves the borrowed character where it stands, takes it off at once, and loads the body's own last-played character as a normal switch. Until that arrives the body wears nothing and its inventory is cleared (when SCM manages inventories), so the borrowed items aren't on two bodies. If a third body wears that character by then, the body gets its character menu. A puppet still on its way isn't cancelled by `release`: release once its future completes.
+- `Puppets.release(body)` returns `RELEASED`, `NOT_PUPPETED` or `UNSUPPORTED`. It saves the borrowed character where it stands, takes it off at once, and loads the body's own last-played character as a normal switch. Until that arrives the body wears nothing and its inventory is cleared (when SCM manages inventories), so the borrowed items aren't on two bodies. If a third body wears that character by then, the body gets its character menu. A puppet still on its way isn't cancelled by `release`: release once its future completes. Called for a body in the middle of a swap (from a listener of one of the swap's events), the release waits until the swap is done, still inside the `swap` call, and then takes off whatever borrowed character the body wears (see "Swap" below).
 - `Puppets.borrowedBy(body)` is the character the body wears if it isn't its own, or null.
 - `PuppetLeaveEvent` (a `PlayerEvent` on the body) fires once whenever a puppeting body stops wearing the borrowed character, after it was saved (except in the case under `QUIT` below) and taken off. A swap is the one exception (see "Swap" below). `getCharacterKey()` is the borrowed character, and `getReason()` says how it left:
 
@@ -178,7 +178,7 @@ The cases above are tested one by one in `PuppetApiTest` (its header lists them)
 | `SLEEPING` | A body is in a bed. The caller gets it out first. |
 | `BUSY` | A body or one of the two characters is in the middle of a load or another swap (for example, called from a `LoadCharacterEvent` listener). |
 | `REFUSED` | Before anything was exchanged: a listener cancelled either skin's `CharacterSkinAppliedEvent`, refused or redirected a teleport, or a body quit or lost its character. Bodies that moved are put back, moving as they were. Both characters may have been saved where they stood. |
-| `INTERRUPTED` | A listener of one of the swap's own events took a body off its new character, or a body quit, after the exchange. Both characters were saved before it began; each body wears whatever it wears now. |
+| `INTERRUPTED` | A listener of one of the swap's own events took a body off its new character: a `Puppets.release` (run once the swap is done), a quit, or a lock-out. Both characters were saved before it began; each body wears whatever it wears now. |
 
 Only `SWAPPED`, `REFUSED` and `INTERRUPTED` can change anything. The others are checked before anything happens.
 
@@ -201,8 +201,9 @@ Only `SWAPPED`, `REFUSED` and `INTERRUPTED` can change anything. The others are 
 
 - no load can put anything on either body, and no load can put X or Y on any body;
 - `Character.save()` does nothing for either body (step 2 already saved both), so a listener can't add a save or write a half-swapped state;
+- `Puppets.release` of either body waits until the swap is done, then runs as usual: it saves the borrowed character with everything the swap moved (crafting-grid items a listener's close put back into the inventory included), clears the inventory and leaves the cursor and grid. Run in the middle, it would skip its save and lose what the swap moved since step 2. The result is `INTERRUPTED`;
 - a body kicked by a listener saves nothing more, and the result is `INTERRUPTED`;
-- a body a listener takes off its new character after step 5 (a quit, `Puppets.release`) gets nothing more of it: no further effect, state, skin, pose, seat or nameplate. It is checked after every call that fires an event. The effects the body hands to the other are still all taken off, so they aren't on both bodies. Its items are where step 5 put them, so a release leaves it as a release right after the swap would: the inventory is cleared (the character's save holds it) and the cursor item and crafting grid stay. The result is `INTERRUPTED`.
+- a body a quit or a lock-out takes off its new character after step 5 gets nothing more of it: no further effect, state, skin, pose, seat or nameplate. It is checked after every call that fires an event. The effects the body hands to the other are still all taken off, so they aren't on both bodies. The result is `INTERRUPTED`.
 
 So each swap writes exactly two gameplay files, X and Y, and one last-played pointer for each body that ends up in its own character.
 

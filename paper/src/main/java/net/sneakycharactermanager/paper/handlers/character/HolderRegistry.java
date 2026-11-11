@@ -181,11 +181,19 @@ public final class HolderRegistry {
      * Until its own character arrives the body wears nothing, like after {@code chardisable}; its inventory is cleared
      * so the borrowed items aren't left on two bodies. Fires {@link PuppetLeaveEvent} last, with {@code reason}.
      *
+     * <p>For a body in the middle of a swap (asked from a listener of one of the swap's events), the release waits
+     * until the swap is done, in the same call ({@link CharacterSwap#releaseAfterSwap}), and then takes off whatever
+     * borrowed character the body wears.
+     *
      * @return false if {@code body} wasn't wearing another player's character; nothing changed then
      */
     public static boolean release(Player body, PuppetLeaveEvent.Reason reason) {
         Character worn = Character.get(body);
         if (worn == null || worn.getOwnerUUID().equals(body.getUniqueId())) return false;
+        if (CharacterSwap.isSwapping(body)) {
+            CharacterSwap.releaseAfterSwap(body, reason);
+            return true;
+        }
         SneakyCharacterManager plugin = SneakyCharacterManager.getInstance();
         worn.save();
         Character.takeOff(body);
