@@ -19,7 +19,7 @@ On an isolated copy of the existing network, with **no SneakyDB installed** and 
 - Join as an existing player; verify last-played character, nickname, pronouns, title, skin, local location/inventory and optional attributes.
 - Open `/char`, switch characters and select by a name prefix; confirm enabled filtering and original character order.
 - Create a character, change its name/gender/tags/title/skin, disable it, reconnect and restart; confirm persistence in the original proxy files.
-- Exercise the console command `chartemp`, named templates (`/savetemplatechar` with an existing player character ID must be refused with a message; re-saving an existing template ID must overwrite it), default-skin reset, uniform application and `/userify`.
+- Exercise default-skin reset, uniform application and `/userify`.
 - Exercise `/titlegrant`: creating a new code and reusing an existing code must retain the canonical display.
 - Exercise the `CharacterDirectory` service from a test plugin or SneakyPlots: list an offline account's characters (enabled only, menu order, plain names) and look up an offline and a disabled character by id; confirm an admin rename made while the character is offline shows up. Run `/userify` with a broad filter. With nobody online the lookup must fail immediately; against an old proxy it must time out without errors on the proxy beyond "unknown subchannel".
 - Repeat transport smoke checks on Bungee. Both transports continue to use the shared proxy core.

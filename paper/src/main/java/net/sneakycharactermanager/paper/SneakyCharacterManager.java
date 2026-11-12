@@ -131,7 +131,6 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		getServer().getCommandMap().register(IDENTIFIER, new CommandCharTag());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandCharPrefix());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandUniform());
-		getServer().getCommandMap().register(IDENTIFIER, new CommandSaveTemplateChar());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandUserify());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandMigrateInventories());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandSkinQueue());
@@ -140,7 +139,6 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 		getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharDisable());
 		getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharEnable());
-		getServer().getCommandMap().register(IDENTIFIER, new ConsoleCommandCharTemp());
 
         if (storageMode == StorageMode.LEGACY) {
             getServer().getMessenger().registerIncomingPluginChannel(this, "sneakymouse:" + IDENTIFIER, new ProxyMessageListener());

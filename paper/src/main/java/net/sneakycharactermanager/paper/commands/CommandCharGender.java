@@ -10,7 +10,6 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.Gender;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
@@ -32,11 +31,6 @@ public class CommandCharGender extends CommandBase {
 
 		if (!(sender instanceof Player player)) {
 			sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Must be a player to run this command"));
-			return false;
-		}
-
-		if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
-			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Template characters do not support /chargender."));
 			return false;
 		}
 

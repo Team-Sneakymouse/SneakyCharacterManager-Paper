@@ -22,7 +22,6 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.storage.CharacterResultEffects;
 import net.sneakycharactermanager.paper.admincommands.CommandTitleGrant;
 import net.sneakycharactermanager.paper.commands.CommandChar;
-import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
@@ -130,23 +129,6 @@ public class ProxyMessageListener implements PluginMessageListener {
 				pl.sendMessage(TextUtility.INSTANCE.convertToComponent("&aNo character found. Loading character menu..."));
 				SneakyCharacterManager.getInstance().selectionMenu.openMenu(pl);
 				break;
-			case "loadTempCharacter":
-				requesterUUID = messageIn.readUTF();
-				pl = Bukkit.getPlayer(UUID.fromString(requesterUUID));
-				character = readCharacter(requesterUUID, messageIn);
-				String characterSource = messageIn.readUTF();
-
-				character.load();
-				ConsoleCommandCharTemp.playerTempCharAdd(requesterUUID, characterSource, character.getCharacterUUID());
-				break;
-			case "loadTempCharacterFailed":
-				playerUUID = messageIn.readUTF();
-				characterUUID = messageIn.readUTF();
-
-				SneakyCharacterManager.getInstance().getLogger()
-						.warning("An attempt was made to load a temp character but it did not exist: [" + playerUUID
-								+ "," + characterUUID + "]");
-				break;
 			case "syncCharactersStart":
 				playerUUID = messageIn.readUTF();
 				requesterUUID = messageIn.readUTF();
@@ -187,11 +169,6 @@ public class ProxyMessageListener implements PluginMessageListener {
 				pl = Bukkit.getPlayer(UUID.fromString(playerUUID));
 				pl.sendMessage(TextUtility.INSTANCE.convertToComponent("&aThe following character has been deleted: &b`"
 						+ messageIn.readUTF() + "`&a (" + messageIn.readUTF() + ")"));
-				break;
-			case "saveTemplateCharRejected":
-				String templateAdmin = messageIn.readUTF();
-				String templateId = messageIn.readUTF();
-				CharacterResultEffects.templateRejected(templateAdmin, templateId, messageIn.readUTF());
 				break;
 			case "listChunk":
 				String chunkRequest = messageIn.readUTF();

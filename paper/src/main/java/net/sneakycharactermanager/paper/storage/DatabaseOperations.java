@@ -13,14 +13,13 @@ public final class DatabaseOperations {
     public record Listed(String owner, String requester, long revision, List<CharacterView> characters,
                          List<Map<String,Object>> uniforms) implements Effect {}
     public record Loaded(String destination, String source, long revision, CharacterView character, boolean forced,
-                         boolean temporary, List<Map<String,Object>> uniforms) implements Effect {}
-    public record NotFound(String player, boolean temporary) implements Effect {}
+                         List<Map<String,Object>> uniforms) implements Effect {}
+    public record NotFound(String player) implements Effect {}
     public record Deleted(String player, String id, String name) implements Effect {}
     public record Catalog(Map<String,String> titles) implements Effect {}
     public record TitleCreated(String admin, String target, boolean success, String code, String display, String error) implements Effect {}
     public record Resolved(String requestId, String status, String id, String url, String texture, String signature, String error) implements Effect {}
     public record Found(String requester, List<String> entries) implements Effect {}
-    public record TemplateRejected(String admin, String id) implements Effect {}
     private record Snapshot(String lastPlayed, long revision, List<CharacterView> characters, List<Map<String,Object>> uniforms) {}
     private final SqlStore store;
     private final Function<String, CompletableFuture<String>> hash;
@@ -36,11 +35,9 @@ public final class DatabaseOperations {
             case CharacterRequest.ListCharacters r -> r.owner();
             case CharacterRequest.Select r -> r.owner();
             case CharacterRequest.SelectByName r -> r.owner();
-            case CharacterRequest.Temporary r -> r.owner();
             case CharacterRequest.Create r -> r.owner();
             case CharacterRequest.Update r -> r.owner();
             case CharacterRequest.DefaultSkin r -> r.owner();
-            case CharacterRequest.Template r -> "template";
             default -> "";
         };
     }
@@ -50,31 +47,28 @@ public final class DatabaseOperations {
     public CompletableFuture<List<Effect>> run(CharacterRequest request, String playerName) {
         String owner = owner(request);
         CompletableFuture<?> initialized = owner.isEmpty() ? CompletableFuture.completedFuture(null)
-                : store.ensureOwner(owner, owner.equals("template") ? "template" : playerName);
+                : store.ensureOwner(owner, playerName);
         return initialized.thenCompose(unused -> dispatch(request, playerName));
     }
     private CompletableFuture<List<Effect>> dispatch(CharacterRequest request, String name) {
         return switch (request) {
-            case CharacterRequest.Join r -> snapshot(r.owner()).thenCompose(s -> load(r.owner(), r.owner(), s.lastPlayed(), true, false, s))
+            case CharacterRequest.Join r -> snapshot(r.owner()).thenCompose(s -> load(r.owner(), r.owner(), s.lastPlayed(), true, s))
                     .thenCompose(events -> catalog().thenApply(titles -> append(events, titles)));
             case CharacterRequest.ListCharacters r -> snapshot(r.owner()).thenApply(s -> List.of(list(r.owner(), r.requester(), s)));
-            case CharacterRequest.Select r -> snapshot(r.owner()).thenCompose(s -> load(r.owner(), r.owner(), r.character(), false, false, s));
+            case CharacterRequest.Select r -> snapshot(r.owner()).thenCompose(s -> load(r.owner(), r.owner(), r.character(), false, s));
             case CharacterRequest.SelectByName r -> snapshot(r.owner()).thenCompose(s -> {
                 String id = s.characters().stream().filter(c -> c.enabled() && !c.id().equals(s.lastPlayed())
                     && c.plainName().toLowerCase(Locale.ROOT).startsWith(r.name().toLowerCase(Locale.ROOT)))
                     .map(CharacterView::id).findFirst().orElse("");
-                if (id.isEmpty()) return done(new NotFound(r.owner(), false));
-                return load(r.owner(), r.owner(), id, false, false, s);
+                if (id.isEmpty()) return done(new NotFound(r.owner()));
+                return load(r.owner(), r.owner(), id, false, s);
             });
-            case CharacterRequest.Temporary r -> snapshot(r.owner()).thenCompose(s -> load(r.requester(), r.owner(), r.character(), true, true, s));
             case CharacterRequest.Create r -> {
                 String id = UUID.randomUUID().toString();
                 yield store.create(r.owner(), id, name, "", "", false)
                         .thenCompose(unused -> snapshot(r.owner()))
-                        .thenCompose(s -> load(r.owner(), r.owner(), id, true, false, s));
+                        .thenCompose(s -> load(r.owner(), r.owner(), id, true, s));
             }
-            case CharacterRequest.Template r -> store.create("template", r.id(), r.name(), r.url(), r.skinUuid(), r.slim())
-                    .thenApply(rows -> rows == 0 ? List.<Effect>of(new TemplateRejected(r.admin(), r.id())) : List.<Effect>of());
             case CharacterRequest.Update r -> update(r);
             case CharacterRequest.DefaultSkin r -> empty(store.initializeSkin(r.owner(), r.character(), r.url(), r.slim()));
             case CharacterRequest.Uniform r -> empty(store.uniform(r.base(), r.hash(), r.uuid(), r.url(), r.texture(), r.signature()));
@@ -98,11 +92,10 @@ public final class DatabaseOperations {
     private Listed list(String owner, String requester, Snapshot s) {
         return new Listed(owner, requester, s.revision(), s.characters().stream().filter(CharacterView::enabled).toList(), s.uniforms());
     }
-    private CompletableFuture<List<Effect>> load(String destination, String owner, String id, boolean forced, boolean temporary, Snapshot s) {
+    private CompletableFuture<List<Effect>> load(String destination, String owner, String id, boolean forced, Snapshot s) {
         CharacterView c = s.characters().stream().filter(ch -> ch.id().equals(id)).findFirst().orElse(null);
-        if (c == null) return done(new NotFound(destination, temporary));
-        Loaded loaded = new Loaded(destination, owner, s.revision(), c, forced, temporary, s.uniforms());
-        if (temporary) return done(loaded);
+        if (c == null) return done(new NotFound(destination));
+        Loaded loaded = new Loaded(destination, owner, s.revision(), c, forced, s.uniforms());
         return store.select(owner, id).thenApply(unused -> List.of(loaded, list(owner, owner, s)));
     }
     private CompletableFuture<List<Effect>> update(CharacterRequest.Update r) {

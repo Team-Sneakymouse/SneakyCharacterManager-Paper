@@ -22,8 +22,6 @@ class PendingCharacterJoinTaskTest {
                 offlinePlayer,
                 () -> cancelled.set(true),
                 () -> false,
-                () -> false,
-                () -> {},
                 () -> {});
 
         assertDoesNotThrow(task::run);

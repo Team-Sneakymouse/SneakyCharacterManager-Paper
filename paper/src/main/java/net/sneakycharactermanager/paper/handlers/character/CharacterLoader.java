@@ -18,7 +18,6 @@ import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
@@ -46,8 +45,6 @@ public class CharacterLoader {
 		Bukkit.getServer().getPluginManager().callEvent(event);
 
 		if (!event.isCancelled()) {
-			ConsoleCommandCharTemp.playerTempCharRemove(player.getUniqueId().toString());
-
 			character.setFirstLoad(false);
 
 			SkinState existingState = SneakyCharacterManager.getInstance().skinStateManager

@@ -21,7 +21,6 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import com.sneakyutils.util.TextUtility;
 
@@ -42,11 +41,6 @@ public class CommandNick extends CommandBase {
             sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Must be a player to run this command"));
             return false;
         }
-
-        if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
-            player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4You are currently on a template character, which do not support /nick and /skin."));
-            return false;
-        };
 
         if (args.length == 0) {
             Character character = Character.get(player);
@@ -123,8 +117,6 @@ public class CommandNick extends CommandBase {
         Character current = Character.get(player);
         if (!player.hasPermission(getPermission())) {
             error = "You no longer have permission to use /nick.";
-        } else if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
-            error = "You are currently on a template character, which does not support /nick.";
         } else if (current == null) {
             error = "Sorry! Failed to retrieve character!";
         } else if (!Objects.equals(characterId, current.getCharacterUUID())) {
