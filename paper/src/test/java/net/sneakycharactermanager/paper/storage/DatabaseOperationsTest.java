@@ -43,6 +43,28 @@ class DatabaseOperationsTest {
         assertEquals("Winner", result.display());
         assertEquals("captain", result.code());
     }
+    @Test void templateCreateMatchingNoRowReportsRejectionToAdmin() {
+        SqlStoreTest.Api api = new SqlStoreTest.Api() {
+            @Override public CompletableFuture<Integer> execute(String sql, List<?> args) {
+                statements.add(sql); bindings.add(args);
+                return CompletableFuture.completedFuture(sql.contains("ON CONFLICT (owner_id, character_id)") ? 0 : 1);
+            }
+        };
+        api.ready.complete(null);
+        DatabaseOperations operations = new DatabaseOperations(new SqlStore(api, 5), url -> CompletableFuture.completedFuture("hash"));
+        var events = operations.run(new CharacterRequest.Template("taken", "Name", "url", "", false, "admin"), "").join();
+        assertEquals(List.of(new DatabaseOperations.TemplateRejected("admin", "taken")), events);
+        String insert = api.statements.stream().filter(sql -> sql.contains("ON CONFLICT (owner_id, character_id)")).findFirst().orElseThrow();
+        assertTrue(insert.contains("character_id = ? AND owner_id <> ?"));
+        assertEquals(List.of("template", "taken", "Name", "url", "", false, "taken", "template"),
+                api.bindings.get(api.statements.indexOf(insert)));
+    }
+    @Test void templateDecodeAcceptsOldPayloadWithoutAdmin() {
+        assertEquals(new CharacterRequest.Template("id", "n", "u", "s", true, ""),
+                CharacterRequest.decode("saveTemplateChar", "id", "n", "u", "s", true));
+        assertEquals(new CharacterRequest.Template("id", "n", "u", "s", true, "admin"),
+                CharacterRequest.decode("saveTemplateChar", "id", "n", "u", "s", true, "admin"));
+    }
     private Map<String,Object> row(String id, boolean enabled, String skinId) {
         return Map.of("character_id", id, "enabled", enabled, "name", id, "skin_id", skinId);
     }

@@ -49,7 +49,7 @@ storage:
 
 Keep `storage.backend: legacy` on the current network until final migration. Only after the offline import and validation, explicitly select `sneakydb` on the intended Paper instances. Backend selection and request timeout are fixed at enable; changes require a full restart, not `/charreload`. An uncertain database operation fences further work for that owner until restart rather than automatically retrying writes. Investigate and reconcile the durable database outcome before restarting; a timeout does not prove rollback.
 
-Database mode requires the operator-applied [schema contract](db/001_scm.sql). Importing legacy data is a separate, operator-run Python tool: see [offline migration and rollback](docs/migration.md). There is no automatic migration or YAML fallback on database failure. Do not enable SQL writers while legacy YAML writers remain authoritative for the same dataset.
+Database mode requires the operator-applied [schema contract](db/001_scm.sql), followed by [`db/002_unique_character_id.sql`](db/002_unique_character_id.sql). Importing legacy data is a separate, operator-run Python tool: see [offline migration and rollback](docs/migration.md). There is no automatic migration or YAML fallback on database failure. Do not enable SQL writers while legacy YAML writers remain authoritative for the same dataset.
 
 Database mode reads authoritative character snapshots for join, list/menu and selection operations. Titles refresh on join and title creation; already-observed title codes are retained against out-of-order snapshots. There is no push subscription, periodic cross-server broadcast, or automatic update to already-loaded player appearances. Changes made elsewhere become visible at those read boundaries; editing/removing existing title displays directly in SQL is not a supported live refresh workflow.
 
@@ -64,6 +64,7 @@ See [backend verification and cutover gates](docs/backend-verification.md) for l
   - `plugins/SneakyCharacterManager/characterdata/<playerUUID>/<characterUUID>.yml`
 - Messaging channel between proxy and backend:
   - `sneakymouse:sneakycharacters`
+- Character IDs are unique across all accounts, including the `template` account. New characters get random UUIDs. `/savetemplatechar <id>` refuses an ID that another account's character already uses (the template may overwrite its own ID). In database mode, `db/002_unique_character_id.sql` enforces this with a unique index; in legacy mode the proxy checks the account files before saving a template.
 
 ## Configuration (Paper)
 

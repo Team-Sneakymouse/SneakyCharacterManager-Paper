@@ -15,6 +15,7 @@ class PostgresTests(unittest.TestCase):
         with psycopg.connect(dsn, autocommit=True) as conn:
             self.assertIsNone(conn.execute("SELECT to_regnamespace('scm')").fetchone()[0], 'test requires empty disposable database')
             conn.execute((Path(__file__).resolve().parents[2] / 'db/001_scm.sql').read_text())
+            conn.execute((Path(__file__).resolve().parents[2] / 'db/002_unique_character_id.sql').read_text())
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / 'characterdata').mkdir()

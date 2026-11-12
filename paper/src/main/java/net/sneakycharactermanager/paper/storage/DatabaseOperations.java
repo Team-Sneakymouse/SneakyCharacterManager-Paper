@@ -20,6 +20,7 @@ public final class DatabaseOperations {
     public record TitleCreated(String admin, String target, boolean success, String code, String display, String error) implements Effect {}
     public record Resolved(String requestId, String status, String id, String url, String texture, String signature, String error) implements Effect {}
     public record Found(String requester, List<String> entries) implements Effect {}
+    public record TemplateRejected(String admin, String id) implements Effect {}
     private record Snapshot(String lastPlayed, long revision, List<CharacterView> characters, List<Map<String,Object>> uniforms) {}
     private final SqlStore store;
     private final Function<String, CompletableFuture<String>> hash;
@@ -72,7 +73,8 @@ public final class DatabaseOperations {
                         .thenCompose(unused -> snapshot(r.owner()))
                         .thenCompose(s -> load(r.owner(), r.owner(), id, true, false, s));
             }
-            case CharacterRequest.Template r -> empty(store.create("template", r.id(), r.name(), r.url(), r.skinUuid(), r.slim()));
+            case CharacterRequest.Template r -> store.create("template", r.id(), r.name(), r.url(), r.skinUuid(), r.slim())
+                    .thenApply(rows -> rows == 0 ? List.<Effect>of(new TemplateRejected(r.admin(), r.id())) : List.<Effect>of());
             case CharacterRequest.Update r -> update(r);
             case CharacterRequest.DefaultSkin r -> empty(store.initializeSkin(r.owner(), r.character(), r.url(), r.slim()));
             case CharacterRequest.Uniform r -> empty(store.uniform(r.base(), r.hash(), r.uuid(), r.url(), r.texture(), r.signature()));

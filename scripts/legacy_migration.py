@@ -116,6 +116,7 @@ def preflight(root):
     files = {}
     diagnostics = []
     seen = {}
+    character_owners = {}
     def add(table, row, key):
         marker = (table, key)
         if marker in seen: raise MigrationError(f'collision in {table}: {key!r}')
@@ -135,6 +136,10 @@ def preflight(root):
                 if key.lower() == 'lastplayedcharacter': continue
                 scalar(key)
                 if not key: raise MigrationError('empty character ID')
+                # Character IDs are global (db/002_unique_character_id.sql), not per owner.
+                if key in character_owners:
+                    raise MigrationError(f'collision in characters: ID {key!r} in owners {character_owners[key]!r} and {owner!r}')
+                character_owners[key] = owner
                 mapping(section)
                 row = {'owner_id': owner, 'character_id': key, 'ordinal': len(tables['characters']) + 1,
                        'enabled': boolean(section.get('enabled'), True), 'slim': boolean(section.get('slim'), False)}

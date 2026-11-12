@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class CommandSaveTemplateCharTest {
     @Test void sendsSkinUuidBeforeSlimForExistingProxyProtocolAndTypedBackend() {
         Player player = mock(Player.class);
+        java.util.UUID admin = java.util.UUID.randomUUID();
+        when(player.getUniqueId()).thenReturn(admin);
         Character character = mock(Character.class);
         when(character.getName()).thenReturn("Name");
         when(character.getSkin()).thenReturn("url");
@@ -18,7 +20,7 @@ class CommandSaveTemplateCharTest {
         try (var characters = mockStatic(Character.class); var messages = mockStatic(ProxyMessagingUtil.class)) {
             characters.when(() -> Character.get(player)).thenReturn(character);
             assertTrue(new CommandSaveTemplateChar().execute(player, "savetemplatechar", new String[]{"template-id"}));
-            messages.verify(() -> ProxyMessagingUtil.sendByteArray(player, "saveTemplateChar", "template-id", "Name", "url", "skin-uuid", true));
+            messages.verify(() -> ProxyMessagingUtil.sendByteArray(player, "saveTemplateChar", "template-id", "Name", "url", "skin-uuid", true, admin.toString()));
         }
     }
 }

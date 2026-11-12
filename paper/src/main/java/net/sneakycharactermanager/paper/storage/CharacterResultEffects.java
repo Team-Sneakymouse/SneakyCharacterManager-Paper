@@ -35,6 +35,15 @@ public final class CharacterResultEffects {
             if (titled != null) SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(online, titled.getDisplayName());
         }
     }
+    /** Character IDs are global, so a template may not reuse a player's character ID. */
+    public static void templateRejected(String admin, String id, String holder) {
+        SneakyCharacterManager.getInstance().getLogger().warning("Refused template character ID '" + id
+                + "': already used by " + (holder.isEmpty() ? "another owner" : "owner " + holder));
+        if (admin.isEmpty()) return;
+        Player player = Bukkit.getPlayer(UUID.fromString(admin));
+        if (player != null) player.sendMessage(TextUtility.INSTANCE.convertToComponent(
+                "&4Template ID &b`" + id + "`&4 is already used by another character. Pick a different ID."));
+    }
     public static void defaultSkin(String owner, String id) {
         Player player = Bukkit.getPlayer(UUID.fromString(owner));
         if (player == null) return;
