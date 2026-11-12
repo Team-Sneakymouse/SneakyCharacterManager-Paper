@@ -29,6 +29,7 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
+import net.sneakycharactermanager.paper.util.ProxyListReplies;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import com.sneakyutils.util.TextUtility;
 
@@ -191,6 +192,16 @@ public class ProxyMessageListener implements PluginMessageListener {
 				String templateAdmin = messageIn.readUTF();
 				String templateId = messageIn.readUTF();
 				CharacterResultEffects.templateRejected(templateAdmin, templateId, messageIn.readUTF());
+				break;
+			case "listChunk":
+				String chunkRequest = messageIn.readUTF();
+				int chunkTotal = messageIn.readInt();
+				int chunkOffset = messageIn.readInt();
+				ProxyListReplies.accept(chunkRequest, chunkTotal, chunkOffset, readStringList(messageIn));
+				break;
+			case "listError":
+				String failedRequest = messageIn.readUTF();
+				ProxyListReplies.fail(failedRequest, new IllegalStateException("Proxy refused the reply: " + messageIn.readUTF()));
 				break;
 			case "getAllCharacters":
 				playerUUID = messageIn.readUTF();

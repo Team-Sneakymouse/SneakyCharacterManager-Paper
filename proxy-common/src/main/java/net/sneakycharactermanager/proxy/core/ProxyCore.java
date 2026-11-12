@@ -11,6 +11,8 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public final class ProxyCore {
 
@@ -28,8 +30,22 @@ public final class ProxyCore {
     private final ProxyMessenger messenger;
 
     private final Set<String> handledRequests = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    /**
+     * Read-only lookups that may scan every account file. One thread, so lookups queue instead of piling up, and
+     * Bungee's network thread (which delivers plugin messages there) is never blocked by disk reads.
+     */
+    private final Executor lookups;
 
     public ProxyCore(ProxyPlatform platform, ProxyKeys keys) {
+        this(platform, keys, Executors.newSingleThreadExecutor(task -> {
+            Thread thread = new Thread(task, "SneakyCharacterManager-lookups");
+            thread.setDaemon(true);
+            return thread;
+        }));
+    }
+
+    ProxyCore(ProxyPlatform platform, ProxyKeys keys, Executor lookups) {
+        this.lookups = lookups;
         this.platform = platform;
         this.privateKey = keys.privateKey();
         this.publicKey = keys.publicKey();
@@ -252,14 +268,41 @@ public final class ProxyCore {
             case "getAllCharacters" -> {
                 String requesterUUID = in.readUTF();
                 String filter = in.readUTF();
-                try {
-                    List<String> data = playerDataRepository.getAllCharacters(filter);
-                    messenger.send(server, "getAllCharacters", requesterUUID, data);
-                } catch (IOException ignored) {
-                    // best-effort
-                }
+                // Appended field: older Paper builds omit it and get the original single reply.
+                String requestId = in.available() > 0 ? in.readUTF() : null;
+                lookup(subChannel, () -> {
+                    List<String> data;
+                    try {
+                        data = playerDataRepository.getAllCharacters(filter);
+                    } catch (IOException ignored) {
+                        return; // best-effort
+                    }
+                    if (data == null) data = List.of();
+                    if (requestId == null) messenger.send(server, "getAllCharacters", requesterUUID, data);
+                    else messenger.sendChunked(server, requestId, data);
+                });
+            }
+            case "directoryOwner" -> {
+                String owner = in.readUTF();
+                String requestId = in.readUTF();
+                lookup(subChannel, () -> messenger.sendChunked(server, requestId, playerDataRepository.directoryOfOwner(owner)));
+            }
+            case "directoryCharacter" -> {
+                String characterId = in.readUTF();
+                String requestId = in.readUTF();
+                lookup(subChannel, () -> messenger.sendChunked(server, requestId, playerDataRepository.directoryOfCharacter(characterId)));
             }
             default -> platform.logger().severe("Unknown proxy subchannel: " + subChannel);
         }
+    }
+
+    private void lookup(String subChannel, Runnable task) {
+        lookups.execute(() -> {
+            try {
+                task.run();
+            } catch (Exception e) {
+                platform.logger().severe("Error handling subchannel " + subChannel, e);
+            }
+        });
     }
 }

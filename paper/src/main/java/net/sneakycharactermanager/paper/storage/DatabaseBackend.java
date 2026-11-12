@@ -3,6 +3,7 @@ package net.sneakycharactermanager.paper.storage;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.directory.CharacterDirectory;
 import net.sneakycharactermanager.paper.admincommands.CommandTitleGrant;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
@@ -31,9 +32,11 @@ public final class DatabaseBackend implements CharacterBackend {
     private volatile boolean closed;
     private final int timeoutSeconds;
 
+    private final CharacterDirectory directory;
     public DatabaseBackend(SneakyCharacterManager plugin, SqlStore store) {
         this.plugin = plugin;
         this.timeoutSeconds = store.timeoutSeconds();
+        this.directory = new SqlCharacterDirectory(store, plugin.getLogger());
         http = new ThreadPoolExecutor(2, 2, 30, TimeUnit.SECONDS, new ArrayBlockingQueue<>(32), r -> {
             Thread thread = new Thread(r, "SCM-skin-resolve"); thread.setDaemon(true); return thread;
         }, new ThreadPoolExecutor.AbortPolicy());
@@ -207,6 +210,7 @@ public final class DatabaseBackend implements CharacterBackend {
         }
         return character;
     }
+    @Override public CharacterDirectory directory() { return directory; }
     @Override public void disconnect(Player player) {
         fence.forget(player.getUniqueId().toString()); joining.remove(player); failedJoins.remove(player);
         temporary.remove(player); failedTemporary.remove(player);

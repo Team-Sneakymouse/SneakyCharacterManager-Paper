@@ -375,11 +375,11 @@ public final class PlayerData {
         syncCharacters(server, messenger, playerUUID);
     }
 
-    private static String stringOrEmpty(Object o) {
+    static String stringOrEmpty(Object o) {
         return o == null ? "" : String.valueOf(o);
     }
 
-    private static boolean boolOrDefault(Object o, boolean def) {
+    static boolean boolOrDefault(Object o, boolean def) {
         if (o instanceof Boolean b) return b;
         if (o instanceof String s) return Boolean.parseBoolean(s);
         return def;
