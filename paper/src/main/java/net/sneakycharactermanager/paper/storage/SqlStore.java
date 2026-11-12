@@ -105,6 +105,7 @@ public final class SqlStore {
                 SELECT 1 FROM scm.characters WHERE owner_id = ? AND character_id = ?)
             """, List.of(character, owner, owner, character));
     }
+    /** Returns 0 rows when another owner already holds {@code id}: character IDs are global. */
     public CompletableFuture<Integer> create(String owner, String id, String name, String skin, String skinUuid, boolean slim) {
         return execute("""
             WITH locked AS (
@@ -112,11 +113,12 @@ public final class SqlStore {
             )
             INSERT INTO scm.characters(owner_id, character_id, name, skin, skin_uuid, slim)
             SELECT owner_id, ?, ?, ?, ?, ? FROM locked
+            WHERE NOT EXISTS (SELECT 1 FROM scm.characters WHERE character_id = ? AND owner_id <> ?)
             ON CONFLICT (owner_id, character_id) DO UPDATE
             SET enabled = true, name = EXCLUDED.name, skin_id = '', skin = EXCLUDED.skin,
                 skin_uuid = EXCLUDED.skin_uuid, texture = '', signature = '', slim = EXCLUDED.slim,
                 tags = '', gender = '', title = ''
-            """, List.of(owner, id, name, skin, skinUuid, slim));
+            """, List.of(owner, id, name, skin, skinUuid, slim, id, owner));
     }
     public CompletableFuture<List<Map<String,Object>>> snapshot(String owner) {
         return query("""

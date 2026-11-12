@@ -180,6 +180,7 @@ public final class DatabaseBackend implements CharacterBackend {
             case DatabaseOperations.Resolved r -> SkinCache.completeResolveOnMainThread(r.requestId(), new SkinCache.ResolveResult(
                     SkinCache.ResolveStatus.valueOf(r.status()), r.id(), r.url(), r.texture(), r.signature(), r.error()));
             case DatabaseOperations.Found r -> ProxyMessageListener.handleCharacterOutput(r.requester(), r.entries());
+            case DatabaseOperations.TemplateRejected r -> CharacterResultEffects.templateRejected(r.admin(), r.id(), "");
             case DatabaseOperations.Deleted r -> {
                 Player player = Bukkit.getPlayer(UUID.fromString(r.player()));
                 if (player != null) player.sendMessage(TextUtility.INSTANCE.convertToComponent(

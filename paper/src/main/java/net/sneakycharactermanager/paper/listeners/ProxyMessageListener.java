@@ -187,6 +187,11 @@ public class ProxyMessageListener implements PluginMessageListener {
 				pl.sendMessage(TextUtility.INSTANCE.convertToComponent("&aThe following character has been deleted: &b`"
 						+ messageIn.readUTF() + "`&a (" + messageIn.readUTF() + ")"));
 				break;
+			case "saveTemplateCharRejected":
+				String templateAdmin = messageIn.readUTF();
+				String templateId = messageIn.readUTF();
+				CharacterResultEffects.templateRejected(templateAdmin, templateId, messageIn.readUTF());
+				break;
 			case "getAllCharacters":
 				playerUUID = messageIn.readUTF();
 				List<String> characterData = readStringList(messageIn);

@@ -19,7 +19,7 @@ On an isolated copy of the existing network, with **no SneakyDB installed** and 
 - Join as an existing player; verify last-played character, nickname, pronouns, title, skin, local location/inventory and optional attributes.
 - Open `/char`, switch characters and select by a name prefix; confirm enabled filtering and original character order.
 - Create a character, change its name/gender/tags/title/skin, disable it, reconnect and restart; confirm persistence in the original proxy files.
-- Exercise the console command `chartemp`, named templates, default-skin reset, uniform application and `/userify`.
+- Exercise the console command `chartemp`, named templates (`/savetemplatechar` with an existing player character ID must be refused with a message; re-saving an existing template ID must overwrite it), default-skin reset, uniform application and `/userify`.
 - Exercise `/titlegrant`: creating a new code and reusing an existing code must retain the canonical display.
 - Repeat transport smoke checks on Bungee. Both transports continue to use the shared proxy core.
 - Compare the config and data directory before/after: no automatic SQL opt-in, imported data or changes to key ownership.
@@ -28,7 +28,7 @@ Automated tests and a built JAR do not establish these in-game results. Record t
 
 ## Database integration gate
 
-Use a separately provisioned disposable PostgreSQL database, never the live migration target, for tests. Apply the repository's operator DDL. Test the same operations as above on Paper instances explicitly configured for the database backend. No SCM proxy plugin or `keys.ser` should be needed in this mode.
+Use a separately provisioned disposable PostgreSQL database, never the live migration target, for tests. Apply the repository's operator DDL (`db/001_scm.sql`, then `db/002_unique_character_id.sql`). Test the same operations as above on Paper instances explicitly configured for the database backend. No SCM proxy plugin or `keys.ser` should be needed in this mode.
 
 In addition, exercise:
 

@@ -66,6 +66,7 @@ class PostgresIntegrationTest {
     @BeforeEach void schema() throws Exception {
         sql("DROP SCHEMA IF EXISTS scm CASCADE");
         sql(Files.readString(Path.of("../db/001_scm.sql")));
+        sql(Files.readString(Path.of("../db/002_unique_character_id.sql")));
         api = new Api(); store = new SqlStore(api, 5); store.ready().join();
         operations = new DatabaseOperations(store, url -> CompletableFuture.completedFuture("content-hash"));
     }
@@ -109,8 +110,24 @@ class PostgresIntegrationTest {
         assertEquals(List.of(initial.id(), second), list("owner").characters().stream().map(CharacterView::id).toList());
         assertTrue(((Number)store.snapshot("owner").join().getFirst().get("revision")).longValue() >= 9);
     }
+    @Test void characterIdsAreGlobalAndTemplatesCannotTakeAPlayersId() throws Exception {
+        String player = list("owner").characters().getFirst().id();
+        var rejected = run(new CharacterRequest.Template(player, "Copy", "http://example.test/skin", "", false, "admin"));
+        assertEquals(List.of(new DatabaseOperations.TemplateRejected("admin", player)), rejected);
+        assertTrue(list("template").characters().stream().noneMatch(c -> c.id().equals(player)));
+        assertEquals(List.of(player), list("owner").characters().stream().map(CharacterView::id).toList());
+        // Overwriting the template's own ID still works.
+        assertEquals(List.of(), run(new CharacterRequest.Template("guard", "Guard", "http://example.test/a", "", false, "admin")));
+        assertEquals(List.of(), run(new CharacterRequest.Template("guard", "Guard 2", "http://example.test/b", "", false, "admin")));
+        assertEquals("Guard 2", list("template").characters().stream().filter(c -> c.id().equals("guard")).findFirst().orElseThrow().name());
+        // The index is the guarantee behind the writer check.
+        store.ensureOwner("other", "Other").join();
+        SQLException duplicate = assertThrows(SQLException.class, () -> sql(
+                "INSERT INTO scm.characters(owner_id, character_id) VALUES ('other', '" + player + "')"));
+        assertEquals("23505", duplicate.getSQLState());
+    }
     @Test void templateLiteralOwnerTemporaryAndInlineOrMissingSkinRefsSurvive() {
-        run(new CharacterRequest.Template("legacy-id", "Template Name", "http://example.test/skin", "skin-uuid", true));
+        run(new CharacterRequest.Template("legacy-id", "Template Name", "http://example.test/skin", "skin-uuid", true, ""));
         var temp = (DatabaseOperations.Loaded)run(new CharacterRequest.Temporary("destination", "template", "legacy-id")).getFirst();
         assertTrue(temp.temporary()); assertEquals("destination", temp.destination()); assertEquals("template", temp.source());
         assertEquals("skin-uuid", temp.character().skinUuid());

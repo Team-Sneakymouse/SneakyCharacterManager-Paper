@@ -38,6 +38,18 @@ public final class PlayerDataRepository {
         playerDataMap.remove(playerUUID);
     }
 
+    /** Owners whose file holds {@code characterId}; scans every file, so keep it off hot paths. */
+    public List<String> ownersOfCharacter(String characterId) {
+        File[] files = characterDataFolder.listFiles((dir, name) -> name.endsWith(".yml"));
+        if (files == null || "lastPlayedCharacter".equalsIgnoreCase(characterId)) return List.of();
+        List<String> owners = new ArrayList<>();
+        for (File playerFile : files) {
+            Map<String, Object> root = net.sneakycharactermanager.proxy.common.YamlFiles.load(playerFile, platform.logger());
+            if (root != null && root.get(characterId) instanceof Map<?, ?>) owners.add(playerFile.getName().replace(".yml", ""));
+        }
+        return owners;
+    }
+
     public List<String> getAllCharacters(String filter) throws IOException {
         if (!characterDataFolder.exists() || characterDataFolder.listFiles() == null) return null;
 

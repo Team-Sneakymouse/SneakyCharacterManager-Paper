@@ -75,6 +75,14 @@ class ManifestTests(unittest.TestCase):
                 self.put(name, text)
                 with self.assertRaisesRegex(m.MigrationError, 'collision'): m.preflight(self.root)
                 (self.root / name).unlink()
+    def test_character_id_collision_across_owners(self):
+        owner = '11111111-1111-1111-1111-111111111111'
+        self.put(f'characterdata/{owner}.yml', 'lastPlayedCharacter: shared\nshared: {name: Mouse}\n')
+        self.put('characterdata/template.yml', 'lastPlayedCharacter: guard\nguard: {}\n')
+        self.assertEqual(len(m.preflight(self.root)['tables']['characters']), 2)
+        self.put('characterdata/template.yml', 'lastPlayedCharacter: guard\nguard: {}\nshared: {}\n')
+        with self.assertRaisesRegex(m.MigrationError, f"collision in characters: ID 'shared' in owners '{owner}' and 'template'"):
+            m.preflight(self.root)
     def test_cache_success_and_source_untouched(self):
         self.put('skin_cache.yml', 'skins: [{id: 001, mojang_url: "https://textures.minecraft.net/texture/a", texture: raw, signature: sig}]')
         self.put('uniform_skin_cache.yml', 'cache: [{base_url: "https://exact", variants: [{hash: 001, url: "https://exact/variant"}]}]')
