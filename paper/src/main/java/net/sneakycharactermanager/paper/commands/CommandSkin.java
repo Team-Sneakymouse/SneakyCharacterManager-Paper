@@ -32,7 +32,6 @@ import me.clip.placeholderapi.PlaceholderAPI;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
@@ -92,13 +91,6 @@ public class CommandSkin extends CommandBase {
 					.hoverEvent(HoverEvent.showText(TextUtility.INSTANCE.convertToComponent("&aClick to Copy!"))));
 			return true;
 		}
-
-		if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
-			player.sendMessage(TextUtility.INSTANCE.convertToComponent(
-					"&4You are currently on a template character, which do not support /nick and /skin."));
-			return false;
-		}
-		;
 
 		Character character = Character.get(player);
 

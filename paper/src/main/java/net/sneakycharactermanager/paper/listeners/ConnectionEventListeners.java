@@ -12,7 +12,6 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.nameplate.ReleaseReason;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
-import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
@@ -43,8 +42,6 @@ public class ConnectionEventListeners implements Listener {
                             player,
                             this::cancel,
                             () -> Character.isPlayedMapped(player),
-                            () -> ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString()),
-                            () -> ConsoleCommandCharTemp.reApply(player),
                             () -> ProxyMessagingUtil.sendByteArray(player, "playerJoin", player.getUniqueId().toString()));
 
                     @Override

@@ -133,12 +133,6 @@ public final class ProxyCore {
                 String characterUUID = in.readUTF();
                 playerDataRepository.get(playerUUID).loadCharacter(server, messenger, characterUUID, false);
             }
-            case "tempCharacter" -> {
-                String requesterUUID = in.readUTF();
-                String playerUUID = in.readUTF();
-                String characterUUID = in.readUTF();
-                playerDataRepository.get(playerUUID).loadTempCharacter(server, messenger, requesterUUID, characterUUID);
-            }
             case "selectCharacterByName" -> {
                 String playerUUID = in.readUTF();
                 String characterName = in.readUTF();
@@ -194,27 +188,6 @@ public final class ProxyCore {
                 PlayerData pd = playerDataRepository.get(playerUUID);
                 String characterUUID = pd.createNewCharacter(name);
                 if (characterUUID != null) pd.loadCharacter(server, messenger, characterUUID, true);
-            }
-            case "saveTemplateChar" -> {
-                String characterID = in.readUTF();
-                String characterName = in.readUTF();
-                String characterSkin = in.readUTF();
-                String skinUUID = in.readUTF();
-                boolean characterSlim = in.readBoolean();
-                // Appended field: older Paper builds omit it.
-                String adminUUID = in.available() > 0 ? in.readUTF() : "";
-
-                // Character IDs are global; a template may only overwrite its own ID.
-                Optional<String> holder = playerDataRepository.ownersOfCharacter(characterID).stream()
-                        .filter(owner -> !owner.equals("template")).findFirst();
-                if (holder.isPresent()) {
-                    platform.logger().warning("Refused template character ID '" + characterID
-                            + "': already used by owner " + holder.get());
-                    messenger.send(server, "saveTemplateCharRejected", adminUUID, characterID, holder.get());
-                    return;
-                }
-                PlayerData pd = playerDataRepository.get("template");
-                pd.createNewCharacter(characterID, characterName, characterSkin, skinUUID, characterSlim);
             }
             case "saveUniformVariant" -> {
                 String baseUrl = in.readUTF();

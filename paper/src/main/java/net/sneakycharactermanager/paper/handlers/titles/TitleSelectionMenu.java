@@ -23,7 +23,6 @@ import com.sneakyutils.util.TextUtility;
 
 import net.kyori.adventure.text.Component;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 
@@ -37,11 +36,6 @@ public class TitleSelectionMenu implements Listener {
 	}
 
 	public void open(Player player) {
-		if (ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString())) {
-			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Template characters do not support titles."));
-			return;
-		}
-
 		Character character = Character.get(player);
 		if (character == null) {
 			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cFailed to retrieve character."));

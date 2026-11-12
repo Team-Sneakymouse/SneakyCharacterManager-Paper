@@ -1,149 +1,19 @@
 package net.sneakycharactermanager.paper.consolecommands;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+/**
+ * Template characters and the {@code chartemp} command were removed. This stub remains only so
+ * plugins compiled against the old API (SneakyRacials) still link.
+ *
+ * @deprecated always returns {@code false}; drop the call.
+ */
+@Deprecated(forRemoval = true)
+public final class ConsoleCommandCharTemp {
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import org.jetbrains.annotations.NotNull;
+    private ConsoleCommandCharTemp() {}
 
-import net.sneakycharactermanager.paper.SneakyCharacterManager;
-import net.sneakycharactermanager.paper.commands.CommandChar;
-import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
-
-public class ConsoleCommandCharTemp extends CommandBaseConsole {
-
-    private static Map<String, TempCharEntry> tempEntries = new HashMap<>();
-
-    public ConsoleCommandCharTemp() {
-        super("chartemp");
-        this.description = "The specified player loads a temporary character from a template or another player. They will only use their nick and skin, not their inventory. /nick and /skin will be disabled whilst on a temporary character.";
-        this.setUsage("/" + this.getName() + " [playerName] [template/playerName/playerUUID] [characterID]");
-    }
-
-    @Override
-    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
-        if (sender instanceof Player) {
-            sender.sendMessage("This command can only be run from the console.");
-            return false;
-        }
-
-        if (args.length != 3) {
-            sender.sendMessage("Invalid Usage: " + this.getUsage());
-            return false;
-        }
-
-        Player player = Bukkit.getPlayer(args[0]);
-
-        if (player == null) {
-            sender.sendMessage("Invalid Player: '" + args[0] + "'");
-            return false;
-        }
-
-        String uuid = args[1];
-
-        boolean valid = uuid.equals("template") ? true : false;
-
-        if (!valid) {
-            for (@NotNull OfflinePlayer opl : Bukkit.getOfflinePlayers()) {
-                if (opl.getName() != null && opl.getName().equals(uuid)) {
-                    valid = true;
-                    uuid = opl.getUniqueId().toString();
-                    break;
-                } else if (opl.getUniqueId() != null && opl.getUniqueId().toString().equals(uuid)) {
-                    valid = true;
-                    break;
-                }
-            }
-        }
-
-        if (!valid) {
-            sender.sendMessage("The provided character source '" + args[1] + "' is not 'template' and it does not match the UUID or name of any known player.");
-            return false;
-        }
-
-        ProxyMessagingUtil.sendByteArray(player, "tempCharacter", player.getUniqueId().toString(), uuid, args[2]);
-        return true;
-    }
-
-    @Override
-    public List<String> tabComplete(CommandSender sender, String alias, String[] args, Location location) {
-        if (args.length == 1) {
-            List<String> playerNames = new ArrayList<>();
-
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                if (player.getName().toLowerCase().startsWith(args[0].toLowerCase()) && !player.getName().equals("CMI-Fake-Operator")) playerNames.add(player.getName());
-            }
-
-            return playerNames;
-        } else if (args.length == 2) {
-            List<String> playerNames = new ArrayList<>();
-            playerNames.add("template");
-
-            for (@NotNull OfflinePlayer opl : Bukkit.getOfflinePlayers()) {
-                if (opl.getName() != null && opl.getName().toLowerCase().startsWith(args[1].toLowerCase()) && !opl.getName().equals("CMI-Fake-Operator")) playerNames.add(opl.getName());
-            }
-
-            return playerNames;
-        } else if (args.length == 3) {
-            String uuid = args[1];
-
-            Player pl = Bukkit.getPlayer(uuid);
-
-            if (pl != null) uuid = pl.getUniqueId().toString();
-
-            List<String> names = new ArrayList<>();
-            try {
-                for (net.sneakycharactermanager.paper.handlers.character.Character c : net.sneakycharactermanager.paper.handlers.character.Character.getPlayerCharacters(java.util.UUID.fromString(uuid))) {
-                    String name = c.getNameUnformatted();
-                    if (!names.contains(name) && name.toLowerCase().startsWith(args[2].toLowerCase())) names.add(name);
-                }
-            } catch (Exception e) {}
-            return names;
-        } else {
-            return new ArrayList<>();
-        }
-    }
-
+    /** @deprecated template characters no longer exist; always {@code false}. */
+    @Deprecated(forRemoval = true)
     public static boolean isPlayerTempChar(String playerUUID) {
-        return tempEntries.keySet().contains(playerUUID);
+        return false;
     }
-
-    public static void playerTempCharAdd(String playerUUID, String characterSource, String characterID) {
-        tempEntries.put(playerUUID, new TempCharEntry(characterSource, characterID));
-    }
-
-    public static void playerTempCharRemove(String playerUUID) {
-        tempEntries.remove(playerUUID);
-    }
-
-    public static void reApply(Player requester) {
-        String playerUUID = requester.getUniqueId().toString();
-        TempCharEntry entry = tempEntries.get(playerUUID);
-
-        if (entry == null) {
-            SneakyCharacterManager.getInstance().getLogger().warning("An attempt was made to reApply a temp character for a player that isn't on a temp character: [" + playerUUID + "]");
-            return;
-        }
-
-        ProxyMessagingUtil.sendByteArray(requester, "tempCharacter", playerUUID, entry.characterSource, entry.characterID);
-    }
-
-    private static class TempCharEntry {
-        
-        private String characterSource;
-        private String characterID;
-
-        private TempCharEntry(String characterSource, String characterID) {
-            this.characterSource = characterSource;
-            this.characterID = characterID;
-        }
-
-    }
-    
 }

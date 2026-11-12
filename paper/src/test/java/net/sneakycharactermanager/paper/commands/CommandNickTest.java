@@ -1,6 +1,5 @@
 package net.sneakycharactermanager.paper.commands;
 
-import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import org.bukkit.entity.Player;
 import org.bukkit.Bukkit;
@@ -125,7 +124,6 @@ class CommandNickTest {
         final SneakyCharacterManager plugin = mock(SneakyCharacterManager.class);
         final PluginManager events = mock(PluginManager.class);
         final CapturingCommand command = new CapturingCommand();
-        final MockedStatic<ConsoleCommandCharTemp> temps = mockStatic(ConsoleCommandCharTemp.class);
         final MockedStatic<Character> characters = mockStatic(Character.class);
         final MockedStatic<SneakyCharacterManager> plugins = mockStatic(SneakyCharacterManager.class);
         final MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
@@ -164,7 +162,7 @@ class CommandNickTest {
         }
 
         public void close() {
-            proxy.close(); bukkit.close(); plugins.close(); characters.close(); temps.close();
+            proxy.close(); bukkit.close(); plugins.close(); characters.close();
         }
     }
 
@@ -176,8 +174,7 @@ class CommandNickTest {
         Character character = mock(Character.class);
         when(character.getCharacterUUID()).thenReturn("character-id");
         String raw = "  " + "a".repeat(33) + "  ";
-        try (var temps = mockStatic(ConsoleCommandCharTemp.class);
-             var characters = mockStatic(Character.class)) {
+        try (var characters = mockStatic(Character.class)) {
             characters.when(() -> Character.get(player)).thenReturn(character);
             CapturingCommand command = new CapturingCommand();
             command.handleSubmit(player, "character-id", raw);
@@ -187,7 +184,7 @@ class CommandNickTest {
     }
 
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.ValueSource(strings = {"permission", "template", "missing", "switched"})
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"permission", "missing", "switched"})
     void submissionRechecksContext(String state) {
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(UUID.randomUUID());
@@ -195,17 +192,13 @@ class CommandNickTest {
         Character character = mock(Character.class);
         when(character.getCharacterUUID()).thenReturn(state.equals("switched") ? "other-id" : "character-id");
         String raw = "x".repeat(33);
-        try (var temps = mockStatic(ConsoleCommandCharTemp.class);
-             var characters = mockStatic(Character.class)) {
-            temps.when(() -> ConsoleCommandCharTemp.isPlayerTempChar(player.getUniqueId().toString()))
-                    .thenReturn(state.equals("template"));
+        try (var characters = mockStatic(Character.class)) {
             characters.when(() -> Character.get(player)).thenReturn(state.equals("missing") ? null : character);
             CapturingCommand command = new CapturingCommand();
             command.handleSubmit(player, "character-id", raw);
             assertEquals(raw, command.draft);
             String expected = switch (state) {
                 case "permission" -> "permission";
-                case "template" -> "template";
                 case "missing" -> "retrieve character";
                 default -> "changed";
             };
@@ -222,8 +215,7 @@ class CommandNickTest {
         Character character = mock(Character.class);
         when(character.getCharacterUUID()).thenReturn("character-id");
         when(character.getName()).thenReturn("Current name");
-        try (var temps = mockStatic(ConsoleCommandCharTemp.class);
-             var characters = mockStatic(Character.class)) {
+        try (var characters = mockStatic(Character.class)) {
             characters.when(() -> Character.get(player)).thenReturn(character);
             CapturingCommand command = new CapturingCommand();
             assertTrue(command.execute(player, "nick", new String[0]));

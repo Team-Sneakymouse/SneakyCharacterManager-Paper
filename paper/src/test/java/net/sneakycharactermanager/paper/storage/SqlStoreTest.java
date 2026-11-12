@@ -49,11 +49,11 @@ class SqlStoreTest {
     @Test void initializationIsSingleAtomicStatementWithBoundLiteralOwner() {
         Api api = new Api(); api.ready.complete(null);
         SqlStore store = new SqlStore(api, 5); store.ready().join(); api.statements.clear();
-        store.ensureOwner("template", "template").join();
+        store.ensureOwner("owner", "Name").join();
         assertEquals(1, api.statements.size());
         assertTrue(api.statements.getFirst().contains("WITH new_owner AS"));
         assertTrue(api.statements.getFirst().contains("ON CONFLICT (owner_id) DO NOTHING"));
-        assertEquals("template", api.bindings.getLast().getFirst());
+        assertEquals("owner", api.bindings.getLast().getFirst());
     }
     @Test void updateParametersNeverBecomeSqlAndRevisionLocksOwner() {
         Api api = new Api(); api.ready.complete(null);

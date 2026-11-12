@@ -5,7 +5,6 @@ import org.bukkit.entity.Player;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.directory.CharacterDirectory;
 import net.sneakycharactermanager.paper.admincommands.CommandTitleGrant;
-import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharTemp;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.listeners.ProxyMessageListener;
@@ -24,8 +23,6 @@ public final class DatabaseBackend implements CharacterBackend {
     private final RevisionFence revisions = new RevisionFence();
     private final Set<Player> joining = Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<Player> failedJoins = Collections.newSetFromMap(new IdentityHashMap<>());
-    private final Map<Player, CharacterRequest.Temporary> temporary = new IdentityHashMap<>();
-    private final Set<Player> failedTemporary = Collections.newSetFromMap(new IdentityHashMap<>());
     private final ThreadPoolExecutor http;
     private CompletableFuture<?> skinBarrier = CompletableFuture.completedFuture(null);
     private long titleCompletion;
@@ -64,25 +61,15 @@ public final class DatabaseBackend implements CharacterBackend {
             return;
         }
         String owner = DatabaseOperations.owner(request);
-        Player target = owner.isEmpty() || owner.equals("template") ? null : Bukkit.getPlayer(UUID.fromString(owner));
+        Player target = owner.isEmpty() ? null : Bukkit.getPlayer(UUID.fromString(owner));
         String name = target != null ? target.getName() : "";
-        String destination = switch (request) {
-            case CharacterRequest.Temporary r -> r.requester();
-            default -> owner;
-        };
-        Player destinationPlayer = destination.isEmpty() || destination.equals("template") ? null : Bukkit.getPlayer(UUID.fromString(destination));
-        if (request instanceof CharacterRequest.Join && destinationPlayer != null) {
-            if (failedJoins.contains(destinationPlayer) || !joining.add(destinationPlayer)) return;
-        }
-        if (request instanceof CharacterRequest.Temporary r && destinationPlayer != null) {
-            if (failedTemporary.contains(destinationPlayer) || r.equals(temporary.get(destinationPlayer))) return;
-            temporary.put(destinationPlayer, r);
+        if (request instanceof CharacterRequest.Join && target != null) {
+            if (failedJoins.contains(target) || !joining.add(target)) return;
         }
         boolean selection = request instanceof CharacterRequest.Join || request instanceof CharacterRequest.Select
-                || request instanceof CharacterRequest.SelectByName || request instanceof CharacterRequest.Create
-                || request instanceof CharacterRequest.Temporary;
+                || request instanceof CharacterRequest.SelectByName || request instanceof CharacterRequest.Create;
         boolean menuRequest = request instanceof CharacterRequest.ListCharacters r && r.requester().endsWith("|openGUI");
-        Player effectPlayer = selection ? destinationPlayer : requester;
+        Player effectPlayer = selection ? target : requester;
         String lane = selection ? "selection" : menuRequest ? "menu" : request instanceof CharacterRequest.ListCharacters ? "list:" + owner
                 : request instanceof CharacterRequest.ResolveSkin r ? "skin:" + r.requestId() : request.getClass().getSimpleName() + ":" + owner;
         // Grants have non-replaceable permission/equip effects, unlike latest-wins UI requests.
@@ -99,8 +86,7 @@ public final class DatabaseBackend implements CharacterBackend {
         String queueKey = request instanceof CharacterRequest.RegisterSkin r ? "$skin:" + r.id()
                 : owner.isEmpty() ? "$global" : owner;
         revisions.begin(owner);
-        if (request instanceof CharacterRequest.Update || request instanceof CharacterRequest.DefaultSkin
-                || request instanceof CharacterRequest.Template) revisions.changed(owner);
+        if (request instanceof CharacterRequest.Update || request instanceof CharacterRequest.DefaultSkin) revisions.changed(owner);
         long changes = revisions.changes(owner);
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
         CompletableFuture<List<DatabaseOperations.Effect>> future = queue.submit(queueKey, () -> {
@@ -118,21 +104,14 @@ public final class DatabaseBackend implements CharacterBackend {
             Bukkit.getScheduler().runTask(plugin, () -> {
                 try {
                 if (closed) return;
-                if (request instanceof CharacterRequest.Join && destinationPlayer != null) {
-                    joining.remove(destinationPlayer);
-                    if (error != null && Bukkit.getPlayer(destinationPlayer.getUniqueId()) == destinationPlayer)
-                        failedJoins.add(destinationPlayer);
-                }
-                if (request instanceof CharacterRequest.Temporary && destinationPlayer != null) {
-                    // An old completion must not release a newer selection's pending identity.
-                    boolean pendingSession = temporary.containsKey(destinationPlayer);
-                    if (temporary.get(destinationPlayer) == request) temporary.remove(destinationPlayer);
-                    if (error != null && pendingSession && Bukkit.getPlayer(destinationPlayer.getUniqueId()) == destinationPlayer)
-                        failedTemporary.add(destinationPlayer);
+                if (request instanceof CharacterRequest.Join && target != null) {
+                    joining.remove(target);
+                    if (error != null && Bukkit.getPlayer(target.getUniqueId()) == target)
+                        failedJoins.add(target);
                 }
                 if (ticket != null && !fence.current(ticket, Bukkit.getPlayer(effectPlayer.getUniqueId()))) return;
                 if (requester != null && Bukkit.getPlayer(requester.getUniqueId()) != requester) return;
-                if (!owner.isEmpty() && !owner.equals("template") && Bukkit.getPlayer(UUID.fromString(owner)) != target) return;
+                if (!owner.isEmpty() && Bukkit.getPlayer(UUID.fromString(owner)) != target) return;
                 if (ticket != null) fence.release(ticket);
                 if (menuRequest && (requester == null || !plugin.selectionMenu.menuExists(requester.getUniqueId().toString()))) return;
                 if (error != null) {
@@ -162,14 +141,9 @@ public final class DatabaseBackend implements CharacterBackend {
                     r.characters().stream().map(c -> character(r.owner(), c, r.uniforms())).toList());
             case DatabaseOperations.Loaded r -> {
                 Character character = character(r.destination(), r.character(), r.uniforms());
-                if (r.temporary()) {
-                    character.load();
-                    ConsoleCommandCharTemp.playerTempCharAdd(r.destination(), r.source(), r.character().id());
-                } else {
-                    CharacterResultEffects.load(character, r.forced());
-                    if (r.character().skin().isEmpty() && r.character().skinId().isEmpty())
-                        CharacterResultEffects.defaultSkin(r.destination(), r.character().id());
-                }
+                CharacterResultEffects.load(character, r.forced());
+                if (r.character().skin().isEmpty() && r.character().skinId().isEmpty())
+                    CharacterResultEffects.defaultSkin(r.destination(), r.character().id());
             }
             case DatabaseOperations.Catalog r -> {
                 // SCM title creation is append-only and canonical displays never change.
@@ -183,20 +157,16 @@ public final class DatabaseBackend implements CharacterBackend {
             case DatabaseOperations.Resolved r -> SkinCache.completeResolveOnMainThread(r.requestId(), new SkinCache.ResolveResult(
                     SkinCache.ResolveStatus.valueOf(r.status()), r.id(), r.url(), r.texture(), r.signature(), r.error()));
             case DatabaseOperations.Found r -> ProxyMessageListener.handleCharacterOutput(r.requester(), r.entries());
-            case DatabaseOperations.TemplateRejected r -> CharacterResultEffects.templateRejected(r.admin(), r.id(), "");
             case DatabaseOperations.Deleted r -> {
                 Player player = Bukkit.getPlayer(UUID.fromString(r.player()));
                 if (player != null) player.sendMessage(TextUtility.INSTANCE.convertToComponent(
                         "&aThe following character has been deleted: &b`" + r.name() + "`&a (" + r.id() + ")"));
             }
             case DatabaseOperations.NotFound r -> {
-                if (r.temporary()) plugin.getLogger().warning("Requested temporary character does not exist");
-                else {
-                    Player player = Bukkit.getPlayer(UUID.fromString(r.player()));
-                    if (player != null) {
-                        player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aNo character found. Loading character menu..."));
-                        plugin.selectionMenu.openMenu(player);
-                    }
+                Player player = Bukkit.getPlayer(UUID.fromString(r.player()));
+                if (player != null) {
+                    player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aNo character found. Loading character menu..."));
+                    plugin.selectionMenu.openMenu(player);
                 }
             }
         }
@@ -213,9 +183,8 @@ public final class DatabaseBackend implements CharacterBackend {
     @Override public CharacterDirectory directory() { return directory; }
     @Override public void disconnect(Player player) {
         fence.forget(player.getUniqueId().toString()); joining.remove(player); failedJoins.remove(player);
-        temporary.remove(player); failedTemporary.remove(player);
     }
     @Override public void close() {
-        closed = true; fence.close(); revisions.clear(); queue.close(); operations.close(); http.shutdownNow(); joining.clear(); failedJoins.clear(); temporary.clear(); failedTemporary.clear();
+        closed = true; fence.close(); revisions.clear(); queue.close(); operations.close(); http.shutdownNow(); joining.clear(); failedJoins.clear();
     }
 }

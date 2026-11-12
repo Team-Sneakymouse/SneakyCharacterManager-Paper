@@ -61,8 +61,6 @@ public final class SqlStore {
 
     public CompletableFuture<Integer> ensureOwner(String owner, String name) {
         String id = UUID.randomUUID().toString();
-        String skin = owner.equals("template")
-                ? "http://textures.minecraft.net/texture/b90696ebc74ce7a900ec8abeec0dc1ccb3534c1b8ba6cbd9e83c5cd7f381fb48" : "";
         return execute("""
             WITH new_owner AS (
                 INSERT INTO scm.owners(owner_id, last_played_character) VALUES (?, ?)
@@ -70,7 +68,7 @@ public final class SqlStore {
             )
             INSERT INTO scm.characters(owner_id, character_id, name, skin)
             SELECT owner_id, ?, ?, ? FROM new_owner
-            """, List.of(owner, id, id, name, skin));
+            """, List.of(owner, id, id, name, ""));
     }
 
     // Fixed allowlist: untrusted field names never enter SQL.
@@ -164,7 +162,7 @@ public final class SqlStore {
     public CompletableFuture<List<Map<String,Object>>> directoryOfCharacter(String id) {
         return query("""
             SELECT character_id, owner_id, name, enabled FROM scm.characters
-            WHERE character_id = ? AND owner_id <> 'template' LIMIT 2
+            WHERE character_id = ? AND owner_id <> 'template' LIMIT 2 -- legacy template rows still in storage
             """, List.of(id));
     }
     public CompletableFuture<List<Map<String,Object>>> search(String filter) {

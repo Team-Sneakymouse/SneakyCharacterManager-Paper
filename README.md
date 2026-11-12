@@ -64,7 +64,7 @@ See [backend verification and cutover gates](docs/backend-verification.md) for l
   - `plugins/SneakyCharacterManager/characterdata/<playerUUID>/<characterUUID>.yml`
 - Messaging channel between proxy and backend:
   - `sneakymouse:sneakycharacters`
-- Character IDs are unique across all accounts, including the `template` account. New characters get random UUIDs. `/savetemplatechar <id>` refuses an ID that another account's character already uses (the template may overwrite its own ID). In database mode, `db/002_unique_character_id.sql` enforces this with a unique index; in legacy mode the proxy checks the account files before saving a template.
+- Character IDs are unique across all accounts. New characters get random UUIDs. In database mode, `db/002_unique_character_id.sql` enforces this with a unique index. Template characters were removed; rows stored under the legacy `template` owner stay in place and keep their IDs reserved.
 
 ## Configuration (Paper)
 
@@ -127,7 +127,6 @@ Titles (proxy file `titles.yml`, not Paper `config.yml`):
 - `/charprefix`
 - `/charscan`
 - `/uniform`
-- `/savetemplatechar`
 - `/userify` (alias: `/whois`)
 - `/migrateinventories`
 - `/skinqueue <status|flush|detail <priority>>`
@@ -140,7 +139,6 @@ Titles (proxy file `titles.yml`, not Paper `config.yml`):
 
 - `chardisable`
 - `charenable`
-- `chartemp`
 
 ## Permissions
 
@@ -260,7 +258,7 @@ CharacterDirectory.get().ifPresent(directory -> {
 
 - Callable from any thread. Futures complete on an arbitrary thread; hop to the main thread before touching Bukkit state.
 - Every call reads the store again, so results include renames made by admins or on other servers. Nothing is cached: cache on your side for frequent callers such as tab completion.
-- Only UUID ids are returned; named template characters are not part of the directory.
+- Only UUID ids are returned; legacy template rows and other non-UUID ids are not part of the directory.
 - **SneakyDB mode:** queries `scm.characters`.
 - **Legacy mode:** a plugin-message round trip to the proxy (`directoryOwner` / `directoryCharacter`), which reads its account files on a background thread. Plugin messages need a player connection, so a lookup fails right away with `IllegalStateException` while nobody is online on that server. A lookup that gets no complete reply, for example from a proxy older than this API, fails with `TimeoutException` after 5 seconds. Update the proxy together with the Paper servers.
 - Renames that don't happen on this server fire no `CharacterNickChangeEvent`; look the character up instead.

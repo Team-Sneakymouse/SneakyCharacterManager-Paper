@@ -58,16 +58,10 @@ public final class PlayerData {
 
             Map<String, Object> section = new LinkedHashMap<>();
             section.put("enabled", true);
-            if ("template".equals(playerUUID)) {
-                section.put("name", "template");
-                section.put("skin", "http://textures.minecraft.net/texture/b90696ebc74ce7a900ec8abeec0dc1ccb3534c1b8ba6cbd9e83c5cd7f381fb48");
-                section.put("skinUUID", "");
-            } else {
-                String name = platform.playerName(UUID.fromString(playerUUID));
-                section.put("name", name == null ? "" : name);
-                section.put("skin", "");
-                section.put("skinUUID", "");
-            }
+            String name = platform.playerName(UUID.fromString(playerUUID));
+            section.put("name", name == null ? "" : name);
+            section.put("skin", "");
+            section.put("skinUUID", "");
             section.put("texture", "");
             section.put("signature", "");
             section.put("slim", false);
@@ -180,16 +174,6 @@ public final class PlayerData {
         }
 
         syncCharactersToSelf(server, messenger);
-    }
-
-    public synchronized void loadTempCharacter(ProxyServerConnection server, ProxyMessenger messenger, String requesterUUID, String characterUUID) {
-        storeCharacters();
-        CharacterData character = characterMap.get(characterUUID);
-        if (character == null) {
-            messenger.send(server, "loadTempCharacterFailed", requesterUUID, characterUUID);
-            return;
-        }
-        messenger.send(server, "loadTempCharacter", requesterUUID, character, playerUUID);
     }
 
     public synchronized void loadLastPlayedCharacter(ProxyServerConnection server, ProxyMessenger messenger) {
