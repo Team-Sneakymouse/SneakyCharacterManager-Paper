@@ -50,6 +50,50 @@ public final class PlayerDataRepository {
         return owners;
     }
 
+    /**
+     * Directory entries for every character in {@code owner}'s file, disabled included, in file (menu) order. Each
+     * entry is four strings: id, owner, name, enabled. Reads the file directly so offline accounts are neither
+     * created nor cached. The {@code template} pseudo-account is not part of the directory.
+     */
+    public List<String> directoryOfOwner(String owner) {
+        return directoryEntries(owner, null);
+    }
+
+    /** Directory entries for {@code characterId} under every non-template owner; more than one means a duplicate. */
+    public List<String> directoryOfCharacter(String characterId) {
+        List<String> entries = new ArrayList<>();
+        for (String owner : ownersOfCharacter(characterId)) entries.addAll(directoryEntries(owner, characterId));
+        return entries;
+    }
+
+    private List<String> directoryEntries(String owner, String onlyCharacter) {
+        // Canonical UUIDs only: excludes 'template' and keeps request input out of file paths.
+        if (!isCanonicalUuid(owner)) return List.of();
+        File playerFile = new File(characterDataFolder, owner + ".yml");
+        if (!playerFile.isFile()) return List.of();
+        Map<String, Object> root = net.sneakycharactermanager.proxy.common.YamlFiles.load(playerFile, platform.logger());
+        if (root == null) return List.of();
+        List<String> entries = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : root.entrySet()) {
+            String id = entry.getKey();
+            if ("lastPlayedCharacter".equalsIgnoreCase(id) || !(entry.getValue() instanceof Map<?, ?> section)) continue;
+            if (onlyCharacter != null && !onlyCharacter.equals(id)) continue;
+            entries.add(id);
+            entries.add(owner);
+            entries.add(PlayerData.stringOrEmpty(section.get("name")));
+            entries.add(String.valueOf(PlayerData.boolOrDefault(section.get("enabled"), true)));
+        }
+        return entries;
+    }
+
+    static boolean isCanonicalUuid(String value) {
+        try {
+            return UUID.fromString(value).toString().equals(value);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
     public List<String> getAllCharacters(String filter) throws IOException {
         if (!characterDataFolder.exists() || characterDataFolder.listFiles() == null) return null;
 

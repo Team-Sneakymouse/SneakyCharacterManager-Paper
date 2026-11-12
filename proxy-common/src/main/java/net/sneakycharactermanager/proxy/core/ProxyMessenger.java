@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.security.PrivateKey;
+import java.util.ArrayList;
 import java.util.List;
 
 public final class ProxyMessenger {
@@ -28,6 +29,54 @@ public final class ProxyMessenger {
         byte[] signed = encodeSigned(subChannel, objects);
         if (signed == null) return;
         server.sendPluginMessage(signed);
+    }
+
+    /**
+     * Payload budget per {@code listChunk}. Messages to a backend server are capped at 32767 bytes; this leaves room
+     * for the signature and header fields.
+     */
+    static final int CHUNK_BUDGET_BYTES = 16 * 1024;
+
+    /**
+     * Sends {@code items} as one or more {@code listChunk(requestId, total, offset, items)} messages. Paper reassembles
+     * them by offset, so chunks may arrive over different player connections in any order. An empty list is one
+     * chunk with total 0.
+     */
+    public void sendChunked(ProxyServerConnection server, String requestId, List<String> items) {
+        int offset = 0;
+        for (List<String> chunk : chunks(items, CHUNK_BUDGET_BYTES)) {
+            send(server, "listChunk", requestId, items.size(), offset, chunk);
+            offset += chunk.size();
+        }
+    }
+
+    /** Splits by encoded size. A single item over budget still goes alone rather than being dropped. */
+    static List<List<String>> chunks(List<String> items, int budgetBytes) {
+        List<List<String>> chunks = new ArrayList<>();
+        List<String> current = new ArrayList<>();
+        int size = 0;
+        for (String item : items) {
+            int length = utfLength(item);
+            if (!current.isEmpty() && size + length > budgetBytes) {
+                chunks.add(current);
+                current = new ArrayList<>();
+                size = 0;
+            }
+            current.add(item);
+            size += length;
+        }
+        if (!current.isEmpty() || chunks.isEmpty()) chunks.add(current);
+        return chunks;
+    }
+
+    /** Bytes {@link DataOutputStream#writeUTF} uses for {@code s}, including its 2-byte length prefix. */
+    static int utfLength(String s) {
+        int length = 2;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            length += c >= 0x0001 && c <= 0x007F ? 1 : c <= 0x07FF ? 2 : 3;
+        }
+        return length;
     }
 
     private byte[] encodeSigned(String subChannel, Object... objects) {

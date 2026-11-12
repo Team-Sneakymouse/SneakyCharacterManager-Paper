@@ -246,6 +246,29 @@ The plate display is not persistent (Paper skips non-persistent passengers when 
 
 **Known limitation.** Paper refuses API cross-world teleports (`Player#teleport`) of a player carrying passengers before any event fires; an unattached plate rides the player, so this pre-existing behaviour is unchanged. Portal and respawn world changes are unaffected.
 
+## Character directory (Paper API)
+
+`net.sneakycharactermanager.paper.api.directory.CharacterDirectory` looks up characters whether or not they are loaded. It is read-only and registered in Bukkit's `ServicesManager` at the end of SCM's enable, in both storage modes.
+
+```java
+CharacterDirectory.get().ifPresent(directory -> {
+    CompletableFuture<List<CharacterInfo>> mine = directory.charactersOf(accountUuid); // enabled, in menu order
+    CompletableFuture<Optional<CharacterInfo>> one = directory.character(characterUuid); // offline, disabled included
+});
+// record CharacterInfo(UUID id, UUID owner, String name /* plain text */, boolean enabled)
+```
+
+- Callable from any thread. Futures complete on an arbitrary thread; hop to the main thread before touching Bukkit state.
+- Every call reads the store again, so results include renames made by admins or on other servers. Nothing is cached: cache on your side for frequent callers such as tab completion.
+- Only UUID ids are returned; named template characters are not part of the directory.
+- **SneakyDB mode:** queries `scm.characters`.
+- **Legacy mode:** a plugin-message round trip to the proxy (`directoryOwner` / `directoryCharacter`), which reads its account files on a background thread. Plugin messages need a player connection, so a lookup fails right away with `IllegalStateException` while nobody is online on that server. A lookup that gets no complete reply, for example from a proxy older than this API, fails with `TimeoutException` after 5 seconds. Update the proxy together with the Paper servers.
+- Renames that don't happen on this server fire no `CharacterNickChangeEvent`; look the character up instead.
+
+### Chunked list replies (legacy wire format)
+
+A plugin message from the proxy to a backend server is capped at 32767 bytes. List replies (directory lookups, and `/userify` search results) are sent as `listChunk(requestId, total, offset, items)` messages of at most 16 KiB of items each; Paper reassembles them by offset. Paper appends the request id to `getAllCharacters`; a proxy that receives the old payload without it still sends the original single `getAllCharacters` reply.
+
 ## SkinState undo / re-apply
 
 The plugin tracks skin changes during a server session, allowing players to undo and re-apply skins via clickable chat buttons.

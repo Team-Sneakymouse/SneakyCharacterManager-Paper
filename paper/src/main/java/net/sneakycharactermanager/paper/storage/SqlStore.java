@@ -153,6 +153,20 @@ public final class SqlStore {
             ON CONFLICT (code) DO UPDATE SET display = scm.titles.display RETURNING code, display
             """, List.of(code, display));
     }
+    /** Every character of {@code owner}, disabled included, in menu order. */
+    public CompletableFuture<List<Map<String,Object>>> directoryOfOwner(String owner) {
+        return query("""
+            SELECT character_id, owner_id, name, enabled FROM scm.characters
+            WHERE owner_id = ? ORDER BY ordinal
+            """, List.of(owner));
+    }
+    /** At most two rows, so a duplicate (which db/002 forbids) is visible to the caller. */
+    public CompletableFuture<List<Map<String,Object>>> directoryOfCharacter(String id) {
+        return query("""
+            SELECT character_id, owner_id, name, enabled FROM scm.characters
+            WHERE character_id = ? AND owner_id <> 'template' LIMIT 2
+            """, List.of(id));
+    }
     public CompletableFuture<List<Map<String,Object>>> search(String filter) {
         // POSITION rather than LIKE: '%' and '_' are literal user input.
         return query("""

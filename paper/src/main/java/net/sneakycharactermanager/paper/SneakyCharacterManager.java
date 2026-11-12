@@ -23,7 +23,9 @@ import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import net.sneakycharactermanager.paper.admincommands.*;
+import net.sneakycharactermanager.paper.api.directory.CharacterDirectory;
 import net.sneakycharactermanager.paper.api.nameplate.NameplateAttachments;
+import net.sneakycharactermanager.paper.storage.LegacyCharacterDirectory;
 import net.sneakycharactermanager.paper.commands.*;
 import net.sneakycharactermanager.paper.consolecommands.*;
 import net.sneakycharactermanager.paper.listeners.*;
@@ -222,6 +224,9 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 		// Last: only expose the attachment API once everything it relies on is running.
 		getServer().getServicesManager().register(NameplateAttachments.class,
 				new NameplateAttachmentsImpl(nametagManager), this, ServicePriority.Normal);
+		getServer().getServicesManager().register(CharacterDirectory.class,
+				characterBackend != null ? characterBackend.directory() : new LegacyCharacterDirectory(getLogger()),
+				this, ServicePriority.Normal);
 	}
 
 	/** Own MagicsSpells-style item defs under resources/magic-items.yml; PDC namespace stays magicspells. */

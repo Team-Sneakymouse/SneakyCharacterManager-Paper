@@ -110,6 +110,23 @@ class PostgresIntegrationTest {
         assertEquals(List.of(initial.id(), second), list("owner").characters().stream().map(CharacterView::id).toList());
         assertTrue(((Number)store.snapshot("owner").join().getFirst().get("revision")).longValue() >= 9);
     }
+    @Test void directoryListsOfflineCharactersInMenuOrderAndFindsAnyById() {
+        String owner = "11111111-1111-1111-1111-111111111111";
+        var directory = new SqlCharacterDirectory(store, java.util.logging.Logger.getAnonymousLogger());
+        String first = list(owner).characters().getFirst().id();
+        String second = ((DatabaseOperations.Loaded)run(new CharacterRequest.Create(owner)).getFirst()).character().id();
+        String third = ((DatabaseOperations.Loaded)run(new CharacterRequest.Create(owner)).getFirst()).character().id();
+        run(new CharacterRequest.Update(owner, second, 2, new Object[]{"<red>Captain &aMouse"}));
+        run(new CharacterRequest.Update(owner, third, 3, new Object[]{false}));
+        var mine = directory.charactersOf(UUID.fromString(owner)).join();
+        assertEquals(List.of(first, second), mine.stream().map(c -> c.id().toString()).toList());
+        assertEquals("Captain Mouse", mine.get(1).name());
+        var disabled = directory.character(UUID.fromString(third)).join().orElseThrow();
+        assertFalse(disabled.enabled());
+        assertEquals(owner, disabled.owner().toString());
+        assertTrue(directory.character(UUID.randomUUID()).join().isEmpty());
+        assertTrue(directory.charactersOf(UUID.randomUUID()).join().isEmpty());
+    }
     @Test void characterIdsAreGlobalAndTemplatesCannotTakeAPlayersId() throws Exception {
         String player = list("owner").characters().getFirst().id();
         var rejected = run(new CharacterRequest.Template(player, "Copy", "http://example.test/skin", "", false, "admin"));

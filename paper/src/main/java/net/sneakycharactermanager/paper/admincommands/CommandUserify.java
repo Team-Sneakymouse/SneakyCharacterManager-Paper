@@ -1,6 +1,10 @@
 package net.sneakycharactermanager.paper.admincommands;
 
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.listeners.ProxyMessageListener;
+import net.sneakycharactermanager.paper.util.ProxyListReplies;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
+import org.bukkit.Bukkit;
 import com.sneakyutils.util.TextUtility;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -28,7 +32,21 @@ public class CommandUserify extends CommandBaseAdmin {
         }
         String characterName = userBuilder.substring(0, userBuilder.length()-1);
 
-        ProxyMessagingUtil.sendByteArray(player, "getAllCharacters", player.getUniqueId().toString(), characterName);
+        String requester = player.getUniqueId().toString();
+        SneakyCharacterManager plugin = SneakyCharacterManager.getInstance();
+        if (plugin.getCharacterBackend() != null) {
+            ProxyMessagingUtil.sendByteArray(player, "getAllCharacters", requester, characterName);
+            return false;
+        }
+        // Legacy: the proxy replies in size-limited chunks. A proxy that predates chunking ignores the request id and
+        // sends its old single reply, which ProxyMessageListener still prints; this future then just times out.
+        ProxyListReplies.request("getAllCharacters", requester, characterName).whenComplete((results, error) -> {
+            if (error != null) {
+                plugin.getLogger().warning("Character search got no complete proxy reply: " + error);
+                return;
+            }
+            Bukkit.getScheduler().runTask(plugin, () -> ProxyMessageListener.handleCharacterOutput(requester, results));
+        });
         return false;
     }
 }
