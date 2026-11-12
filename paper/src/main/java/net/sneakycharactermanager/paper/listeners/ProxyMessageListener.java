@@ -199,6 +199,10 @@ public class ProxyMessageListener implements PluginMessageListener {
 				int chunkOffset = messageIn.readInt();
 				ProxyListReplies.accept(chunkRequest, chunkTotal, chunkOffset, readStringList(messageIn));
 				break;
+			case "listError":
+				String failedRequest = messageIn.readUTF();
+				ProxyListReplies.fail(failedRequest, new IllegalStateException("Proxy refused the reply: " + messageIn.readUTF()));
+				break;
 			case "getAllCharacters":
 				playerUUID = messageIn.readUTF();
 				List<String> characterData = readStringList(messageIn);

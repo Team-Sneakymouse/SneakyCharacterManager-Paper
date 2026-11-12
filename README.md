@@ -267,7 +267,7 @@ CharacterDirectory.get().ifPresent(directory -> {
 
 ### Chunked list replies (legacy wire format)
 
-A plugin message from the proxy to a backend server is capped at 32767 bytes. List replies (directory lookups, and `/userify` search results) are sent as `listChunk(requestId, total, offset, items)` messages of at most 16 KiB of items each; Paper reassembles them by offset. Paper appends the request id to `getAllCharacters`; a proxy that receives the old payload without it still sends the original single `getAllCharacters` reply.
+A plugin message from the proxy to a backend server is capped at 32767 bytes. List replies (directory lookups, and `/userify` search results) are sent as `listChunk(requestId, total, offset, items)` messages of at most 16 KiB of items each; Paper reassembles them by offset. A reply that cannot fit (a single field over 16 KiB) is refused with one `listError(requestId, reason)` message, and the lookup fails right away instead of timing out. Paper appends the request id to `getAllCharacters`; a proxy that receives the old payload without it still sends the original single `getAllCharacters` reply.
 
 ## SkinState undo / re-apply
 

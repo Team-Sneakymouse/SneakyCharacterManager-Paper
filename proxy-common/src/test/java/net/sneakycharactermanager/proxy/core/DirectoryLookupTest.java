@@ -73,6 +73,7 @@ class DirectoryLookupTest {
     private List<Chunk> chunks() throws Exception {
         List<Chunk> chunks = new ArrayList<>();
         for (byte[] data : sent) {
+            assertTrue(data.length <= ProxyMessenger.MAX_MESSAGE_BYTES, "signed message of " + data.length + " bytes");
             DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
             in.readUTF(); // signature envelope
             assertEquals("listChunk", in.readUTF());
@@ -147,6 +148,31 @@ class DirectoryLookupTest {
         assertEquals(8000, joined.size());
         assertEquals("Character with a fairly long display name number 1999 ✦", joined.get(7998));
         for (byte[] data : sent) assertTrue(data.length < 32767, "chunk of " + data.length + " bytes");
+    }
+
+    @Test void oversizedFieldIsRefusedWithAnErrorInsteadOfAnUndeliverableChunk() throws Exception {
+        // 33,000 bytes: over the message limit on its own. 17,000: fits a message but not the chunk budget.
+        for (int size : List.of(33_000, 17_000)) {
+            sent.clear();
+            writeAccount(OTHER, FIRST, Map.of("name", "x".repeat(size)), SECOND, Map.of("name", "Fine"));
+            request("directoryOwner", OTHER, "huge");
+            assertEquals(1, sent.size(), "only the error is sent, no partial chunks");
+            assertTrue(sent.getFirst().length <= ProxyMessenger.MAX_MESSAGE_BYTES);
+            DataInputStream in = new DataInputStream(new ByteArrayInputStream(sent.getFirst()));
+            in.readUTF(); // signature envelope
+            assertEquals("listError", in.readUTF());
+            assertEquals("huge", in.readUTF());
+            assertTrue(in.readUTF().contains("exceeds"));
+        }
+    }
+
+    @Test void fieldExactlyAtTheBudgetIsStillDelivered() throws Exception {
+        String name = "x".repeat(ProxyMessenger.CHUNK_BUDGET_BYTES - 2);
+        writeAccount(OTHER, FIRST, Map.of("name", name));
+        request("directoryOwner", OTHER, "edge");
+        List<String> joined = new ArrayList<>();
+        for (Chunk chunk : chunks()) joined.addAll(chunk.items());
+        assertEquals(List.of(FIRST, OTHER, name, "true"), joined);
     }
 
     @Test void utfLengthMatchesWriteUtf() throws Exception {

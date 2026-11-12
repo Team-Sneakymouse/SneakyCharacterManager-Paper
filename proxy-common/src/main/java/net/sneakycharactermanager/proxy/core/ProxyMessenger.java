@@ -36,21 +36,46 @@ public final class ProxyMessenger {
      * for the signature and header fields.
      */
     static final int CHUNK_BUDGET_BYTES = 16 * 1024;
+    /** Largest plugin message a backend server accepts from the proxy. */
+    static final int MAX_MESSAGE_BYTES = 32767;
 
     /**
      * Sends {@code items} as one or more {@code listChunk(requestId, total, offset, items)} messages. Paper reassembles
      * them by offset, so chunks may arrive over different player connections in any order. An empty list is one
      * chunk with total 0.
+     * <p>Every chunk is encoded before any is sent. If one item is over {@link #CHUNK_BUDGET_BYTES} or a signed chunk
+     * would exceed {@link #MAX_MESSAGE_BYTES}, the reply could never be delivered complete, so a single
+     * {@code listError(requestId, reason)} goes out instead and Paper fails the request right away.
      */
     public void sendChunked(ProxyServerConnection server, String requestId, List<String> items) {
+        String error = null;
+        for (String item : items) {
+            if (utfLength(item) > CHUNK_BUDGET_BYTES) {
+                error = "Reply field of " + utfLength(item) + " bytes exceeds the " + CHUNK_BUDGET_BYTES + "-byte limit";
+                break;
+            }
+        }
+        List<byte[]> messages = new ArrayList<>();
         int offset = 0;
-        for (List<String> chunk : chunks(items, CHUNK_BUDGET_BYTES)) {
-            send(server, "listChunk", requestId, items.size(), offset, chunk);
+        for (List<String> chunk : error == null ? chunks(items, CHUNK_BUDGET_BYTES) : List.<List<String>>of()) {
+            byte[] signed = encodeSigned("listChunk", requestId, items.size(), offset, chunk);
+            if (signed == null) return; // already logged; Paper times out
+            if (signed.length > MAX_MESSAGE_BYTES) {
+                error = "Reply chunk of " + signed.length + " bytes exceeds the " + MAX_MESSAGE_BYTES + "-byte message limit";
+                break;
+            }
+            messages.add(signed);
             offset += chunk.size();
         }
+        if (error != null) {
+            platform.logger().warning("Refused list reply " + requestId + ": " + error);
+            send(server, "listError", requestId, error);
+            return;
+        }
+        for (byte[] message : messages) server.sendPluginMessage(message);
     }
 
-    /** Splits by encoded size. A single item over budget still goes alone rather than being dropped. */
+    /** Splits by encoded size. Callers must reject items over budget first; such an item would be placed alone. */
     static List<List<String>> chunks(List<String> items, int budgetBytes) {
         List<List<String>> chunks = new ArrayList<>();
         List<String> current = new ArrayList<>();

@@ -65,7 +65,8 @@ public final class ProxyListReplies {
         return entry.future.copy();
     }
 
-    static void fail(String requestId, Throwable error) {
+    /** Fails a pending request, e.g. on a {@code listError} reply. Unknown or expired request ids are ignored. */
+    public static void fail(String requestId, Throwable error) {
         Pending entry = pending.get(requestId);
         if (entry != null) entry.future.completeExceptionally(error);
     }

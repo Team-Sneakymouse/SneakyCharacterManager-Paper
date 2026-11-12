@@ -29,6 +29,13 @@ class ProxyListRepliesTest {
         ProxyListReplies.accept("overflow", 2, 1, List.of("a", "b"));
         assertThrows(CompletionException.class, reply::join);
     }
+    @Test void errorReplyFailsTheRequestImmediately() {
+        var reply = ProxyListReplies.expect("refused");
+        ProxyListReplies.fail("refused", new IllegalStateException("Proxy refused the reply: too big"));
+        var error = assertThrows(CompletionException.class, reply::join);
+        assertTrue(error.getCause().getMessage().contains("too big"));
+        ProxyListReplies.accept("refused", 1, 0, List.of("late")); // ignored after failure
+    }
     @Test void unknownRequestIsIgnoredAndCallerCannotCompleteSharedState() {
         ProxyListReplies.accept("nobody-asked", 1, 0, List.of("x"));
         var reply = ProxyListReplies.expect("copy");
