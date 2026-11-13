@@ -43,6 +43,21 @@ class DatabaseOperationsTest {
         assertEquals("Winner", result.display());
         assertEquals("captain", result.code());
     }
+    @Test void rejectedSkinUrlResolvesAsRejectedButTransientFailureStaysError() {
+        SqlStoreTest.Api api = new SqlStoreTest.Api(); api.ready.complete(null);
+        SqlStore store = new SqlStore(api, 5);
+        api.rows = List.of();
+        var rejected = new DatabaseOperations(store, url -> CompletableFuture.failedFuture(new CompletionException(
+                new net.sneakycharactermanager.proxy.common.SkinFetchException(
+                        net.sneakycharactermanager.proxy.common.SkinFetchException.Reason.ADDRESS_NOT_PUBLIC, "test"))))
+                .run(new CharacterRequest.ResolveSkin("p", "r", "http://internal.test/a.png", false), "").join();
+        assertEquals("REJECTED", ((DatabaseOperations.Resolved)rejected.getFirst()).status());
+        var failed = new DatabaseOperations(store, url -> CompletableFuture.failedFuture(
+                new net.sneakycharactermanager.proxy.common.SkinFetchException(
+                        net.sneakycharactermanager.proxy.common.SkinFetchException.Reason.TIMEOUT, "test")))
+                .run(new CharacterRequest.ResolveSkin("p", "r", "http://slow.test/a.png", false), "").join();
+        assertEquals("ERROR", ((DatabaseOperations.Resolved)failed.getFirst()).status());
+    }
     private Map<String,Object> row(String id, boolean enabled, String skinId) {
         return Map.of("character_id", id, "enabled", enabled, "name", id, "skin_id", skinId);
     }

@@ -35,6 +35,8 @@ import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
+import net.sneakycharactermanager.paper.handlers.skins.SkinFetching;
+import net.sneakycharactermanager.proxy.common.SkinFetchException;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinState;
 import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
@@ -157,9 +159,13 @@ public class CommandSkin extends CommandBase {
 		}
 
 		String url = args[0];
-		if (!url.startsWith("http")) {
-			player.sendMessage(
-					TextUtility.INSTANCE.convertToComponent("&4Invalid URL.. Please make sure it starts with HTTP(s)"));
+		try {
+			SkinFetching.policy().check(url);
+		} catch (SkinFetchException e) {
+			player.sendMessage(TextUtility.INSTANCE.convertToComponent(
+					e.reason() == SkinFetchException.Reason.HOST_NOT_ALLOWED
+							? "&4Skins from that site aren't allowed here."
+							: "&4Invalid skin URL. Use a direct http(s) link to a 64x64 or 64x32 PNG."));
 			return true;
 		}
 

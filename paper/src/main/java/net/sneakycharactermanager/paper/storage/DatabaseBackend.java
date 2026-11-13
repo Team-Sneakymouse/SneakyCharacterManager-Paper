@@ -8,8 +8,7 @@ import net.sneakycharactermanager.paper.admincommands.CommandTitleGrant;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.listeners.ProxyMessageListener;
-import net.sneakycharactermanager.proxy.common.SkinContentHash;
-import net.sneakycharactermanager.proxy.common.SkinImageFetcher;
+import net.sneakycharactermanager.paper.handlers.skins.SkinFetching;
 import com.sneakyutils.util.TextUtility;
 import java.util.*;
 import java.util.concurrent.*;
@@ -37,11 +36,9 @@ public final class DatabaseBackend implements CharacterBackend {
         http = new ThreadPoolExecutor(2, 2, 30, TimeUnit.SECONDS, new ArrayBlockingQueue<>(32), r -> {
             Thread thread = new Thread(r, "SCM-skin-resolve"); thread.setDaemon(true); return thread;
         }, new ThreadPoolExecutor.AbortPolicy());
-        SkinImageFetcher fetcher = new SkinImageFetcher(5, 1024 * 1024);
-        operations = new DatabaseOperations(store, url -> CompletableFuture.supplyAsync(() -> {
-            try { return SkinContentHash.skinIdFromImage(fetcher.downloadImage(url)); }
-            catch (Exception error) { throw new CompletionException(error); }
-        }, http));
+        // Player-supplied URLs go through the shared safe fetcher (issue #28); policy is read per fetch.
+        operations = new DatabaseOperations(store, url -> CompletableFuture.supplyAsync(
+                () -> SkinFetching.skinId(url, SkinFetching.policy()), http));
         operations.ready().whenComplete((unused, error) -> {
             if (error != null && !closed) plugin.getLogger().severe(
                     "SneakyDB SCM initialization failed. Apply db/001_scm.sql, check SneakyDB, then restart; no legacy fallback.");

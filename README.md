@@ -89,6 +89,16 @@ See [backend verification and cutover gates](docs/backend-verification.md) for l
   - `rate_limit_base`: Target hourly limit
   - `min_capacity_reservation`: Reserved slots for high-priority jobs
   - `preload_active_days`: Offline player activity cutoff for preloading
+- `skin`:
+  - `resolveTimeoutSeconds`: How long to wait for a skin cache lookup (default `5`; skin URL downloads add `fetch.timeoutSeconds`)
+  - `fetch`: Rules for downloading player-supplied skin URLs (`/skin <url>`, uniforms, cache hashing). Read on every fetch, so `/charreload` applies changes.
+    - `allowedHosts`: Host names allowed (default `[]` = any public host). An entry starting with `.` also matches subdomains, e.g. `.discordapp.net`. `textures.minecraft.net` is always allowed
+    - `allowedPorts`: Explicit ports allowed (default `[80, 443]`)
+    - `maxBytes`: Download size cap (default `1048576`)
+    - `maxRedirects`: Redirect hops followed, each re-checked (default `3`)
+    - `timeoutSeconds`: Total time for one download, including redirects (default `5`)
+
+  Regardless of these settings, skin URLs must be http(s) without user info, must resolve only to public addresses (no loopback, private, link-local/cloud metadata or other special ranges), and must be a 64x64 or 64x32 PNG. Paper downloads and hashes player URLs itself; the proxy only downloads `textures.minecraft.net` images.
 - `imgurApiUrl`
 - `imgurClientId`
 - `webServerFolderPath`
@@ -112,7 +122,7 @@ Titles (proxy file `titles.yml`, not Paper `config.yml`):
 - `/nick` (open a native name dialog for the current character; `/nick <name...>` still works)
   - Names use the same banned-word and character checks in both paths. Without `sneakycharacters.formatnames`, names are limited to 32 characters; that permission bypasses length/format checks, never banned words.
   - The native input enforces length while typing. Other validation runs on Save and reopens the form with an explanation and the exact draft. An oversized draft is retained if formatting permission changed, but must be shortened before saving. Changing characters requires reopening `/nick`.
-- `/skin <url> [slim|classic]` (set skin from URL)
+- `/skin <url> [slim|classic]` (set skin from a direct link to a public 64x64 or 64x32 PNG; see `skin.fetch`)
 - `/skin revert` (revert to Mojang default skin)
 - `/skin fetch [player]` (get a player's skin URL)
 - `/skin state <id>` (apply a previous skin state from this session)

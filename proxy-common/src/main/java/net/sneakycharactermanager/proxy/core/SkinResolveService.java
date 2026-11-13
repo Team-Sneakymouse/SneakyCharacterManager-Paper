@@ -2,6 +2,7 @@ package net.sneakycharactermanager.proxy.core;
 
 import net.sneakycharactermanager.proxy.common.ProxyLogger;
 import net.sneakycharactermanager.proxy.common.SkinContentHash;
+import net.sneakycharactermanager.proxy.common.SkinFetchException;
 import net.sneakycharactermanager.proxy.common.SkinImageFetcher;
 
 import java.awt.image.BufferedImage;
@@ -68,13 +69,27 @@ public final class SkinResolveService {
     }
 
     public CompletableFuture<Result> resolve(String sourceUrl) {
+        return resolve(sourceUrl, "");
+    }
+
+    /**
+     * @param providedSkinId content hash computed by Paper for a non-Mojang URL. When present the proxy only looks it
+     *                       up in the cache. Without it, only Mojang texture URLs are downloaded; any other URL is
+     *                       refused so the proxy never fetches player-supplied URLs (issue #28).
+     */
+    public CompletableFuture<Result> resolve(String sourceUrl, String providedSkinId) {
+        String skinId = providedSkinId == null ? "" : providedSkinId.trim();
+        if (!skinId.isEmpty()) {
+            return CompletableFuture.completedFuture(cache.getById(skinId).map(Result::hit).orElseGet(() -> Result.miss(skinId)));
+        }
         String key = sourceUrl == null ? "" : sourceUrl.trim();
         if (key.isEmpty()) {
             return CompletableFuture.completedFuture(Result.error("Empty source URL"));
         }
-        if (SkinContentHash.isMojangTextureUrl(key)) {
-            key = SkinContentHash.normalizeMojangTextureUrl(key);
+        if (!SkinContentHash.isMojangTextureUrl(key)) {
+            return CompletableFuture.completedFuture(Result.error("Proxy only downloads Mojang texture URLs"));
         }
+        key = SkinContentHash.normalizeMojangTextureUrl(key);
         final String resolveKey = key;
 
         CompletableFuture<Result> existing = inFlight.get(resolveKey);
@@ -94,26 +109,20 @@ public final class SkinResolveService {
         return future;
     }
 
-    private CompletableFuture<Result> doResolve(String sourceUrl) {
-        if (SkinContentHash.isMojangTextureUrl(sourceUrl)) {
-            Optional<GlobalSkinCache.Entry> hit = cache.getByMojangUrl(sourceUrl);
-            if (hit.isPresent()) {
-                return CompletableFuture.completedFuture(Result.hit(hit.get()));
-            }
-            return CompletableFuture.supplyAsync(() -> resolveByDownload(sourceUrl), executor);
+    private CompletableFuture<Result> doResolve(String mojangUrl) {
+        Optional<GlobalSkinCache.Entry> hit = cache.getByMojangUrl(mojangUrl);
+        if (hit.isPresent()) {
+            return CompletableFuture.completedFuture(Result.hit(hit.get()));
         }
-
-        return CompletableFuture.supplyAsync(() -> resolveByDownload(sourceUrl), executor);
+        return CompletableFuture.supplyAsync(() -> resolveByDownload(mojangUrl), executor);
     }
 
-    private Result resolveByDownload(String sourceUrl) {
+    private Result resolveByDownload(String mojangUrl) {
         try {
-            if (SkinContentHash.isMojangTextureUrl(sourceUrl)) {
-                Optional<GlobalSkinCache.Entry> hit = cache.getByMojangUrl(sourceUrl);
-                if (hit.isPresent()) return Result.hit(hit.get());
-            }
+            Optional<GlobalSkinCache.Entry> hit = cache.getByMojangUrl(mojangUrl);
+            if (hit.isPresent()) return Result.hit(hit.get());
 
-            BufferedImage image = fetcher.downloadImage(sourceUrl);
+            BufferedImage image = fetcher.downloadImage(mojangUrl);
             String skinId = SkinContentHash.skinIdFromImage(image);
             if (skinId == null) return Result.error("Failed to hash image");
 
@@ -122,8 +131,8 @@ public final class SkinResolveService {
 
             return Result.miss(skinId);
         } catch (Exception e) {
-            logger.warning("Skin resolve failed for " + sourceUrl + ": " + e.getMessage());
-            return Result.error(e.getMessage());
+            logger.warning("Skin resolve failed for " + mojangUrl + ": " + e.getMessage());
+            return Result.error(e instanceof SkinFetchException f ? f.reason().name() : "Download failed");
         }
     }
 }

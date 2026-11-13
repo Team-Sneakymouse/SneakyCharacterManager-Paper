@@ -204,16 +204,18 @@ public final class ProxyCore {
                 String sourceUrl = in.readUTF();
                 @SuppressWarnings("unused")
                 boolean slim = in.readBoolean();
+                // Optional trailing field (issue #28): Paper's content hash for a URL it downloaded itself.
+                String providedSkinId = in.available() > 0 ? in.readUTF() : "";
                 if (SkinContentHash.isMojangTextureUrl(sourceUrl)) {
                     sourceUrl = SkinContentHash.normalizeMojangTextureUrl(sourceUrl);
                 }
                 final String urlFinal = sourceUrl;
-                skinResolveService.resolve(urlFinal).whenComplete((result, err) -> {
+                skinResolveService.resolve(urlFinal, providedSkinId).whenComplete((result, err) -> {
                     SkinResolveService.Result toSend = result;
                     if (err != null || toSend == null) {
                         platform.logger().warning("resolveSkin failed for " + urlFinal + ": "
                                 + (err != null ? err.getMessage() : "null result"));
-                        toSend = SkinResolveService.Result.error(err != null ? err.getMessage() : "Resolve failed");
+                        toSend = SkinResolveService.Result.error("Resolve failed");
                     } else if (toSend.status == SkinResolveService.Status.HIT) {
                         platform.logger().info("resolveSkin HIT " + urlFinal + " -> " + toSend.skinId);
                     } else {

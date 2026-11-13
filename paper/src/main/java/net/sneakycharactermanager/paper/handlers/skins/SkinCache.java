@@ -4,6 +4,8 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import net.sneakycharactermanager.paper.util.SkinUtil;
+import net.sneakycharactermanager.proxy.common.SkinFetchException;
+import net.sneakycharactermanager.proxy.common.SkinUrlPolicy;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -23,7 +25,9 @@ public final class SkinCache {
     public enum ResolveStatus {
         HIT,
         MISS,
-        ERROR
+        ERROR,
+        /** URL or image refused by the skin fetch policy (issue #28); MineSkin fallback is pointless. */
+        REJECTED
     }
 
     public static final class ResolveResult {
@@ -74,18 +78,50 @@ public final class SkinCache {
                     session.getValue(), session.getSignature(), ""));
         }
 
+        boolean mojang = SkinUtil.isMojangTextureUrl(sourceUrl);
+        SkinUrlPolicy policy = null;
+        if (!mojang) {
+            policy = SkinFetching.policy();
+            try {
+                policy.check(sourceUrl);
+            } catch (SkinFetchException e) {
+                SneakyCharacterManager.getInstance().getLogger().info("Skin URL refused: " + e.getMessage());
+                return CompletableFuture.completedFuture(
+                        new ResolveResult(ResolveStatus.REJECTED, "", "", "", "", e.reason().name()));
+            }
+        }
+
         String requestId = UUID.randomUUID().toString();
         CompletableFuture<ResolveResult> future = new CompletableFuture<>();
         pending.put(requestId, future);
 
+        int timeoutSeconds = resolveTimeoutSeconds() + (policy == null ? 0 : (policy.timeoutMillis() + 999) / 1000);
         future.completeOnTimeout(
                 new ResolveResult(ResolveStatus.ERROR, "", "", "", "", "Resolve timed out"),
-                resolveTimeoutSeconds(), TimeUnit.SECONDS)
+                timeoutSeconds, TimeUnit.SECONDS)
                 .whenComplete((res, ex) -> pending.remove(requestId));
 
-        ProxyMessagingUtil.sendByteArray(requester, "resolveSkin",
-                requester == null ? "" : requester.getUniqueId().toString(),
-                requestId, sourceUrl, slim);
+        String requesterId = requester == null ? "" : requester.getUniqueId().toString();
+        if (!mojang && SneakyCharacterManager.getInstance().getCharacterBackend() == null) {
+            // Legacy proxy storage: download, validate and hash here; the proxy never fetches player URLs.
+            final String url = sourceUrl;
+            SkinFetching.skinIdAsync(url).whenComplete((skinId, error) -> {
+                if (error != null) {
+                    SkinFetchException failure = SkinFetching.fetchFailure(error);
+                    SneakyCharacterManager.getInstance().getLogger().warning("Skin fetch failed for " + url + ": "
+                            + (failure != null ? failure.getMessage() : error.getMessage()));
+                    completeResolveOnMainThread(requestId, new ResolveResult(
+                            failure != null && failure.isRejection() ? ResolveStatus.REJECTED : ResolveStatus.ERROR,
+                            "", "", "", "", failure != null ? failure.reason().name() : "Download failed"));
+                    return;
+                }
+                Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () ->
+                        ProxyMessagingUtil.sendByteArray(requester, "resolveSkin", requesterId, requestId, url, slim, skinId));
+            });
+            return future;
+        }
+
+        ProxyMessagingUtil.sendByteArray(requester, "resolveSkin", requesterId, requestId, sourceUrl, slim);
         return future;
     }
 

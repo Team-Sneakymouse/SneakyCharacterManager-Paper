@@ -40,6 +40,39 @@ class SkinResolveServiceTest {
         assertEquals(SkinResolveService.Status.HIT, second.status);
     }
 
+    @Test
+    void refusesToDownloadNonMojangUrls() {
+        GlobalSkinCache cache = new GlobalSkinCache(tempDir, noopLogger());
+        SkinResolveService service = new SkinResolveService(cache, 5, 1024 * 1024, noopLogger());
+
+        SkinResolveService.Result result = service.resolve("http://169.254.169.254/latest/meta-data").join();
+        assertEquals(SkinResolveService.Status.ERROR, result.status);
+    }
+
+    @Test
+    void paperProvidedSkinIdIsLookedUpWithoutDownloading() throws Exception {
+        File dataFolder = new File(tempDir, "proxy-data");
+        dataFolder.mkdirs();
+        Files.writeString(new File(dataFolder, "skin_cache.yml").toPath(), """
+                skins:
+                  - id: knownId
+                    mojang_url: %s
+                    texture: eyJ0ZXN0Ijp0cnVlfQ==
+                    signature: sig
+                """.formatted(MOJANG_URL));
+        GlobalSkinCache cache = new GlobalSkinCache(dataFolder, noopLogger());
+        SkinResolveService service = new SkinResolveService(cache, 5, 1024 * 1024, noopLogger());
+
+        // The URL is unreachable on purpose: a download attempt would turn into ERROR.
+        SkinResolveService.Result hit = service.resolve("http://127.0.0.1:1/skin.png", "knownId").join();
+        assertEquals(SkinResolveService.Status.HIT, hit.status);
+        assertEquals("sig", hit.signature);
+
+        SkinResolveService.Result miss = service.resolve("http://127.0.0.1:1/skin.png", "unknownId").join();
+        assertEquals(SkinResolveService.Status.MISS, miss.status);
+        assertEquals("unknownId", miss.skinId);
+    }
+
     private static ProxyLogger noopLogger() {
         return new ProxyLogger() {
             @Override public void info(String message) {}
