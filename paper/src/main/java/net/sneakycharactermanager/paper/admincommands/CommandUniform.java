@@ -10,15 +10,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -47,6 +42,9 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.skins.SkinData;
+import net.sneakycharactermanager.paper.handlers.skins.SkinFetching;
+import net.sneakycharactermanager.proxy.common.SkinFetchException;
+import net.sneakycharactermanager.proxy.common.SkinUrlPolicy;
 import net.sneakycharactermanager.paper.handlers.skins.SkinState;
 import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import com.sneakyutils.util.TextUtility;
@@ -135,6 +133,7 @@ public class CommandUniform extends CommandBaseAdmin {
         // Store as final so it can be used async
         File uniformFinal = uniformFile;
         String baseSkinUrl = skinURL.toString();
+        SkinUrlPolicy policy = SkinFetching.policy();
 
         Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
             // 1. Calculate uniform hash
@@ -173,154 +172,146 @@ public class CommandUniform extends CommandBaseAdmin {
             }
 
             try {
-                // Grab character skin from remote web server
-                HttpClient httpClient = HttpClient.newHttpClient();
-                HttpRequest httpRequest = HttpRequest.newBuilder().uri(
-                    skinURL.toURI())
-                    .timeout(Duration.ofSeconds(2))
-                    .build();
-                HttpResponse<InputStream> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream());
+                // Grab character skin through the shared safe fetcher (issue #28)
+                BufferedImage image;
+                try {
+                    image = SkinFetching.fetcher().fetchImage(baseSkinUrl, policy);
+                } catch (SkinFetchException e) {
+                    SneakyCharacterManager.getInstance().getLogger().warning("Uniform base skin fetch failed: " + e.getMessage());
+                    Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+                        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aThe original skin could not be fetched."));
+                    });
+                    return;
+                }
 
-                // Check the HTTP response status
-                int statusCode = response.statusCode();
+                try {
+                    BufferedImage overlayImage = ImageIO.read(uniformFinal);
 
-                if (statusCode == 200) {
-                    try (InputStream inputStream = response.body()) {
-                        if (inputStream != null) {
-                            BufferedImage image = ImageIO.read(inputStream);
-                            BufferedImage overlayImage = ImageIO.read(uniformFinal);
+                    if (image == null || overlayImage == null) return;
 
-                            if (image == null || overlayImage == null) return;
+                    int width = Math.min(image.getWidth(), overlayImage.getWidth());
+                    int height = Math.min(image.getHeight(), overlayImage.getHeight());
 
-                            int width = Math.min(image.getWidth(), overlayImage.getWidth());
-                            int height = Math.min(image.getHeight(), overlayImage.getHeight());
+                    BufferedImage combined = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
 
-                            BufferedImage combined = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_ARGB);
+                    for (int x = 0; x < width; x++) {
+                        for (int y = 0; y < height; y++) {
+                            int pixelImage = image.getRGB(x, y);
+                            int pixelOverlay = overlayImage.getRGB(x, y);
+                            int outerAlpha = (pixelOverlay >> 24) & 0xFF;
 
-                            for (int x = 0; x < width; x++) {
-                                for (int y = 0; y < height; y++) {
-                                    int pixelImage = image.getRGB(x, y);
-                                    int pixelOverlay = overlayImage.getRGB(x, y);
-                                    int outerAlpha = (pixelOverlay >> 24) & 0xFF;
+                            if (outerAlpha > 0) {
+                                // If the overlay image contains a pixel, definitely use this pixel
+                                combined.setRGB(x, y, pixelOverlay);
+                            } else {
+                                Point outerToInnerOffset = calculateOuterToInnerOffset(x, y);
+                                if (outerToInnerOffset == null) {
+                                    // If the overlay image does not contain a pixel, and it is not an outer skin layer part, use the original pixel
+                                    combined.setRGB(x, y, pixelImage);
+                                } else {
+                                    int relativeInnerAlpha = (overlayImage.getRGB(x + (int) outerToInnerOffset.getX(), y + (int) outerToInnerOffset.getY()) >> 24) & 0xFF;
 
-                                    if (outerAlpha > 0) {
-                                        // If the overlay image contains a pixel, definitely use this pixel
-                                        combined.setRGB(x, y, pixelOverlay);
+                                    if (relativeInnerAlpha == 0) {
+                                        // If the overlay image does not contain a pixel, and its relative inner layer also does not, use the original pixel
+                                        combined.setRGB(x, y, pixelImage);
                                     } else {
-                                        Point outerToInnerOffset = calculateOuterToInnerOffset(x, y);
-                                        if (outerToInnerOffset == null) {
-                                            // If the overlay image does not contain a pixel, and it is not an outer skin layer part, use the original pixel
-                                            combined.setRGB(x, y, pixelImage);
-                                        } else {
-                                            int relativeInnerAlpha = (overlayImage.getRGB(x + (int) outerToInnerOffset.getX(), y + (int) outerToInnerOffset.getY()) >> 24) & 0xFF;
-
-                                            if (relativeInnerAlpha == 0) {
-                                                // If the overlay image does not contain a pixel, and its relative inner layer also does not, use the original pixel
-                                                combined.setRGB(x, y, pixelImage);
-                                            } else {
-                                                // If the overlay image does not contain a pixel, and its relative inner layer does, use the overlay pixel (which is in this case empty)
-                                                combined.setRGB(x, y, pixelOverlay);
-                                            }
-                                        }
+                                        // If the overlay image does not contain a pixel, and its relative inner layer does, use the overlay pixel (which is in this case empty)
+                                        combined.setRGB(x, y, pixelOverlay);
                                     }
                                 }
                             }
+                        }
+                    }
 
-                            boolean succes = false;
-                            String url = null;
+                    boolean succes = false;
+                    String url = null;
 
-                            if (WEBSERVER_PATH != null && !WEBSERVER_PATH.isEmpty() && WEBSERVER_URL_PREFIX != null && !WEBSERVER_URL_PREFIX.isEmpty()) {
-                                String randomFileName = UUID.randomUUID() + ".png";
-                                File outputFile = new File(WEBSERVER_PATH, randomFileName);
+                    if (WEBSERVER_PATH != null && !WEBSERVER_PATH.isEmpty() && WEBSERVER_URL_PREFIX != null && !WEBSERVER_URL_PREFIX.isEmpty()) {
+                        String randomFileName = UUID.randomUUID() + ".png";
+                        File outputFile = new File(WEBSERVER_PATH, randomFileName);
 
+                        try {
+                            ByteArrayOutputStream encodedImage = new ByteArrayOutputStream();
+                            if (!ImageIO.write(combined, "PNG", encodedImage)) {
+                                throw new IOException("No PNG image writer is available");
+                            }
+                            AtomicFiles.write(outputFile.toPath(), encodedImage.toByteArray());
+                            Files.setPosixFilePermissions(outputFile.toPath(), PosixFilePermissions.fromString("rw-r--r--"));
+                            succes = true;
+                            url = WEBSERVER_URL_PREFIX + randomFileName;
+
+                            Bukkit.getAsyncScheduler().runDelayed(SneakyCharacterManager.getInstance(), (z) -> {
                                 try {
-                                    ByteArrayOutputStream encodedImage = new ByteArrayOutputStream();
-                                    if (!ImageIO.write(combined, "PNG", encodedImage)) {
-                                        throw new IOException("No PNG image writer is available");
-                                    }
-                                    AtomicFiles.write(outputFile.toPath(), encodedImage.toByteArray());
-                                    Files.setPosixFilePermissions(outputFile.toPath(), PosixFilePermissions.fromString("rw-r--r--"));
-                                    succes = true;
-                                    url = WEBSERVER_URL_PREFIX + randomFileName;
-
-                                    Bukkit.getAsyncScheduler().runDelayed(SneakyCharacterManager.getInstance(), (z) -> {
-                                        try {
-                                            Files.deleteIfExists(outputFile.toPath());
-                                        } catch (IOException e) {
-                                            e.printStackTrace();
-                                        }
-                                    }, 600, TimeUnit.SECONDS);
+                                    Files.deleteIfExists(outputFile.toPath());
                                 } catch (IOException e) {
                                     e.printStackTrace();
-                                    return;
                                 }
-                            } else if (IMGUR_CLIENT_ID != null && !IMGUR_CLIENT_ID.isEmpty() && IMGUR_API_URL != null && !IMGUR_API_URL.isEmpty()) {
-                                // Convert the merged images into a ByteArray
-                                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                                ImageIO.write(combined, "png", byteArrayOutputStream);
-                                byte[] imageBytes = byteArrayOutputStream.toByteArray();
-                                String dataImage = Base64.getEncoder().encodeToString(imageBytes);
-                                String data = URLEncoder.encode("image", "UTF-8") + "="
-                                        + URLEncoder.encode(dataImage, "UTF-8");
+                            }, 600, TimeUnit.SECONDS);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            return;
+                        }
+                    } else if (IMGUR_CLIENT_ID != null && !IMGUR_CLIENT_ID.isEmpty() && IMGUR_API_URL != null && !IMGUR_API_URL.isEmpty()) {
+                        // Convert the merged images into a ByteArray
+                        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                        ImageIO.write(combined, "png", byteArrayOutputStream);
+                        byte[] imageBytes = byteArrayOutputStream.toByteArray();
+                        String dataImage = Base64.getEncoder().encodeToString(imageBytes);
+                        String data = URLEncoder.encode("image", "UTF-8") + "="
+                                + URLEncoder.encode(dataImage, "UTF-8");
 
-                                // Upload image to Imgur
-                                URL imgurUrl = new URL(IMGUR_API_URL);
-                                HttpURLConnection imgurConnection = (HttpURLConnection) imgurUrl.openConnection();
-                                imgurConnection.setRequestMethod("POST");
-                                imgurConnection.setDoOutput(true);
-                                imgurConnection.setRequestProperty("Authorization", "Client-ID " + IMGUR_CLIENT_ID);
-                                imgurConnection.setRequestMethod("POST");
-                                imgurConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                        // Upload image to Imgur
+                        URL imgurUrl = new URL(IMGUR_API_URL);
+                        HttpURLConnection imgurConnection = (HttpURLConnection) imgurUrl.openConnection();
+                        imgurConnection.setRequestMethod("POST");
+                        imgurConnection.setDoOutput(true);
+                        imgurConnection.setRequestProperty("Authorization", "Client-ID " + IMGUR_CLIENT_ID);
+                        imgurConnection.setRequestMethod("POST");
+                        imgurConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 
-                                imgurConnection.connect();
+                        imgurConnection.connect();
 
-                                OutputStreamWriter wr = new OutputStreamWriter(imgurConnection.getOutputStream());
-                                wr.write(data);
-                                wr.flush();
+                        OutputStreamWriter wr = new OutputStreamWriter(imgurConnection.getOutputStream());
+                        wr.write(data);
+                        wr.flush();
 
-                                // Check response and build response json
-                                int imgurResponsecode = imgurConnection.getResponseCode();
-                                if (imgurResponsecode == 200) {
-                                    BufferedReader imgurReader = new BufferedReader(new InputStreamReader(imgurConnection.getInputStream()));
-                                    StringBuilder imgurResponseBuilder = new StringBuilder();
-                                    String line;
-                                    while ((line = imgurReader.readLine()) != null) {
-                                        imgurResponseBuilder.append(line);
-                                    }
-
-                                    String imgurResponse = imgurResponseBuilder.toString();
-
-                                    // Grab the response URL
-                                    JSONParser parser = new JSONParser();
-                                    JSONObject imgurJson = (JSONObject) parser.parse(imgurResponse);
-                                    JSONObject jsonData = (JSONObject) imgurJson.get("data");
-                                    url = ((String) jsonData.get("link")).replace("\\", "");
-                                    succes = true;
-                                }
+                        // Check response and build response json
+                        int imgurResponsecode = imgurConnection.getResponseCode();
+                        if (imgurResponsecode == 200) {
+                            BufferedReader imgurReader = new BufferedReader(new InputStreamReader(imgurConnection.getInputStream()));
+                            StringBuilder imgurResponseBuilder = new StringBuilder();
+                            String line;
+                            while ((line = imgurReader.readLine()) != null) {
+                                imgurResponseBuilder.append(line);
                             }
 
-                            if (succes && url != null) {
-                                // Make skindata and add to skinqueue
-                                 String urlFinal = new String(url);
-                                 final String uniformKeyForJob = args[1];
-                                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                                     SkinData sd = SkinData.getOrCreate(urlFinal, "", character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getCharacterUUID(), character.getName());
-                                     sd.setUniformCacheInfo(baseSkinUrl, uniformHash, uniformKeyForJob);
-                                 });
-                             }
+                            String imgurResponse = imgurResponseBuilder.toString();
+
+                            // Grab the response URL
+                            JSONParser parser = new JSONParser();
+                            JSONObject imgurJson = (JSONObject) parser.parse(imgurResponse);
+                            JSONObject jsonData = (JSONObject) imgurJson.get("data");
+                            url = ((String) jsonData.get("link")).replace("\\", "");
+                            succes = true;
                         }
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                        Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aSomething went very wrong while applying this uniform."));
-                        });
                     }
-                } else {
+
+                    if (succes && url != null) {
+                        // Make skindata and add to skinqueue
+                         String urlFinal = new String(url);
+                         final String uniformKeyForJob = args[1];
+                         Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+                             SkinData sd = SkinData.getOrCreate(urlFinal, "", character.isSlim(), SkinQueue.PRIO_UNIFORM, player, character.getCharacterUUID(), character.getName());
+                             sd.setUniformCacheInfo(baseSkinUrl, uniformHash, uniformKeyForJob);
+                         });
+                     }
+                } catch (ParseException e) {
+                    e.printStackTrace();
                     Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-                        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aThe webserver that hosts the original skin could not be reached."));
+                        sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aSomething went very wrong while applying this uniform."));
                     });
                 }
-            } catch (IOException | InterruptedException | URISyntaxException e) {
+            } catch (IOException e) {
                 e.printStackTrace();
                 Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
                     sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aSomething went very wrong while applying this uniform."));

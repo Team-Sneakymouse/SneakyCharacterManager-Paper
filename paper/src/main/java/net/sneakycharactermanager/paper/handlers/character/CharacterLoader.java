@@ -1,16 +1,9 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
 import java.awt.image.BufferedImage;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
-
-import javax.imageio.ImageIO;
 
 import org.bukkit.Bukkit;
+import com.sneakyutils.util.TextUtility;
 import org.bukkit.entity.Player;
 import org.bukkit.profile.PlayerTextures;
 
@@ -20,6 +13,9 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
+import net.sneakycharactermanager.paper.handlers.skins.SkinFetching;
+import net.sneakycharactermanager.proxy.common.SkinFetchException;
+import net.sneakycharactermanager.proxy.common.SkinUrlPolicy;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinState;
 import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
@@ -122,42 +118,36 @@ public class CharacterLoader {
 		}
 
 		PlayerProfile playerProfile = player.getPlayerProfile();
+		SkinUrlPolicy policy = SkinFetching.policy();
 		Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
 			checkSlimThenSetSkin(sourceUrl,
 					playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM),
-					player, characterUUID, ctx, priority);
+					player, characterUUID, ctx, priority, policy);
 		});
 	}
 
 	private static void checkSlimThenSetSkin(String url, boolean slim, Player player, String characterUUID,
-	                                         SkinApplyContext ctx, int priority) {
+	                                         SkinApplyContext ctx, int priority, SkinUrlPolicy policy) {
 		try {
-			HttpClient httpClient = HttpClient.newHttpClient();
-			HttpRequest request = HttpRequest.newBuilder().uri(
-					new URI(url.replace("imgur", "filmot")))
-					.timeout(Duration.ofSeconds(2))
-					.build();
-			HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
-
-			if (response.statusCode() == 200) {
-				try (InputStream inputStream = response.body()) {
-					if (inputStream != null) {
-						BufferedImage image = ImageIO.read(inputStream);
-						if (image != null && image.getWidth() > 55 && image.getHeight() > 20) {
-							int alpha = (image.getRGB(55, 20) >> 24) & 0xFF;
-							slim = alpha == 0;
-						}
-					}
-				}
+			BufferedImage image = SkinFetching.fetcher().fetchImage(url.replace("imgur", "filmot"), policy);
+			int alpha = (image.getRGB(55, 20) >> 24) & 0xFF;
+			slim = alpha == 0;
+		} catch (SkinFetchException e) {
+			SneakyCharacterManager.getInstance().getLogger().warning(
+					"Slim detection failed for " + url + ": " + e.getMessage());
+			if (e.isRejection()) {
+				Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+					if (player.isOnline()) player.sendMessage(TextUtility.INSTANCE.convertToComponent(SkinFetching.REJECTED_MESSAGE));
+				});
+				return;
 			}
 		} catch (Exception e) {
 			SneakyCharacterManager.getInstance().getLogger().warning(
 					"Slim detection failed for " + url + ": " + e.getMessage());
-		} finally {
-			final boolean slimFinal = slim;
-			Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () ->
-					SkinApplyService.requestSkin(player, characterUUID, url, slimFinal, priority, ctx));
 		}
+		final boolean slimFinal = slim;
+		Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () ->
+				SkinApplyService.requestSkin(player, characterUUID, url, slimFinal, priority, ctx));
 	}
 
 }

@@ -43,6 +43,11 @@ public final class SkinApplyService {
                                             int priority, SkinApplyContext context, SkinCache.ResolveResult result) {
         if (!player.isOnline()) return;
 
+        if (result.status == SkinCache.ResolveStatus.REJECTED) {
+            player.sendMessage(TextUtility.INSTANCE.convertToComponent(SkinFetching.REJECTED_MESSAGE));
+            return;
+        }
+
         if (result.status == SkinCache.ResolveStatus.HIT) {
             ProfileProperty property = result.toProfileProperty();
             if (property == null) {

@@ -5,6 +5,7 @@ import java.util.concurrent.*;
 import java.util.function.Function;
 import net.sneakycharactermanager.common.titles.TitleKeys;
 import net.sneakycharactermanager.proxy.common.SkinContentHash;
+import net.sneakycharactermanager.proxy.common.SkinFetchException;
 import static net.sneakycharactermanager.paper.storage.SqlStore.text;
 
 /** Headless operation layer: SQL/HTTP in, immutable domain effects out; no Bukkit or wire packets. */
@@ -154,13 +155,27 @@ public final class DatabaseOperations {
         if (normalized.isEmpty()) return CompletableFuture.completedFuture(new Resolved(requestId, "ERROR", "", "", "", "", "Empty source URL"));
         return store.findSkin(normalized).thenCompose(rows -> {
             if (!rows.isEmpty()) return CompletableFuture.completedFuture(hit(requestId, rows.getFirst()));
-            return hash.apply(normalized).handle((id, error) -> error == null ? id : "")
+            return hash.apply(normalized).handle((id, error) -> {
+                        if (error == null) return id;
+                        SkinFetchException failure = fetchFailure(error);
+                        if (failure != null && failure.isRejection()) throw new CompletionException(failure);
+                        return "";
+                    })
                     .thenCompose(id -> {
                         if (id == null || id.isEmpty()) return CompletableFuture.completedFuture(new Resolved(requestId, "ERROR", "", "", "", "", "Skin download/hash failed"));
                         return store.findSkin(id).thenApply(found -> found.isEmpty()
                             ? new Resolved(requestId, "MISS", id, "", "", "", "") : hit(requestId, found.getFirst()));
+                    })
+                    .exceptionallyCompose(error -> {
+                        SkinFetchException failure = fetchFailure(error);
+                        if (failure == null || !failure.isRejection()) return CompletableFuture.failedFuture(error);
+                        return CompletableFuture.completedFuture(new Resolved(requestId, "REJECTED", "", "", "", "", failure.reason().name()));
                     });
         });
+    }
+    private static SkinFetchException fetchFailure(Throwable error) {
+        for (Throwable t = error; t != null; t = t.getCause()) if (t instanceof SkinFetchException f) return f;
+        return null;
     }
     private Resolved hit(String requestId, Map<String,Object> row) {
         return new Resolved(requestId, "HIT", text(row, "skin_id"), text(row, "mojang_url"), text(row, "texture"), text(row, "signature"), "");
