@@ -7,14 +7,9 @@ import static org.mockito.Mockito.*;
 import java.util.UUID;
 
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
+import com.sneakyitems.events.MagicItemClickEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -69,8 +64,8 @@ class CharacterCrystalOwnerTest {
         when(worn.getKey()).thenReturn(new CharacterKey(UUID.randomUUID(), "borrowed"));
         CharacterCrystal crystal = new CharacterCrystal(plugin);
 
-        crystal.onUse(rightClickWithCrystal());
-        crystal.onUse(rightClickWithCrystal()); // the confirming second click
+        crystal.onCrystalClick(rightClickWithCrystal());
+        crystal.onCrystalClick(rightClickWithCrystal()); // the confirming second click
 
         luckPerms.verify(() -> LuckPermsNodes.addPermanent(any(), anyString()), never());
         verify(player, atLeast(2)).sendMessage(any(net.kyori.adventure.text.Component.class));
@@ -82,24 +77,19 @@ class CharacterCrystalOwnerTest {
         luckPerms.when(() -> LuckPermsNodes.user(player)).thenReturn(mock(net.luckperms.api.model.user.User.class));
         CharacterCrystal crystal = new CharacterCrystal(plugin);
 
-        crystal.onUse(rightClickWithCrystal()); // first click only asks to confirm
+        crystal.onCrystalClick(rightClickWithCrystal()); // first click only asks to confirm
 
         slots.verify(() -> CharacterSlots.isUnlimited(player)); // got past the ownership check
         luckPerms.verify(() -> LuckPermsNodes.addPermanent(any(), anyString()), never());
     }
 
-    private PlayerInteractEvent rightClickWithCrystal() {
-        PersistentDataContainer data = mock(PersistentDataContainer.class);
-        when(data.get(CharacterCrystal.MAGIC_ITEM_KEY, PersistentDataType.STRING)).thenReturn(CharacterCrystal.MAGIC_ITEM_NAME);
-        ItemMeta meta = mock(ItemMeta.class);
-        when(meta.getPersistentDataContainer()).thenReturn(data);
+    private MagicItemClickEvent rightClickWithCrystal() {
         ItemStack item = mock(ItemStack.class);
-        when(item.hasItemMeta()).thenReturn(true);
-        when(item.getItemMeta()).thenReturn(meta);
-        PlayerInteractEvent event = mock(PlayerInteractEvent.class);
-        when(event.getAction()).thenReturn(Action.RIGHT_CLICK_AIR);
+        MagicItemClickEvent event = mock(MagicItemClickEvent.class);
+        when(event.isRightClick()).thenReturn(true);
+        when(event.getItemKey()).thenReturn(CharacterCrystal.MAGIC_ITEM_NAME);
+        when(event.isAlreadyDenied()).thenReturn(false);
         when(event.getItem()).thenReturn(item);
-        when(event.useItemInHand()).thenReturn(Event.Result.DEFAULT);
         when(event.getPlayer()).thenReturn(player);
         when(event.getHand()).thenReturn(EquipmentSlot.HAND);
         return event;
