@@ -1,5 +1,6 @@
 package net.sneakycharactermanager.paper;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -262,6 +263,25 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 	public CompletableFuture<Void> writeFile(Path target, String content) {
 		return reportWriteFailure(target, fileWriter.writeUtf8(target, content));
+	}
+
+	/**
+	 * Reads a UTF-8 file off the main thread: its content, or an empty string if there is no such file. Completes on
+	 * the main thread. It does not see writes that are still queued; {@code GameplayFile.latest} adds that.
+	 */
+	public CompletableFuture<String> readFile(Path target) {
+		CompletableFuture<String> result = new CompletableFuture<>();
+		Bukkit.getAsyncScheduler().runNow(this, task -> {
+			String content;
+			try {
+				content = Files.exists(target) ? Files.readString(target) : "";
+			} catch (IOException | RuntimeException failure) {
+				Bukkit.getScheduler().runTask(this, () -> result.completeExceptionally(failure));
+				return;
+			}
+			Bukkit.getScheduler().runTask(this, () -> result.complete(content));
+		});
+		return result;
 	}
 
 	private void closeTitlePermissionRefresh() {

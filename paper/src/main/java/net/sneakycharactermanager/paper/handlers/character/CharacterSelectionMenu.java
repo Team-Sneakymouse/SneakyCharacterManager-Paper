@@ -337,11 +337,6 @@ public class CharacterSelectionMenu implements Listener {
 
         public void onClose(){
             CharacterKey key = new CharacterKey(this.target.getUniqueId(), this.characterUUID);
-            String refusal = inventoryEditRefusal(key);
-            if(refusal != null){
-                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Inventory not saved! &e" + refusal));
-                return;
-            }
 
             ItemStack[] dummyItems = new ItemStack[41];
             for(int i = 0; i < dummyItems.length; i++){
@@ -350,21 +345,15 @@ public class CharacterSelectionMenu implements Listener {
 
             String encoded = InventoryUtility.inventoryToPaperYaml(dummyItems);
 
-            // Read and write through GameplayFile (main thread): it sees saves still queued, and a load right after this
-            // sees the edit before it reaches the disk.
-            File characterFile = GameplayFile.of(key);
-            String updated;
-            try {
-                updated = editedInventory(GameplayFile.read(characterFile).saveToString(), this.storedInventory, encoded);
-            } catch (org.bukkit.configuration.InvalidConfigurationException e) {
-                updated = null;
-            }
-            if (updated == null) {
-                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Inventory not saved! &eThe character was played while you were editing."));
-                return;
-            }
-            GameplayFile.write(characterFile, updated);
-            this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&eSaved character inventory!"));
+            // Read and write through GameplayFile: it sees saves still queued, and a load right after the write sees
+            // the edit before it reaches the disk. With nothing queued the file is read off the main thread, so the
+            // checks and the write run on the main thread once its content is here.
+            GameplayFile.latest(GameplayFile.of(key)).whenComplete((current, failure) -> {
+                String refusal = failure != null ? "The character's file could not be read."
+                        : saveEditedInventory(key, current, this.storedInventory, encoded);
+                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent(refusal == null
+                        ? "&eSaved character inventory!" : "&4Inventory not saved! &e" + refusal));
+            });
         }
 
         @Override
@@ -447,14 +436,37 @@ public class CharacterSelectionMenu implements Listener {
         return config.saveToString();
     }
 
+    private static final String EDIT_WHILE_WORN = "Someone is currently on this character. Use direct inventory editing instead.";
+    private static final String EDIT_NEVER_LOADED = "This character has never been loaded on this server, so it has no inventory yet.";
+
     /**
      * Why an admin can't edit this character's stored inventory right now, or null if they can. A character someone
      * wears is live, not stored; a character that has never been loaded (no file, written or queued) would skip its
      * fresh defaults (spawn location, empty inventory) on first load if the editor created one.
      */
     static String inventoryEditRefusal(CharacterKey key) {
-        if (Character.wearerOf(key) != null) return "Someone is currently on this character. Use direct inventory editing instead.";
-        if (!GameplayFile.exists(GameplayFile.of(key))) return "This character has never been loaded on this server, so it has no inventory yet.";
+        if (Character.wearerOf(key) != null) return EDIT_WHILE_WORN;
+        if (!GameplayFile.exists(GameplayFile.of(key))) return EDIT_NEVER_LOADED;
+        return null;
+    }
+
+    /**
+     * Queues the admin's edited inventory for {@code key}'s gameplay file, whose newest content is {@code currentFile}
+     * (from {@link GameplayFile#latest}, empty if it has no file). Returns why it was not saved, or null if it was.
+     * Main thread. The same refusals as {@link #inventoryEditRefusal}, without touching the disk.
+     */
+    static String saveEditedInventory(CharacterKey key, String currentFile, String inventoryWhenOpened,
+                                      String editedInventory) {
+        if (Character.wearerOf(key) != null) return EDIT_WHILE_WORN;
+        if (currentFile.isEmpty()) return EDIT_NEVER_LOADED;
+        String updated;
+        try {
+            updated = editedInventory(currentFile, inventoryWhenOpened, editedInventory);
+        } catch (org.bukkit.configuration.InvalidConfigurationException e) {
+            updated = null;
+        }
+        if (updated == null) return "The character was played while you were editing.";
+        GameplayFile.write(GameplayFile.of(key), updated);
         return null;
     }
 

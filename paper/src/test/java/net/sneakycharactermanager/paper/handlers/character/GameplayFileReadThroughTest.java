@@ -49,6 +49,8 @@ class GameplayFileReadThroughTest {
     final YamlConfiguration config = new YamlConfiguration();
     /** Writes handed to the async writer and not yet landed, oldest first. */
     final List<PendingWrite> pending = new ArrayList<>();
+    /** Disk reads handed to another thread and not yet back on the main thread, oldest first. */
+    final List<PendingRead> reads = new ArrayList<>();
     MockedStatic<SneakyCharacterManager> plugins;
     MockedStatic<Bukkit> bukkit;
     MockedStatic<CharacterLoader> loader;
@@ -56,6 +58,8 @@ class GameplayFileReadThroughTest {
     MockedStatic<GameplayFile> files;
 
     record PendingWrite(Path target, String content, CompletableFuture<Void> future) {}
+
+    record PendingRead(Path target, CompletableFuture<String> future) {}
 
     @BeforeEach
     void setUp() {
@@ -74,6 +78,11 @@ class GameplayFileReadThroughTest {
         when(plugin.writeFile(any(), anyString())).thenAnswer(call -> {
             CompletableFuture<Void> future = new CompletableFuture<>();
             pending.add(new PendingWrite(call.getArgument(0), call.getArgument(1), future)); // lands on flush
+            return future;
+        });
+        when(plugin.readFile(any())).thenAnswer(call -> {
+            CompletableFuture<String> future = new CompletableFuture<>();
+            reads.add(new PendingRead(call.getArgument(0), future)); // comes back on finishOldestRead
             return future;
         });
         plugin.nametagManager = mock(NametagManager.class);
@@ -227,6 +236,100 @@ class GameplayFileReadThroughTest {
 
         assertFalse(GameplayFile.of(key).exists(), "nothing landed on disk yet");
         assertNull(CharacterSelectionMenu.inventoryEditRefusal(key));
+    }
+
+    // --- GameplayFile.latest: the newest content without a disk read on the main thread ---
+
+    @Test
+    void latestIsTheQueuedSaveAndReadsNoDisk() throws Exception {
+        File file = saved(ownerId, "k", 10);
+        GameplayFile.write(file, "QUEUED");
+
+        assertEquals("QUEUED", GameplayFile.latest(file).getNow(null));
+        verify(plugin, never()).readFile(any());
+    }
+
+    @Test
+    void latestReadsTheDiskOnAnotherThreadWhenNothingIsQueued() throws Exception {
+        File file = saved(ownerId, "k", 10);
+
+        CompletableFuture<String> latest = GameplayFile.latest(file);
+        assertFalse(latest.isDone(), "the read is not done on the calling thread");
+        finishOldestRead();
+
+        assertEquals(Files.readString(file.toPath()), latest.getNow(null));
+    }
+
+    @Test
+    void latestIsEmptyForACharacterWithNoFile() throws Exception {
+        CompletableFuture<String> latest = GameplayFile.latest(GameplayFile.of(new CharacterKey(ownerId, "none")));
+        finishOldestRead();
+
+        assertEquals("", latest.getNow(null));
+    }
+
+    /** Guards: a save queued while the disk read ran must win over the older content the read brings back. */
+    @Test
+    void latestPrefersASaveQueuedDuringTheRead() throws Exception {
+        File file = saved(ownerId, "k", 10);
+        CompletableFuture<String> latest = GameplayFile.latest(file);
+
+        GameplayFile.write(file, "QUEUED-MEANWHILE");
+        finishOldestRead(); // brings back what was on disk before
+
+        assertEquals("QUEUED-MEANWHILE", latest.getNow(null));
+    }
+
+    /** Guards: the same when that save has already landed and left the queue: the file is read again. */
+    @Test
+    void latestReadsAgainWhenASaveCameAndLandedDuringTheRead() throws Exception {
+        File file = saved(ownerId, "k", 10);
+        CompletableFuture<String> latest = GameplayFile.latest(file);
+        PendingRead stale = reads.remove(0);
+        String before = Files.readString(file.toPath());
+
+        GameplayFile.write(file, "LANDED-MEANWHILE");
+        flushWrites();
+        stale.future().complete(before); // the read started before the save
+
+        assertFalse(latest.isDone(), "the stale content is not used");
+        finishOldestRead();
+        assertEquals("LANDED-MEANWHILE", latest.getNow(null));
+    }
+
+    // --- saving the admin inventory editor ---
+
+    @Test
+    void adminInventoryEditIsQueuedAndSeenByTheNextRead() throws Exception {
+        CharacterKey key = new CharacterKey(ownerId, "k");
+
+        assertNull(CharacterSelectionMenu.saveEditedInventory(key, file(new Location(null, 5, 64, 0), "WHEN-OPENED"),
+                "WHEN-OPENED", "EDITED"));
+
+        assertEquals("EDITED", GameplayFile.read(GameplayFile.of(key)).getString("inventory"));
+        assertEquals(new Location(null, 5, 64, 0), GameplayFile.read(GameplayFile.of(key)).getLocation("location"));
+    }
+
+    @Test
+    void adminInventoryEditIsRefusedWithoutWritingAnything() throws Exception {
+        CharacterKey key = new CharacterKey(ownerId, "k");
+        String stored = file(new Location(null, 5, 64, 0), "WHEN-OPENED");
+
+        assertTrue(CharacterSelectionMenu.saveEditedInventory(key, "", "WHEN-OPENED", "EDITED").contains("never been loaded"));
+        assertTrue(CharacterSelectionMenu.saveEditedInventory(key, file(new Location(null, 5, 64, 0), "PLAYED-SINCE"),
+                "WHEN-OPENED", "EDITED").contains("played while you were editing"));
+        assertTrue(pending.isEmpty());
+
+        saved(ownerId, "k", 10);
+        character(wearer, ownerId, "k").load(); // someone wears it by the time the file content is here
+        pending.clear();
+        assertTrue(CharacterSelectionMenu.saveEditedInventory(key, stored, "WHEN-OPENED", "EDITED").contains("Someone"));
+        assertTrue(pending.isEmpty());
+    }
+
+    private void finishOldestRead() throws Exception {
+        PendingRead read = reads.remove(0);
+        read.future().complete(Files.exists(read.target()) ? Files.readString(read.target()) : "");
     }
 
     private void body(Player body, UUID id) {

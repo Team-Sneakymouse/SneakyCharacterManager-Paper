@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
@@ -37,6 +38,9 @@ final class GameplayFile {
         Queued(String content) { this.content = content; }
     }
 
+    /** How many writes each file has had queued, so {@link #latest} notices one that came and landed meanwhile. */
+    private static final Map<Path, Long> writeCounts = new ConcurrentHashMap<>();
+
     private GameplayFile() {}
 
     static File of(CharacterKey key) {
@@ -65,11 +69,26 @@ final class GameplayFile {
         }
     }
 
+    /**
+     * The file's newest content without a disk read on the main thread, for event handlers: the queued write if there
+     * is one, otherwise the file, read on another thread. An empty string means there is no file. Call on the main
+     * thread; it completes there, at once if a write is queued, with content no later write has replaced.
+     */
+    static CompletableFuture<String> latest(File file) {
+        Path path = path(file);
+        Queued queued = unwritten.get(path);
+        if (queued != null) return CompletableFuture.completedFuture(queued.content);
+        long seen = writeCounts.getOrDefault(path, 0L);
+        return SneakyCharacterManager.getInstance().readFile(path).thenCompose(onDisk ->
+                writeCounts.getOrDefault(path, 0L) == seen ? CompletableFuture.completedFuture(onDisk) : latest(file));
+    }
+
     static void write(File file, String content) {
         file.getParentFile().mkdirs();
         Path path = path(file);
         Queued queued = new Queued(content);
         unwritten.put(path, queued);
+        writeCounts.merge(path, 1L, Long::sum);
         SneakyCharacterManager.getInstance().writeFile(path, content)
                 .whenComplete((ignored, failure) -> unwritten.remove(path, queued));
     }
