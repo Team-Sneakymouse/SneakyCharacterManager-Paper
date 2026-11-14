@@ -61,7 +61,7 @@ class CommandSkinSupersedeTest {
 
         new CommandSkin().execute(player, "skin", new String[]{"state", String.valueOf(older.id())});
 
-        verify(plugin.skinQueue).supersede(player, key);
+        verify(plugin.skinQueue).supersede(key);
     }
 
     // Guards: the same for /skin revert, which bypassed CharacterLoader.updateSkin's supersession.
@@ -69,6 +69,6 @@ class CommandSkinSupersedeTest {
     void skinRevertSupersedesOlderQueuedJobs() {
         new CommandSkin().execute(player, "skin", new String[]{"revert"});
 
-        verify(plugin.skinQueue).supersede(player, key);
+        verify(plugin.skinQueue).supersede(key);
     }
 }

@@ -132,7 +132,7 @@ public class CommandSkin extends CommandBase {
 				return true;
 			}
 			// This skin is now the newest for the character: older queued skin jobs must not land on top of it later.
-			SneakyCharacterManager.getInstance().skinQueue.supersede(player, character.getKey());
+			SneakyCharacterManager.getInstance().skinQueue.supersede(character.getKey());
 			ProfileProperty stateProperty = new ProfileProperty("textures", state.texture(), state.signature());
 			SkinUtil.applySkin(player, stateProperty);
 
@@ -158,7 +158,7 @@ public class CommandSkin extends CommandBase {
 			if (event.isCancelled()) return false;
 
 			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&eFetching skin.. Please wait..!"));
-			SneakyCharacterManager.getInstance().skinQueue.supersede(player, character.getKey());
+			SneakyCharacterManager.getInstance().skinQueue.supersede(character.getKey());
 			resetPlayerSkin(player, character.getKey());
 			return true;
 		}

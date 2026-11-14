@@ -162,9 +162,12 @@ class SkinSupersedeTest {
 
     // --- SkinQueue.supersede / SkinData.apply ---
 
-    /** Guards: an older preload/load/skin job for a character finished after a newer /skin and overwrote it. */
+    /**
+     * Guards: an older preload/load/skin job for a character finished after a newer /skin and overwrote it. That
+     * includes a job another body queued: the character's previous wearer can still be online with a slow job for it.
+     */
     @Test
-    void supersedeDropsOnlyThisRequestersOlderBaseSkinJobsForThatCharacter() {
+    void supersedeDropsEveryRequestersOlderBaseSkinJobsForThatCharacter() {
         Player other = body();
         SkinData online = job("https://skins/1.png", SkinQueue.PRIO_ONLINE, wearer, key);
         SkinData load = job("https://skins/2.png", SkinQueue.PRIO_LOAD, wearer, key);
@@ -175,7 +178,7 @@ class SkinSupersedeTest {
         SkinData otherOwner = job("https://skins/6.png", SkinQueue.PRIO_LOAD, wearer, otherKey);
         SkinData otherRequester = job("https://skins/7.png", SkinQueue.PRIO_LOAD, other, key);
 
-        plugin.skinQueue.supersede(wearer, key);
+        plugin.skinQueue.supersede(key);
 
         assertFalse(plugin.skinQueue.contains(online));
         assertFalse(plugin.skinQueue.contains(load));
@@ -183,7 +186,23 @@ class SkinSupersedeTest {
         assertTrue(plugin.skinQueue.contains(uniformPriority));
         assertTrue(plugin.skinQueue.contains(uniform));
         assertTrue(plugin.skinQueue.contains(otherOwner));
-        assertTrue(plugin.skinQueue.contains(otherRequester));
+        assertFalse(plugin.skinQueue.contains(otherRequester));
+    }
+
+    /** Bug: A queued a slow /skin for a character, B then wore it and set a newer skin; A's job later saved over it. */
+    @Test
+    void aPreviousWearersJobFinishingAfterANewerSkinIsNeitherAppliedNorSaved() throws Exception {
+        Player previousWearer = body();
+        SkinData old = job("https://skins/old.png", SkinQueue.PRIO_SKIN, previousWearer, key);
+        old.setPendingSkinId("old-skin-id");
+        finished(old);
+
+        CharacterLoader.updateSkin(wearer, key, URL, false, null); // the newer skin, from the body wearing it now
+        old.apply();
+
+        cache.verify(() -> SkinCache.updateCharacterSkin(any(), eq(key), eq("old-skin-id"), anyBoolean()), never());
+        cache.verify(() -> SkinCache.register(any(), eq("old-skin-id"), any(), any(), any(), any()), never());
+        skins.verify(() -> SkinUtil.applySkin(eq(previousWearer), any()), never());
     }
 
     /** Guards: a job superseded while its MineSkin request ran still applied and saved its (older) skin. */
@@ -194,7 +213,7 @@ class SkinSupersedeTest {
         old.setPendingSkinId("old-skin-id");
         finished(old);
 
-        plugin.skinQueue.supersede(wearer, key);
+        plugin.skinQueue.supersede(key);
         old.apply();
 
         skins.verify(() -> SkinUtil.applySkin(any(), any()), never());
@@ -225,7 +244,7 @@ class SkinSupersedeTest {
     void updateSkinSupersedesOlderJobsBeforeRequestingTheNewSkin() {
         List<String> calls = new ArrayList<>();
         plugin.skinQueue = mock(SkinQueue.class);
-        doAnswer(call -> calls.add("supersede")).when(plugin.skinQueue).supersede(wearer, key);
+        doAnswer(call -> calls.add("supersede")).when(plugin.skinQueue).supersede(key);
         try (MockedStatic<SkinApplyService> service = mockStatic(SkinApplyService.class)) {
             service.when(() -> SkinApplyService.requestSkin(any(), any(), any(), any(), anyInt(), any()))
                     .thenAnswer(call -> calls.add("request:" + call.getArgument(4)));
@@ -239,7 +258,7 @@ class SkinSupersedeTest {
                     eq(SkinQueue.PRIO_LOAD), any()));
         }
         assertEquals(List.of("supersede", "request:" + SkinQueue.PRIO_SKIN, "supersede", "request:" + SkinQueue.PRIO_LOAD), calls);
-        verify(plugin.skinQueue, never()).supersede(wearer, otherKey);
+        verify(plugin.skinQueue, never()).supersede(otherKey);
     }
 
     /** Guards: restoring a session skin on load left preload jobs queued that later painted the record skin over it. */

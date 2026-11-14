@@ -124,7 +124,7 @@ public class CharacterLoader {
 	}
 
 	public static void updateSkin(Player player, CharacterKey key, String url, Boolean slim, @Nullable String skinStateName, int priority) {
-		SneakyCharacterManager.getInstance().skinQueue.supersede(player, key);
+		SneakyCharacterManager.getInstance().skinQueue.supersede(key);
 		String sourceUrl = SkinUtil.isMojangTextureUrl(url) ? SkinUtil.normalizeMojangTextureUrl(url) : url;
 		SkinApplyContext ctx = skinStateName != null && !skinStateName.isBlank()
 				? SkinApplyContext.withSkinStateLabel(skinStateName.trim())
