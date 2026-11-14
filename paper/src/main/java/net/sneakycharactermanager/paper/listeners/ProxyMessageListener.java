@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.bukkit.profile.PlayerTextures;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
@@ -19,6 +20,7 @@ import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteStreams;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.storage.CharacterResultEffects;
 import net.sneakycharactermanager.paper.admincommands.CommandTitleGrant;
 import net.sneakycharactermanager.paper.commands.CommandChar;
@@ -115,9 +117,10 @@ public class ProxyMessageListener implements PluginMessageListener {
 				break;
 			case "loadCharacter":
 				playerUUID = messageIn.readUTF();
-				character = readCharacter(playerUUID, messageIn);
+				character = readCharacter(playerUUID, Bukkit.getPlayer(UUID.fromString(playerUUID)), messageIn);
 				boolean forced = messageIn.readBoolean();
 
+				// The proxy has already moved last-played; the holder rule still runs before the load.
 				CharacterResultEffects.load(character, forced);
 				break;
 			case "selectCharacterByNameFailed":
@@ -144,7 +147,7 @@ public class ProxyMessageListener implements PluginMessageListener {
 			case "syncCharactersItem":
 				playerUUID = messageIn.readUTF();
 				requesterUUID = messageIn.readUTF();
-				Character characterItem = readCharacter(playerUUID, messageIn);
+				Character characterItem = readCharacter(playerUUID, null, messageIn);
 				
 				String guiKey = "syncCharacters:" + requesterUUID + ":" + playerUUID;
 				List<Character> charList = guiCharacters.get(guiKey);
@@ -257,14 +260,15 @@ public class ProxyMessageListener implements PluginMessageListener {
 
 		List<Character> characters = new ArrayList<>();
 		while (characters.size() < size) {
-			Character character = readCharacter(uuid, in);
+			Character character = readCharacter(uuid, null, in);
 			characters.add(character);
 		}
 
 		return characters;
 	}
 
-	private static Character readCharacter(String playerUUID, ByteArrayDataInput in) {
+	/** Reads one character owned by {@code ownerUUID}; {@code wearer} is null for list entries. */
+	private static Character readCharacter(String ownerUUID, @Nullable Player wearer, ByteArrayDataInput in) {
 		String uuid = in.readUTF();
 		String name = in.readUTF();
 		String skin = in.readUTF();
@@ -276,7 +280,7 @@ public class ProxyMessageListener implements PluginMessageListener {
 		String gender = in.readUTF();
 		String title = in.readUTF();
 		
-		Character character = new Character(playerUUID, uuid, name, skin, skinUUID, texture, signature, slim, tags, gender, title);
+		Character character = new Character(CharacterKey.of(ownerUUID, uuid), wearer, name, skin, skinUUID, texture, signature, slim, tags, gender, title);
 		
 		// Read uniform variants
 		int variantCount = in.readInt();

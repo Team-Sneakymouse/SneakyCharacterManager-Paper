@@ -8,6 +8,8 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
+import net.sneakycharactermanager.paper.handlers.character.CharacterUpdates;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import com.sneakyutils.util.TextUtility;
 
@@ -34,7 +36,15 @@ public class CommandChar extends CommandBase {
                 if (deleteConfirmationMap.containsKey(player)) {
                     String[] s = deleteConfirmationMap.get(player).split(";");
                     if (System.currentTimeMillis() < Long.valueOf(s[0]) + 10000) {
-                        ProxyMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), s[1], 3, false);
+                        // Deleting is the owner's own action on its own list. Re-check now: the character may have been
+                        // loaded (by this player or someone else) since the deletion was started.
+                        CharacterKey key = new CharacterKey(player.getUniqueId(), s[1]);
+                        if (net.sneakycharactermanager.paper.handlers.character.Character.wearerOf(key) != null) {
+                            sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&4That character is being played right now and can't be deleted."));
+                            deleteConfirmationMap.remove(player);
+                            return false;
+                        }
+                        CharacterUpdates.send(player, key, CharacterUpdates.ENABLED, false);
                         sender.sendMessage(TextUtility.INSTANCE.convertToComponent("&aDeleting character..."));
                         deleteConfirmationMap.remove(player);
                         return true;

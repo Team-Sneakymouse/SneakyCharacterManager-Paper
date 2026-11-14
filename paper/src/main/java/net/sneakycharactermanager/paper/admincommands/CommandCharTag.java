@@ -13,7 +13,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
 import net.sneakycharactermanager.paper.handlers.character.Character;
-import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
+import net.sneakycharactermanager.paper.handlers.character.CharacterUpdates;
 import com.sneakyutils.util.TextUtility;
 
 public class CommandCharTag extends CommandBaseAdmin {
@@ -76,8 +76,7 @@ public class CommandCharTag extends CommandBaseAdmin {
 			return false;
 		}
 
-		ProxyMessagingUtil.sendByteArray(player, "updateCharacter", player.getUniqueId().toString(), character.getCharacterUUID(), 4,
-				character.getTagsAsString());
+		CharacterUpdates.send(player, character.getKey(), CharacterUpdates.TAGS, character.getTagsAsString());
 
 		return true;
 	}

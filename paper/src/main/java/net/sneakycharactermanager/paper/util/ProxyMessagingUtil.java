@@ -13,7 +13,7 @@ import org.bukkit.entity.Player;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.storage.CharacterRequest;
-import net.sneakycharactermanager.paper.storage.StorageMode;
+import net.sneakycharactermanager.paper.api.character.StorageMode;
 
 public class ProxyMessagingUtil {
 

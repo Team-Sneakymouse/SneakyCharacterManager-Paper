@@ -32,6 +32,8 @@ import me.clip.placeholderapi.PlaceholderAPI;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
+import net.sneakycharactermanager.paper.handlers.character.CharacterUpdates;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
@@ -43,7 +45,6 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterLoader;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSkinChangeEvent;
-import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 import com.sneakyutils.util.TextUtility;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 
@@ -121,7 +122,7 @@ public class CommandSkin extends CommandBase {
 				player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Skin state not found."));
 				return true;
 			}
-			if (!state.characterUUID().equals(character.getCharacterUUID())) {
+			if (!character.getKey().equals(state.characterKey())) {
 				player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4That skin state belongs to a different character."));
 				return true;
 			}
@@ -130,17 +131,20 @@ public class CommandSkin extends CommandBase {
 				player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4You are already on that skin state."));
 				return true;
 			}
+			// This skin is now the newest for the character: older queued skin jobs must not land on top of it later.
+			SneakyCharacterManager.getInstance().skinQueue.supersede(character.getKey());
 			ProfileProperty stateProperty = new ProfileProperty("textures", state.texture(), state.signature());
 			SkinUtil.applySkin(player, stateProperty);
 
-			if (!state.proxyTextureUrl().equals(character.getSkin()) ||
-					!state.proxySignature().equals(character.getSignature())) {
+			// An empty saved skin means "unknown" (a uniform with no base in this character's history): keep the record.
+			if (!state.proxyTextureUrl().isEmpty() && (!state.proxyTextureUrl().equals(character.getSkin()) ||
+					!state.proxySignature().equals(character.getSignature()))) {
 				character.setSkin(state.proxyTextureUrl());
 				character.setTexture(state.proxyTexture());
 				character.setSignature(state.proxySignature());
-				ProxyMessagingUtil.sendByteArray(player, "updateCharacter",
-						player.getUniqueId().toString(), character.getCharacterUUID(), 1,
+				CharacterUpdates.send(player, character.getKey(), CharacterUpdates.LEGACY_SKIN,
 						state.proxyTextureUrl(), "", state.proxyTexture(), state.proxySignature(), character.isSlim());
+				mgr.recordChanged(player.getUniqueId(), character.getKey());
 			}
 
 			mgr.activateState(player.getUniqueId(), stateId);
@@ -149,12 +153,13 @@ public class CommandSkin extends CommandBase {
 
 		if (args[0].equalsIgnoreCase("default") || args[0].equalsIgnoreCase("revert")) {
 			CharacterSkinChangeEvent event = new CharacterSkinChangeEvent(player,
-					SkinState.pendingCharacterSkinChange(character.getCharacterUUID(), "default", null));
+					SkinState.pendingCharacterSkinChange(character.getKey(), "default", null));
 			Bukkit.getPluginManager().callEvent(event);
 			if (event.isCancelled()) return false;
 
 			player.sendMessage(TextUtility.INSTANCE.convertToComponent("&eFetching skin.. Please wait..!"));
-			resetPlayerSkin(player);
+			SneakyCharacterManager.getInstance().skinQueue.supersede(character.getKey());
+			resetPlayerSkin(player, character.getKey());
 			return true;
 		}
 
@@ -178,13 +183,13 @@ public class CommandSkin extends CommandBase {
 		}
 
 		CharacterSkinChangeEvent event = new CharacterSkinChangeEvent(player,
-				SkinState.pendingCharacterSkinChange(character.getCharacterUUID(), url, slim));
+				SkinState.pendingCharacterSkinChange(character.getKey(), url, slim));
 		Bukkit.getPluginManager().callEvent(event);
 		if (event.isCancelled()) return false;
 
 		player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aUpdating your skin!"));
 
-		CharacterLoader.updateSkin(player, character.getCharacterUUID(), url, slim);
+		CharacterLoader.updateSkin(player, character.getKey(), url, slim, null);
 
 		return true;
 	}
@@ -214,12 +219,12 @@ public class CommandSkin extends CommandBase {
 		}
 	}
 
-	private void resetPlayerSkin(Player player) {
+	private void resetPlayerSkin(Player player, CharacterKey key) {
 		Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
 			try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
 				URL url = new URL(
 						String.format("https://sessionserver.mojang.com/session/minecraft/profile/%s?unsigned=false",
-								player.getUniqueId().toString().replace("-", "")));
+								key.owner().toString().replace("-", "")));
 				HttpGet httpGet = new HttpGet(url.toURI());
 				HttpResponse response = httpClient.execute(httpGet);
 				if (response != null) {
@@ -238,47 +243,49 @@ public class CommandSkin extends CommandBase {
 						String signatureValue = (String) textureProp.get("signature");
 						ProfileProperty property = new ProfileProperty("textures", textureValue, signatureValue);
 						Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
+							if (!player.isOnline()) return;
 							PlayerProfile profile = player.getPlayerProfile();
 							profile.setProperty(property);
 							player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aUpdating your skin!"));
 
 							String textureURL = profile.getTextures().getSkin().toString();
 							boolean isSlim = profile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM);
-							Character character = Character.get(player);
 
-							if (character == null)
-								return;
+							// The skin belongs to the character /skin was run on, even if the player switched since.
+							if (Character.isWearing(player, key)) {
+								Character character = Character.get(player);
+								character.setSkin(textureURL);
+								character.setSlim(isSlim);
+								character.setTexture(textureValue);
+								character.setSignature(signatureValue);
 
-							character.setSkin(textureURL);
-							character.setSlim(isSlim);
-							character.setTexture(textureValue);
-							character.setSignature(signatureValue);
+								SkinUtil.applySkin(player, property);
 
-							SkinUtil.applySkin(player, property);
+								SneakyCharacterManager.getInstance().skinStateManager.record(
+										player, "Regular", textureValue, signatureValue,
+										key, textureURL, false);
 
-							SneakyCharacterManager.getInstance().skinStateManager.record(
-									player, "Regular", textureValue, signatureValue,
-									character.getCharacterUUID(), textureURL, false);
+								Entity vehicle = player.getVehicle();
+								if (vehicle != null)
+									vehicle.removePassenger(player);
+								player.teleport(player.getLocation().add(0, 1, 0));
+							} else {
+								SneakyCharacterManager.getInstance().skinStateManager.forgetCharacter(key);
+							}
 
 							SkinCache.resolve(player, textureURL, isSlim).thenAccept(resolveResult -> {
 								Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () -> {
-									if (!player.isOnline() || character.getCharacterUUID() == null) return;
+									if (!player.isOnline()) return;
 									String skinId = resolveResult.skinId;
 									if (!skinId.isEmpty()) {
 										SkinCache.register(player, skinId, textureURL, textureValue, signatureValue, textureURL);
-										SkinCache.updateCharacterSkin(player, character.getCharacterUUID(), skinId, isSlim);
+										SkinCache.updateCharacterSkin(player, key, skinId, isSlim);
 									} else {
-										ProxyMessagingUtil.sendByteArray(player, "updateCharacter",
-												player.getUniqueId().toString(), character.getCharacterUUID(), 1,
+										CharacterUpdates.send(player, key, CharacterUpdates.LEGACY_SKIN,
 												textureURL, "", textureValue, signatureValue, isSlim);
 									}
 								});
 							});
-
-							Entity vehicle = player.getVehicle();
-							if (vehicle != null)
-								vehicle.removePassenger(player);
-							player.teleport(player.getLocation().add(0, 1, 0));
 						});
 					}
 				}

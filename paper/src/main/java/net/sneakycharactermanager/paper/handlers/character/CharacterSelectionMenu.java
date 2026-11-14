@@ -31,6 +31,7 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
@@ -60,7 +61,7 @@ public class CharacterSelectionMenu implements Listener {
         protected static String LEFT;
         protected static String SWAP_OFFHAND;
 
-        private final String playerUUID;
+        protected final String playerUUID;
 
         protected OfflinePlayer offlinePlayer = null;
         protected Player player = null;
@@ -215,7 +216,7 @@ public class CharacterSelectionMenu implements Listener {
             if (profileProperty == null) {
                 inventory.setItem(index, characterHead);
 
-                SkinApplyService.requestSkin(this.opener, character.getCharacterUUID(), character.getSkin(), character.isSlim(),
+                SkinApplyService.requestSkin(this.opener, character.getKey(), character.getSkin(), character.isSlim(),
                         SkinQueue.PRIO_ONLINE,
                         SkinApplyContext.forMenu(skullMeta, characterHead, inventory, index));
             } else {
@@ -263,10 +264,8 @@ public class CharacterSelectionMenu implements Listener {
 
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
 
-            Character currentChar = Character.get(this.player);
-
             if (characterUUID == null) return;
-            if (currentChar != null && characterUUID.equals(currentChar.getCharacterUUID())) {
+            if (Character.isWearing(this.player, CharacterKey.of(playerUUID, characterUUID))) {
                 this.player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aYou are already playing that character."));
                 return;
             }
@@ -286,11 +285,9 @@ public class CharacterSelectionMenu implements Listener {
 
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
 
-            Character currentChar = Character.get(this.player);
-
             if (characterUUID == null) return;
-            if (currentChar != null && characterUUID.equals(currentChar.getCharacterUUID())) {
-                this.player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aYou cannot delete the character that you are currently playing."));
+            if (Character.wearerOf(CharacterKey.of(playerUUID, characterUUID)) != null) {
+                this.player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aYou cannot delete a character that is being played."));
                 return;
             }
 
@@ -318,14 +315,17 @@ public class CharacterSelectionMenu implements Listener {
         private OfflinePlayer target;
         private String characterUUID;
         private ItemStack[] contents;
+        /** The stored inventory this editor was opened with; saving is refused if the file has changed since. */
+        private final String storedInventory;
 
         private Inventory inventory;
 
-        public AdminInventoryHolder(Player opener, OfflinePlayer target, String characterUUID, ItemStack[] contents){
+        public AdminInventoryHolder(Player opener, OfflinePlayer target, String characterUUID, ItemStack[] contents, String storedInventory){
             this.opener = opener;
             this.target = target;
             this.characterUUID = characterUUID;
             this.contents = contents;
+            this.storedInventory = storedInventory;
 
             createInventory();
         }
@@ -336,16 +336,7 @@ public class CharacterSelectionMenu implements Listener {
         }
 
         public void onClose(){
-            Character currentChar = null;
-            Player player = Bukkit.getPlayer(this.target.getUniqueId());
-            if(player != null){
-                currentChar = Character.get(player);
-            }
-
-            if(currentChar != null && currentChar.getCharacterUUID().equals(this.characterUUID)){
-                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&4Inventory not saved! &ePlayer swapped character while you were editing!"));
-                return;
-            }
+            CharacterKey key = new CharacterKey(this.target.getUniqueId(), this.characterUUID);
 
             ItemStack[] dummyItems = new ItemStack[41];
             for(int i = 0; i < dummyItems.length; i++){
@@ -354,17 +345,15 @@ public class CharacterSelectionMenu implements Listener {
 
             String encoded = InventoryUtility.inventoryToPaperYaml(dummyItems);
 
-            File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), this.target.getUniqueId().toString());
-            File characterFile = new File(playerDir, this.characterUUID + ".yml");
-            SneakyCharacterManager.getInstance().updateFile(characterFile.toPath(), current -> {
-                YamlConfiguration config = new YamlConfiguration();
-                config.loadFromString(current);
-                config.set("inventory", encoded);
-                return config.saveToString();
-            }).thenRun(() -> Bukkit.getScheduler().runTask(
-                    SneakyCharacterManager.getInstance(),
-                    () -> this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&eSaved character inventory!"))
-            ));
+            // Read and write through GameplayFile: it sees saves still queued, and a load right after the write sees
+            // the edit before it reaches the disk. With nothing queued the file is read off the main thread, so the
+            // checks and the write run on the main thread once its content is here.
+            GameplayFile.latest(GameplayFile.of(key)).whenComplete((current, failure) -> {
+                String refusal = failure != null ? "The character's file could not be read."
+                        : saveEditedInventory(key, current, this.storedInventory, encoded);
+                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent(refusal == null
+                        ? "&eSaved character inventory!" : "&4Inventory not saved! &e" + refusal));
+            });
         }
 
         @Override
@@ -404,28 +393,18 @@ public class CharacterSelectionMenu implements Listener {
             String characterUUID = meta.getPersistentDataContainer().get(characterKey, PersistentDataType.STRING);
 
             if (characterUUID == null) return;
-            Character currentChar = null;
-            if(this.player != null){
-                currentChar = Character.get(player);
-            }
-
-            if (currentChar != null && characterUUID.equals(currentChar.getCharacterUUID())) {
-                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&aThe player is currently on this character. Use direct inventory editing instead."));
+            CharacterKey key = CharacterKey.of(playerUUID, characterUUID);
+            String refusal = inventoryEditRefusal(key);
+            if (refusal != null) {
+                this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&a" + refusal));
                 return;
             }
 
             this.opener.sendMessage(TextUtility.INSTANCE.convertToComponent("&aEditing inventory for character &b'" + ((TextComponent) meta.displayName()).content() + "'&a."));
             
             Bukkit.getScheduler().runTaskLater(SneakyCharacterManager.getInstance(), () -> {
-                String playerUUID;
-                if(player == null)
-                    playerUUID = offlinePlayer.getUniqueId().toString();
-                else
-                    playerUUID = player.getUniqueId().toString();
-
-                File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID);
-                File characterFile = new File(playerDir, characterUUID + ".yml");
-                YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
+                File characterFile = GameplayFile.of(key);
+                YamlConfiguration config = GameplayFile.read(characterFile);
 
                 ItemStack[] inventoryContents;
                 try {
@@ -436,12 +415,59 @@ public class CharacterSelectionMenu implements Listener {
                     inventoryContents = new ItemStack[0];
                 }
 
-                AdminInventoryHolder holder = new AdminInventoryHolder(this.opener, (this.player == null ? this.offlinePlayer : this.player), characterUUID, inventoryContents);
+                AdminInventoryHolder holder = new AdminInventoryHolder(this.opener, (this.player == null ? this.offlinePlayer : this.player), characterUUID, inventoryContents, config.getString("inventory"));
                 this.opener.openInventory(holder.getInventory());
 
             }, 2);
         }
     
+    }
+
+    /**
+     * The gameplay file with the admin's edited inventory, or null if the stored inventory changed since the editor
+     * opened (the character was played meanwhile), so the edit would overwrite newer state.
+     */
+    static String editedInventory(String currentFile, String inventoryWhenOpened, String editedInventory)
+            throws org.bukkit.configuration.InvalidConfigurationException {
+        YamlConfiguration config = new YamlConfiguration();
+        config.loadFromString(currentFile);
+        if (!java.util.Objects.equals(config.getString("inventory"), inventoryWhenOpened)) return null;
+        config.set("inventory", editedInventory);
+        return config.saveToString();
+    }
+
+    private static final String EDIT_WHILE_WORN = "Someone is currently on this character. Use direct inventory editing instead.";
+    private static final String EDIT_NEVER_LOADED = "This character has never been loaded on this server, so it has no inventory yet.";
+
+    /**
+     * Why an admin can't edit this character's stored inventory right now, or null if they can. A character someone
+     * wears is live, not stored; a character that has never been loaded (no file, written or queued) would skip its
+     * fresh defaults (spawn location, empty inventory) on first load if the editor created one.
+     */
+    static String inventoryEditRefusal(CharacterKey key) {
+        if (Character.wearerOf(key) != null) return EDIT_WHILE_WORN;
+        if (!GameplayFile.exists(GameplayFile.of(key))) return EDIT_NEVER_LOADED;
+        return null;
+    }
+
+    /**
+     * Queues the admin's edited inventory for {@code key}'s gameplay file, whose newest content is {@code currentFile}
+     * (from {@link GameplayFile#latest}, empty if it has no file). Returns why it was not saved, or null if it was.
+     * Main thread. The same refusals as {@link #inventoryEditRefusal}, without touching the disk.
+     */
+    static String saveEditedInventory(CharacterKey key, String currentFile, String inventoryWhenOpened,
+                                      String editedInventory) {
+        if (Character.wearerOf(key) != null) return EDIT_WHILE_WORN;
+        if (currentFile.isEmpty()) return EDIT_NEVER_LOADED;
+        String updated;
+        try {
+            updated = editedInventory(currentFile, inventoryWhenOpened, editedInventory);
+        } catch (org.bukkit.configuration.InvalidConfigurationException e) {
+            updated = null;
+        }
+        if (updated == null) return "The character was played while you were editing.";
+        GameplayFile.write(GameplayFile.of(key), updated);
+        return null;
     }
 
     public CharacterSelectionMenu() {
@@ -475,13 +501,15 @@ public class CharacterSelectionMenu implements Listener {
         }
     }
 
-    public void updateInventory(String playerUUID, List<Character> characters) {
+    public void updateInventory(String playerUUID, String ownerUUID, List<Character> characters) {
         if (!menuExists(playerUUID)) {
             SneakyCharacterManager.getInstance().getLogger().warning("Attempted to update invalid inventory!");
             return;
         }
         CharacterMenuHolder holder = activeMenus.get(playerUUID);
         if (holder == null) return; //Also should be possible
+        // A late list for a menu the requester has since closed must not fill another owner's menu.
+        if (!holder.playerUUID.equals(ownerUUID)) return;
         holder.receivedCharacterList(characters);
 
         if (holder.getClass().equals(CharacterMenuHolder.class)) {

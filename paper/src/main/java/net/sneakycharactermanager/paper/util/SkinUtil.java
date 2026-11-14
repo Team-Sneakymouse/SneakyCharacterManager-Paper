@@ -1,6 +1,7 @@
 package net.sneakycharactermanager.paper.util;
 
 import com.sneakyutils.util.TextUtility;
+import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSkinAppliedEvent;
 
 import org.bukkit.OfflinePlayer;
@@ -55,15 +56,56 @@ public class SkinUtil {
     }
 
 	public static void applySkin(Player player, ProfileProperty profileProperty) {
-		CharacterSkinAppliedEvent event = new CharacterSkinAppliedEvent(player, profileProperty);
-		Bukkit.getPluginManager().callEvent(event);
-		if (event.isCancelled()) return;
-		player.setPlayerProfile(handleCachedSkin(player, profileProperty));
+		Character worn = Character.get(player);
+		if (!skinAllowed(player, profileProperty)) return;
+		// A listener switched or released the body: this skin was for the character it wore before.
+		if (!sameCharacter(worn, Character.get(player))) return;
+		putSkin(player, profileProperty);
 
 		// Remove player from vehicle and teleport them up slightly to prevent them from getting stuck
 		Entity vehicle = player.getVehicle();
 		if (vehicle != null) vehicle.removePassenger(player);
 		player.teleport(player.getLocation().add(0, 1, 0));
+	}
+
+	private static boolean sameCharacter(@Nullable Character before, @Nullable Character after) {
+		if (before == null || after == null) return before == after;
+		return before.getKey().equals(after.getKey());
+	}
+
+	/**
+	 * Fires {@link CharacterSkinAppliedEvent} for putting {@code profileProperty} on {@code player}; false if a
+	 * listener cancelled it. {@link #applySkin} asks this first. A swap asks it for both bodies before anything moves,
+	 * so a veto refuses the whole swap, and puts the skins on later with {@link #putSkin}.
+	 */
+	public static boolean skinAllowed(Player player, ProfileProperty profileProperty) {
+		CharacterSkinAppliedEvent event = new CharacterSkinAppliedEvent(player, profileProperty);
+		Bukkit.getPluginManager().callEvent(event);
+		return !event.isCancelled();
+	}
+
+	/**
+	 * Sets {@code player}'s profile to wear {@code profileProperty}, where it stands: no event (see
+	 * {@link #skinAllowed}), and none of {@link #applySkin}'s dismount and +1 Y teleport. Null wears no
+	 * {@code textures} property (the client's default skin).
+	 */
+	public static void putSkin(Player player, @Nullable ProfileProperty profileProperty) {
+		if (profileProperty != null) {
+			player.setPlayerProfile(handleCachedSkin(player, profileProperty));
+			return;
+		}
+		PlayerProfile profile = player.getPlayerProfile();
+		profile.removeProperty("textures");
+		player.setPlayerProfile(profile);
+	}
+
+	/** The signed {@code textures} property {@code player} wears right now, or null if it wears none. */
+	@Nullable
+	public static ProfileProperty wornTextures(Player player) {
+		for (ProfileProperty property : player.getPlayerProfile().getProperties()) {
+			if (property.getName().equals("textures")) return property;
+		}
+		return null;
 	}
 
 	public static String getTextureUrl(ProfileProperty property) {

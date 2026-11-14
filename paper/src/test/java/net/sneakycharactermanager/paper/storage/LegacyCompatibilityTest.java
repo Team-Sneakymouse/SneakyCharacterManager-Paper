@@ -1,5 +1,7 @@
 package net.sneakycharactermanager.paper.storage;
 
+import net.sneakycharactermanager.paper.api.character.StorageMode;
+
 import org.junit.jupiter.api.Test;
 import org.bukkit.entity.Player;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;

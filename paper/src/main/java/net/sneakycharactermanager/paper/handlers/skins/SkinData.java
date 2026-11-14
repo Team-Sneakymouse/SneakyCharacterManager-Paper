@@ -3,6 +3,7 @@ package net.sneakycharactermanager.paper.handlers.skins;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu.CharacterMenuHolder;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
@@ -41,12 +42,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SkinData extends BukkitRunnable {
 
+    /** Whether the missing-key warning was logged; once per server run is enough. */
+    private static final AtomicBoolean warnedNoAuth = new AtomicBoolean();
+
     private final String url;
     private String skinUUID;
-    private String characterUUID;
+    /** The character this skin is for (owner + ID). Fixed at creation: results are saved here, never to whatever the player wears later. */
+    private final CharacterKey characterKey;
     private final boolean isSlim;
     private int priority;
     final Player player;
@@ -122,21 +128,21 @@ public class SkinData extends BukkitRunnable {
      *                 3 = Loading a character
      *                 4 = Using /skin
      *                 5 = Using /uniform
-     * @param player Player to apply the skin to
-     * @param characterUUID UUID of the character
+     * @param player Player that requested the skin and gets it applied (if it still wears the character)
+     * @param characterKey The character the skin is for
      * @param characterName Name of the character
      * @param skullMeta SkullMeta of the character
      * @param characterHead ItemStack of the character
      * @param inventory Inventory of the character
      * @param index Index of the character
      */
-    private SkinData(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, String characterUUID, String characterName, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
+    private SkinData(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, CharacterKey characterKey, String characterName, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
         this.url = url;
         this.skinUUID = skinUUID;
         this.isSlim = isSlim;
         this.priority = priority;
         this.player = player;
-        this.characterUUID = characterUUID;
+        this.characterKey = characterKey;
         this.characterName = characterName;
         this.skullMeta = skullMeta;
         this.characterHead = characterHead;
@@ -145,8 +151,8 @@ public class SkinData extends BukkitRunnable {
         SneakyCharacterManager.getInstance().skinQueue.add(this, priority);
     }
 
-    private SkinData(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, String characterUUID, String characterName) {
-        this(url, skinUUID, isSlim, priority, player, characterUUID, characterName, null, null, null, 0);
+    private SkinData(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, CharacterKey characterKey, String characterName) {
+        this(url, skinUUID, isSlim, priority, player, characterKey, characterName, null, null, null, 0);
     }
 
     /**
@@ -205,10 +211,9 @@ public class SkinData extends BukkitRunnable {
     public void run() {
         boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
         String auth = getAuth();
-        if (auth == null || auth.isEmpty()) {
-            SneakyCharacterManager.getInstance().getLogger().warning("You must set a mineskin auth token in the config.yml file to apply skins.");
-            SneakyCharacterManager.getInstance().skinQueue.remove(this);
-            return;
+        if ((auth == null || auth.isEmpty()) && !warnedNoAuth.getAndSet(true)) {
+            SneakyCharacterManager.getInstance().getLogger().warning("No mineskinAuth key in config.yml: using MineSkin's"
+                    + " anonymous API, which allows about 10 skins a minute.");
         }
 
         if (player == null || !player.isOnline()) {
@@ -467,42 +472,50 @@ public class SkinData extends BukkitRunnable {
             return;
         }
 
+        // Superseded or cancelled while its HTTP request was running: drop the result.
+        if (!SneakyCharacterManager.getInstance().skinQueue.contains(this)) return;
+
         // Apply to player if:
         // - It's a character load/manual update (priority >= PRIO_LOAD) even if it was originally a menu item
+        // - and the player still wears this character. A result for a character it has switched away from is only
+        //   saved to that character (below), never put on the body or onto the character it wears now.
         if (this.priority >= SkinQueue.PRIO_LOAD) {
             boolean isUniform = this.uniformHash != null;
+            boolean worn = Character.isWearing(this.player, this.characterKey);
 
             // EXCEPTION: Don't apply a uniform variant automatically during character load (PRIO_LOAD).
             // It should only be applied if priority is PRIO_UNIFORM (4).
-            if (!isUniform || this.priority == SkinQueue.PRIO_UNIFORM) {
+            if (worn && (!isUniform || this.priority == SkinQueue.PRIO_UNIFORM)) {
                 SkinUtil.applySkin(this.player, property);
+                // applySkin fires events on this thread: a listener can switch or release the body before it returns.
+                worn = Character.isWearing(this.player, this.characterKey);
+            }
 
-                if (this.characterUUID != null && !this.characterUUID.isEmpty()) {
-                    SkinStateManager mgr = SneakyCharacterManager.getInstance().skinStateManager;
-                    String stateName;
-                    if (isUniform) {
-                        stateName = SkinStateManager.uniformKeyToDisplayName(this.uniformKey);
-                    } else if (this.priority == SkinQueue.PRIO_SKIN && this.skinStateLabel != null) {
-                        stateName = this.skinStateLabel;
-                    } else {
-                        stateName = "Regular";
-                    }
-                    SkinState state = mgr.record(this.player, stateName, texture, signature, this.characterUUID, this.url, isUniform);
+            if (worn && (!isUniform || this.priority == SkinQueue.PRIO_UNIFORM)) {
+                SkinStateManager mgr = SneakyCharacterManager.getInstance().skinStateManager;
+                String stateName;
+                if (isUniform) {
+                    stateName = SkinStateManager.uniformKeyToDisplayName(this.uniformKey);
+                } else if (this.priority == SkinQueue.PRIO_SKIN && this.skinStateLabel != null) {
+                    stateName = this.skinStateLabel;
+                } else {
+                    stateName = "Regular";
+                }
+                SkinState state = mgr.record(this.player, stateName, texture, signature, this.characterKey, this.url, isUniform);
 
-                    if (this.priority == SkinQueue.PRIO_SKIN || this.priority == SkinQueue.PRIO_UNIFORM) {
-                        SkinStateManager.sendSkinUpdatedMessage(this.player, state);
-                    }
+                if (this.priority == SkinQueue.PRIO_SKIN || this.priority == SkinQueue.PRIO_UNIFORM) {
+                    SkinStateManager.sendSkinUpdatedMessage(this.player, state);
                 }
             }
 
-            // PRIO_SKIN is used exclusively for /skin
-            if (priority == SkinQueue.PRIO_SKIN) {
-                Character character = Character.get(this.player);
+            if (!worn && !isUniform) {
+                // The record gets this skin below; older session states must not override it on the next load.
+                SneakyCharacterManager.getInstance().skinStateManager.forgetCharacter(this.characterKey);
+            }
 
-                if (character == null) {
-                    SneakyCharacterManager.getInstance().skinQueue.remove(this);
-                    return;
-                }
+            // PRIO_SKIN is used exclusively for /skin
+            if (priority == SkinQueue.PRIO_SKIN && worn) {
+                Character character = Character.get(this.player);
 
                 PlayerProfile profile = this.player.getPlayerProfile();
                 PlayerTextures textures = profile.getTextures();
@@ -531,8 +544,7 @@ public class SkinData extends BukkitRunnable {
             holder.displayCurrentPage();
         }
 
-        if (this.characterUUID != null && !this.characterUUID.isEmpty() && this.uniformHash == null
-                && priority == SkinQueue.PRIO_LOAD) {
+        if (this.uniformHash == null && priority == SkinQueue.PRIO_LOAD) {
             SneakyCharacterManager.getInstance().getLogger().info("Skin Update (Cache Persistence): [" + this.player.getName() + "," + characterName + "," + url + "]");
         }
 
@@ -556,7 +568,11 @@ public class SkinData extends BukkitRunnable {
     }
 
     public String getCharacterUUID() {
-        return characterUUID;
+        return characterKey.characterId();
+    }
+
+    public CharacterKey getCharacterKey() {
+        return characterKey;
     }
 
     public boolean isSlim() {
@@ -607,7 +623,8 @@ public class SkinData extends BukkitRunnable {
         map.put("priority", priority);
         map.put("player", player != null ? player.getName() : "null");
         map.put("characterName", characterName != null ? ChatUtility.stripFormatting(characterName) : "null");
-        map.put("characterUUID", characterUUID);
+        map.put("characterUUID", characterKey.characterId());
+        map.put("owner", characterKey.owner().toString());
         map.put("processing", processing);
         map.put("jobid", jobid);
         map.put("lastPollTime", lastPollTime);
@@ -657,31 +674,43 @@ public class SkinData extends BukkitRunnable {
         return inventory.equals(player.getOpenInventory().getTopInventory());
     }
 
-    public static SkinData getOrCreate(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, String characterUUID, String characterName) {
+    /**
+     * Returns the queued job for this skin URL, requester and character, or queues a new one. The character is matched by
+     * owner and ID, so a job for another owner's character with the same ID is never reused.
+     */
+    public static SkinData getOrCreate(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, CharacterKey characterKey, String characterName) {
         if (url == null || url.isEmpty()) return null;
-        List<SkinData> skinDataList = SneakyCharacterManager.getInstance().skinQueue.getQueue().values().stream().flatMap(List::stream).toList();
-        
+        SkinData existing = find(url, player, characterKey, priority, characterName);
+        if (existing != null) return existing;
+        return new SkinData(url, skinUUID, isSlim, priority, player, characterKey, characterName);
+    }
+
+    public static SkinData getOrCreate(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, CharacterKey characterKey, String characterName, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
+        if (url == null || url.isEmpty()) return null;
+        SkinData existing = find(url, player, characterKey, priority, characterName);
+        if (existing != null) {
+            // Update meta if this is for a menu display
+            existing.updateMeta(skullMeta, characterHead, inventory, index);
+            return existing;
+        }
+        return new SkinData(url, skinUUID, isSlim, priority, player, characterKey, characterName, skullMeta, characterHead, inventory, index);
+    }
+
+    @Nullable
+    private static SkinData find(String url, Player player, CharacterKey characterKey, int priority, String characterName) {
         boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
         if (debug) {
             String urlEnd = url.length() > 20 ? url.substring(url.length() - 20) : url;
-            SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] getOrCreate (7-arg) search for " + player.getName() + " | Char: " + characterUUID + " | URL: " + urlEnd);
+            SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] getOrCreate search for " + player.getName() + " | Char: " + characterKey + " | URL: " + urlEnd);
         }
 
-        for (SkinData skinData : skinDataList) {
-            String existingUrl = skinData.getUrl();
-            UUID existingPlayerId = skinData.getPlayer().getUniqueId();
-            String existingCharId = skinData.getCharacterUUID();
-
-            if (existingUrl.equals(url) && existingPlayerId.equals(player.getUniqueId()) && 
-                Objects.equals(existingCharId, characterUUID)) {
-                
+        for (SkinData skinData : SneakyCharacterManager.getInstance().skinQueue.getQueue().values().stream().flatMap(List::stream).toList()) {
+            if (skinData.getUrl().equals(url) && skinData.getPlayer().getUniqueId().equals(player.getUniqueId())
+                    && characterKey.equals(skinData.getCharacterKey())) {
                 if (debug) {
                     SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] MATCH FOUND for " + characterName + " (Existing P" + skinData.getPriority() + " -> New P" + priority + ")");
                 }
-
-                if (priority > skinData.getPriority()) {
-                    SneakyCharacterManager.getInstance().skinQueue.updatePriority(player, characterUUID, priority);
-                }
+                SneakyCharacterManager.getInstance().skinQueue.raise(skinData, priority);
                 return skinData;
             }
         }
@@ -689,45 +718,7 @@ public class SkinData extends BukkitRunnable {
         if (debug) {
             SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] NO MATCH - Creating new SkinData for " + characterName + " (P" + priority + ")");
         }
-        return new SkinData(url, skinUUID, isSlim, priority, player, characterUUID, characterName);
-    }
-
-    public static SkinData getOrCreate(@NotNull String url, @NotNull String skinUUID, boolean isSlim, int priority, Player player, String characterUUID, String characterName, SkullMeta skullMeta, ItemStack characterHead, Inventory inventory, int index) {
-        if (url == null || url.isEmpty()) return null;
-        List<SkinData> skinDataList = SneakyCharacterManager.getInstance().skinQueue.getQueue().values().stream().flatMap(List::stream).toList();
-        
-        boolean debug = SneakyCharacterManager.getInstance().getConfig().getBoolean("mineskin.debug", false);
-        if (debug) {
-            String urlEnd = url.length() > 20 ? url.substring(url.length() - 20) : url;
-            SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] getOrCreate search for " + player.getName() + " | Char: " + characterUUID + " | URL: " + urlEnd);
-        }
-
-        for (SkinData skinData : skinDataList) {
-            String existingUrl = skinData.getUrl();
-            UUID existingPlayerId = skinData.getPlayer().getUniqueId();
-            String existingCharId = skinData.getCharacterUUID();
-
-            if (existingUrl.equals(url) && existingPlayerId.equals(player.getUniqueId()) && 
-                Objects.equals(existingCharId, characterUUID)) {
-                
-                if (debug) {
-                    SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] MATCH FOUND for " + characterName + " (Existing P" + skinData.getPriority() + " -> New P" + priority + ")");
-                }
-
-                // Update meta if this is for a menu display
-                skinData.updateMeta(skullMeta, characterHead, inventory, index);
-
-                if (priority > skinData.getPriority()) {
-                    SneakyCharacterManager.getInstance().skinQueue.updatePriority(player, characterUUID, priority);
-                }
-                return skinData;
-            }
-        }
-        
-        if (debug) {
-             SneakyCharacterManager.getInstance().getLogger().info("[SkinQueue Debug] NO MATCH - Creating new SkinData for " + characterName + " (P" + priority + ")");
-        }
-        return new SkinData(url, skinUUID, isSlim, priority, player, characterUUID, characterName, skullMeta, characterHead, inventory, index);
+        return null;
     }
 
 

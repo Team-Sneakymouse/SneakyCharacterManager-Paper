@@ -2,6 +2,7 @@ package net.sneakycharactermanager.paper.listeners;
 
 import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterLoader;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
@@ -28,8 +29,8 @@ class ConnectionSkinSessionTest {
             UUID other = UUID.randomUUID();
             Player otherPlayer = mock(Player.class);
             when(otherPlayer.getUniqueId()).thenReturn(other);
-            f.plugin.skinStateManager.record(otherPlayer, "Other", "other", "sig", "char", "url", false);
-            var old = f.plugin.skinStateManager.record(f.player, "Old uniform", "old", "old-sig", "char", "old-url", true);
+            f.plugin.skinStateManager.record(otherPlayer, "Other", "other", "sig", new CharacterKey(other, "char"), "url", false);
+            var old = f.plugin.skinStateManager.record(f.player, "Old uniform", "old", "old-sig", f.key, "old-url", true);
             new ConnectionEventListeners().onPlayerJoin(new PlayerJoinEvent(f.player, (net.kyori.adventure.text.Component) null));
             assertTrue(CharacterLoader.loadCharacter(f.character));
             f.skins.verify(() -> SkinUtil.applySkin(f.player, new ProfileProperty("textures", "database-texture", "database-signature")));
@@ -42,7 +43,7 @@ class ConnectionSkinSessionTest {
     @Test void sameDatabaseSessionStillRestoresUniformOnCharacterReload() {
         try (Fixture f = new Fixture(mock(DatabaseBackend.class))) {
             new ConnectionEventListeners().onPlayerJoin(new PlayerJoinEvent(f.player, (net.kyori.adventure.text.Component) null));
-            var uniform = f.plugin.skinStateManager.record(f.player, "Uniform", "uniform", "uniform-sig", "char", "url", true);
+            var uniform = f.plugin.skinStateManager.record(f.player, "Uniform", "uniform", "uniform-sig", f.key, "url", true);
             assertTrue(CharacterLoader.loadCharacter(f.character));
             f.skins.verify(() -> SkinUtil.applySkin(f.player, new ProfileProperty("textures", "uniform", "uniform-sig")));
             assertSame(uniform, f.plugin.skinStateManager.current(f.uuid));
@@ -50,7 +51,7 @@ class ConnectionSkinSessionTest {
     }
     @Test void legacyJoinKeepsExistingSkinHistoryBehavior() {
         try (Fixture f = new Fixture(null)) {
-            var old = f.plugin.skinStateManager.record(f.player, "Uniform", "old", "sig", "char", "url", true);
+            var old = f.plugin.skinStateManager.record(f.player, "Uniform", "old", "sig", f.key, "url", true);
             new ConnectionEventListeners().onPlayerJoin(new PlayerJoinEvent(f.player, (net.kyori.adventure.text.Component) null));
             assertSame(old, f.plugin.skinStateManager.current(f.uuid));
             assertTrue(CharacterLoader.loadCharacter(f.character));
@@ -59,6 +60,7 @@ class ConnectionSkinSessionTest {
     }
     private static class Fixture implements AutoCloseable {
         final UUID uuid = UUID.randomUUID();
+        final CharacterKey key = new CharacterKey(uuid, "char");
         final Player player = mock(Player.class);
         final Character character = mock(Character.class);
         final SneakyCharacterManager plugin = mock(SneakyCharacterManager.class);
@@ -79,6 +81,7 @@ class ConnectionSkinSessionTest {
             when(player.getUniqueId()).thenReturn(uuid);
             when(character.getPlayer()).thenReturn(player);
             when(character.getCharacterUUID()).thenReturn("char");
+            when(character.getKey()).thenReturn(key);
             when(character.getName()).thenReturn("Character");
             when(character.getSkin()).thenReturn("http://textures.minecraft.net/texture/database");
             when(character.getTexture()).thenReturn("database-texture");

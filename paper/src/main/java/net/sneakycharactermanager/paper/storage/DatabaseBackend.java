@@ -4,12 +4,16 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.directory.CharacterDirectory;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.admincommands.CommandTitleGrant;
 import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.character.HolderRegistry;
+import net.sneakycharactermanager.paper.handlers.character.LoadReason;
 import net.sneakycharactermanager.paper.handlers.skins.SkinCache;
 import net.sneakycharactermanager.paper.listeners.ProxyMessageListener;
 import net.sneakycharactermanager.paper.handlers.skins.SkinFetching;
 import com.sneakyutils.util.TextUtility;
+import org.jetbrains.annotations.ApiStatus;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -22,6 +26,10 @@ public final class DatabaseBackend implements CharacterBackend {
     private final RevisionFence revisions = new RevisionFence();
     private final Set<Player> joining = Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<Player> failedJoins = Collections.newSetFromMap(new IdentityHashMap<>());
+    /** Borrows submitted and not yet applied on the main thread, by character. Read on storage threads. */
+    private final Map<CharacterKey, Integer> borrowsInFlight = new ConcurrentHashMap<>();
+    /** Callers' futures not completed yet; {@link #close} fails them. Main thread only. */
+    private final Set<CompletableFuture<?>> awaiting = Collections.newSetFromMap(new IdentityHashMap<>());
     private final ThreadPoolExecutor http;
     private CompletableFuture<?> skinBarrier = CompletableFuture.completedFuture(null);
     private long titleCompletion;
@@ -38,35 +46,70 @@ public final class DatabaseBackend implements CharacterBackend {
         }, new ThreadPoolExecutor.AbortPolicy());
         // Player-supplied URLs go through the shared safe fetcher (issue #28); policy is read per fetch.
         operations = new DatabaseOperations(store, url -> CompletableFuture.supplyAsync(
-                () -> SkinFetching.skinId(url, SkinFetching.policy()), http));
+                () -> SkinFetching.skinId(url, SkinFetching.policy()), http), this::heldElsewhere);
         operations.ready().whenComplete((unused, error) -> {
             if (error != null && !closed) plugin.getLogger().severe(
                     "SneakyDB SCM initialization failed. Apply db/001_scm.sql, check SneakyDB, then restart; no legacy fallback.");
         });
     }
+    /**
+     * How a request ended on the main thread, for a caller that waits on it ({@link #loadBorrowed}). A storage failure,
+     * or SCM closing, completes the caller's future exceptionally instead.
+     */
+    @ApiStatus.Internal
+    public enum Outcome {
+        /** Delivered; it loaded nothing. */
+        DONE,
+        /** A character was put on its body. */
+        LOADED,
+        /** A character arrived but its load was refused (holder rule, cancelled {@code LoadCharacterEvent}). */
+        REFUSED,
+        /** The character doesn't exist or is disabled. */
+        NOT_FOUND,
+        /**
+         * Dropped before it did anything: the body, owner or requester logged in or out, a newer selection for the
+         * body replaced it, or the owner's record changed while it was read.
+         */
+        INTERRUPTED
+    }
+
     @Override public void submit(Player requester, CharacterRequest request) {
-        if (closed) return;
+        submit(requester, request, null);
+    }
+    /** {@code outcome}, if given, is completed exactly once, on the main thread, however the request ends. */
+    private void submit(Player requester, CharacterRequest request, CompletableFuture<Outcome> outcome) {
+        if (closed) { fail(outcome, new IllegalStateException("SCM storage closed")); return; }
         if (!Bukkit.isPrimaryThread()) {
             Bukkit.getScheduler().runTask(plugin, () -> {
-                if (requester == null || Bukkit.getPlayer(requester.getUniqueId()) == requester) submit(requester, request);
+                if (requester == null || Bukkit.getPlayer(requester.getUniqueId()) == requester) submit(requester, request, outcome);
+                else end(outcome, Outcome.INTERRUPTED);
             });
             return;
         }
         if (request instanceof CharacterRequest.Quit quit) {
             Player player = Bukkit.getPlayer(UUID.fromString(quit.owner()));
             if (player != null) disconnect(player);
+            end(outcome, Outcome.DONE);
             return;
         }
         String owner = DatabaseOperations.owner(request);
         Player target = owner.isEmpty() ? null : Bukkit.getPlayer(UUID.fromString(owner));
         String name = target != null ? target.getName() : "";
+        Player destination = request instanceof CharacterRequest.Borrow r ? Bukkit.getPlayer(UUID.fromString(r.body())) : target;
+        // Without an online body there is no session to fence the result to; it could land on a later session.
+        if (request instanceof CharacterRequest.Borrow && destination == null) { end(outcome, Outcome.INTERRUPTED); return; }
         if (request instanceof CharacterRequest.Join && target != null) {
-            if (failedJoins.contains(target) || !joining.add(target)) return;
+            if (failedJoins.contains(target) || !joining.add(target)) { end(outcome, Outcome.INTERRUPTED); return; }
         }
+        // Counts as held from now on, so an owner's pick queued behind it can't move last-played to it.
+        CharacterKey borrowing = request instanceof CharacterRequest.Borrow r ? CharacterKey.of(r.owner(), r.character()) : null;
+        if (borrowing != null) borrowsInFlight.merge(borrowing, 1, Integer::sum);
+        if (outcome != null) awaiting.add(outcome);
         boolean selection = request instanceof CharacterRequest.Join || request instanceof CharacterRequest.Select
-                || request instanceof CharacterRequest.SelectByName || request instanceof CharacterRequest.Create;
+                || request instanceof CharacterRequest.SelectByName || request instanceof CharacterRequest.Create
+                || request instanceof CharacterRequest.Borrow;
         boolean menuRequest = request instanceof CharacterRequest.ListCharacters r && r.requester().endsWith("|openGUI");
-        Player effectPlayer = selection ? target : requester;
+        Player effectPlayer = selection ? destination : requester;
         String lane = selection ? "selection" : menuRequest ? "menu" : request instanceof CharacterRequest.ListCharacters ? "list:" + owner
                 : request instanceof CharacterRequest.ResolveSkin r ? "skin:" + r.requestId() : request.getClass().getSimpleName() + ":" + owner;
         // Grants have non-replaceable permission/equip effects, unlike latest-wins UI requests.
@@ -83,22 +126,23 @@ public final class DatabaseBackend implements CharacterBackend {
         String queueKey = request instanceof CharacterRequest.RegisterSkin r ? "$skin:" + r.id()
                 : owner.isEmpty() ? "$global" : owner;
         revisions.begin(owner);
-        if (request instanceof CharacterRequest.Update || request instanceof CharacterRequest.DefaultSkin) revisions.changed(owner);
+        // A moved pointer counts too: a load of the owner read before it lands is stale (see writeLastPlayed).
+        if (request instanceof CharacterRequest.Update || request instanceof CharacterRequest.DefaultSkin
+                || request instanceof CharacterRequest.SetLastPlayed) revisions.changed(owner);
         long changes = revisions.changes(owner);
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
-        CompletableFuture<List<DatabaseOperations.Effect>> future = queue.submit(queueKey, () -> {
-            long remaining = deadline - System.nanoTime();
-            if (remaining <= 0) return CompletableFuture.failedFuture(new TimeoutException("SCM request expired in queue"));
-            return operations.ready().thenCompose(unused -> barrier).thenCompose(unused -> operations.run(request, name, deadline))
-                    .orTimeout(remaining, TimeUnit.NANOSECONDS);
-        });
+        CompletableFuture<List<DatabaseOperations.Effect>> future = enqueue(queueKey, barrier, deadline,
+                () -> operations.run(request, name, deadline));
         // This is an ordering barrier, not authority to fail unrelated lanes. Keep the
         // original future exceptional for its requester and OwnerQueue's no-retry fence.
         if (request instanceof CharacterRequest.RegisterSkin)
             skinBarrier = CompletableFuture.allOf(barrier, future.handle((unused, error) -> null));
         future.whenComplete((effects, error) -> {
-            if (closed) return;
+            if (closed) return; // close() already failed the caller's outcome
             Bukkit.getScheduler().runTask(plugin, () -> {
+                // Every return below before the effects is a drop: nothing was applied.
+                Outcome result = Outcome.INTERRUPTED;
+                Throwable failure = null;
                 try {
                 if (closed) return;
                 if (request instanceof CharacterRequest.Join && target != null) {
@@ -108,39 +152,83 @@ public final class DatabaseBackend implements CharacterBackend {
                 }
                 if (ticket != null && !fence.current(ticket, Bukkit.getPlayer(effectPlayer.getUniqueId()))) return;
                 if (requester != null && Bukkit.getPlayer(requester.getUniqueId()) != requester) return;
+                // The owner logged in or out while this was in flight (for a borrow too).
                 if (!owner.isEmpty() && Bukkit.getPlayer(UUID.fromString(owner)) != target) return;
                 if (ticket != null) fence.release(ticket);
                 if (menuRequest && (requester == null || !plugin.selectionMenu.menuExists(requester.getUniqueId().toString()))) return;
                 if (error != null) {
+                    failure = error;
                     plugin.getLogger().warning("SCM database operation failed (" + request.getClass().getSimpleName()
                             + "); owner fenced after uncertain outcome. Check database and restart. No automatic retry or YAML fallback.");
                     if (requester != null) requester.sendMessage(TextUtility.INSTANCE.convertToComponent(
                             "&cCharacter storage unavailable. No changes are being retried; contact an administrator."));
                     if (request instanceof CharacterRequest.ResolveSkin r) SkinCache.completeResolveOnMainThread(r.requestId(),
                             new SkinCache.ResolveResult(SkinCache.ResolveStatus.ERROR, "", "", "", "", "Database unavailable"));
-                    if (request instanceof CharacterRequest.CreateTitle r) CommandTitleGrant.handleCreateResult(r.admin(), r.target(), false, "", "", "failed");
+                    if (request instanceof CharacterRequest.CreateTitle r) CommandTitleGrant.handleCreateResult(r.admin(), r.target(), false, r.code(), r.display(), "failed");
                     return;
                 }
+                result = Outcome.DONE;
                 for (DatabaseOperations.Effect effect : effects) {
                     // A newer local mutation can have no Listed effect (notably skins).
                     if (effect instanceof DatabaseOperations.Loaded loaded
-                            && (!revisions.unchanged(owner, changes) || !revisions.accept(loaded.source(), loaded.revision()))) continue;
+                            && (!revisions.unchanged(owner, changes) || !revisions.accept(loaded.source(), loaded.revision()))) {
+                        result = Outcome.INTERRUPTED;
+                        continue;
+                    }
                     if (effect instanceof DatabaseOperations.Listed listed && !revisions.accept(listed.owner(), listed.revision())) continue;
-                    apply(effect);
+                    Outcome applied = apply(effect);
+                    if (applied != Outcome.DONE) result = applied;
                 }
-                } finally { revisions.finish(owner); }
+                } finally {
+                    revisions.finish(owner);
+                    if (borrowing != null) borrowsInFlight.computeIfPresent(borrowing, (k, n) -> n == 1 ? null : n - 1);
+                    if (failure != null) fail(outcome, failure);
+                    else if (!closed) end(outcome, result);
+                }
             });
         });
     }
-    private void apply(DatabaseOperations.Effect effect) {
+    /** Runs {@code work} in {@code queueKey}'s turn, once storage is ready and {@code barrier} has passed. */
+    private <T> CompletableFuture<T> enqueue(String queueKey, CompletableFuture<?> barrier, long deadline,
+            java.util.function.Supplier<CompletableFuture<T>> work) {
+        return queue.submit(queueKey, () -> {
+            long remaining = deadline - System.nanoTime();
+            if (remaining <= 0) return CompletableFuture.failedFuture(new TimeoutException("SCM request expired in queue"));
+            return operations.ready().thenCompose(unused -> barrier).thenCompose(unused -> work.get())
+                    .orTimeout(remaining, TimeUnit.NANOSECONDS);
+        });
+    }
+    private void end(CompletableFuture<Outcome> outcome, Outcome result) {
+        if (outcome == null) return;
+        awaiting.remove(outcome);
+        outcome.complete(result);
+    }
+    private void fail(CompletableFuture<?> outcome, Throwable error) {
+        if (outcome == null) return;
+        awaiting.remove(outcome);
+        outcome.completeExceptionally(error);
+    }
+    /** Applies one storage result on the main thread; says whether it loaded a character. */
+    private Outcome apply(DatabaseOperations.Effect effect) {
         switch (effect) {
             case DatabaseOperations.Listed r -> CharacterResultEffects.handleListCompletion("syncCharacters", r.owner(), r.requester(),
-                    r.characters().stream().map(c -> character(r.owner(), c, r.uniforms())).toList());
+                    r.characters().stream().map(c -> character(r.owner(), null, c, r.uniforms())).toList());
             case DatabaseOperations.Loaded r -> {
-                Character character = character(r.destination(), r.character(), r.uniforms());
+                Character character = character(r.source(), Bukkit.getPlayer(UUID.fromString(r.destination())), r.character(), r.uniforms());
+                if (r.borrowed()) {
+                    // No lock-permission check and no default-skin initialisation: the body isn't the owner.
+                    return character.load(LoadReason.BORROW) ? Outcome.LOADED : Outcome.REFUSED;
+                }
                 CharacterResultEffects.load(character, r.forced());
                 if (r.character().skin().isEmpty() && r.character().skinId().isEmpty())
                     CharacterResultEffects.defaultSkin(r.destination(), r.character().id());
+            }
+            case DatabaseOperations.HeldElsewhere r -> {
+                Player owner = Bukkit.getPlayer(UUID.fromString(r.owner()));
+                if (owner == null || !CharacterResultEffects.canLoad(owner, r.character())) return Outcome.DONE;
+                // Freed since the check on the storage thread: pick it again as a normal switch.
+                if (!HolderRegistry.ownerPickedHeld(owner, CharacterKey.of(r.owner(), r.character())))
+                    submit(owner, new CharacterRequest.Select(r.owner(), r.character()));
             }
             case DatabaseOperations.Catalog r -> {
                 // SCM title creation is append-only and canonical displays never change.
@@ -160,6 +248,10 @@ public final class DatabaseBackend implements CharacterBackend {
                         "&aThe following character has been deleted: &b`" + r.name() + "`&a (" + r.id() + ")"));
             }
             case DatabaseOperations.NotFound r -> {
+                if (r.borrowed()) {
+                    plugin.getLogger().warning("Character to borrow does not exist or is disabled; nothing was loaded onto " + r.player());
+                    return Outcome.NOT_FOUND;
+                }
                 Player player = Bukkit.getPlayer(UUID.fromString(r.player()));
                 if (player != null) {
                     player.sendMessage(TextUtility.INSTANCE.convertToComponent("&aNo character found. Loading character menu..."));
@@ -167,9 +259,10 @@ public final class DatabaseBackend implements CharacterBackend {
                 }
             }
         }
+        return Outcome.DONE;
     }
-    private Character character(String destination, CharacterView c, List<Map<String,Object>> uniforms) {
-        Character character = new Character(destination, c.id(), c.name(), c.skin(), c.skinUuid(), c.texture(), c.signature(),
+    private Character character(String owner, Player wearer, CharacterView c, List<Map<String,Object>> uniforms) {
+        Character character = new Character(CharacterKey.of(owner, c.id()), wearer, c.name(), c.skin(), c.skinUuid(), c.texture(), c.signature(),
                 c.slim(), c.tags(), c.gender(), c.title());
         for (Map<String,Object> row : uniforms) {
             if (SqlStore.text(row, "base_url").equals(c.uniformBase())) character.addUniformVariant(SqlStore.text(row, "uniform_hash"),
@@ -178,10 +271,81 @@ public final class DatabaseBackend implements CharacterBackend {
         return character;
     }
     @Override public CharacterDirectory directory() { return directory; }
+    /**
+     * Internal seam under {@code Puppets.puppet}: loads {@code key}'s character onto {@code body}, which need not be
+     * its owner. Reads the owner's snapshot through the owner's queue; never writes last-played for either player,
+     * never checks the character-lock permission, never creates the owner. The gameplay file and every later edit go
+     * to the owner (see {@link Character}). Refused if any body (the owner included) already wears it
+     * ({@link HolderRegistry}).
+     *
+     * <p>The future completes on the main thread with how the borrow ended ({@link Outcome#LOADED} only if the body
+     * now wears it), or exceptionally if storage failed or closed. It never stays pending.
+     */
+    @ApiStatus.Internal
+    public CompletableFuture<Outcome> loadBorrowed(Player body, CharacterKey key) {
+        CompletableFuture<Outcome> outcome = new CompletableFuture<>();
+        submit(null, new CharacterRequest.Borrow(body.getUniqueId().toString(), key.owner().toString(), key.characterId()), outcome);
+        return outcome;
+    }
+    /**
+     * Loads {@code body}'s own last-played character after a release. Unlike a login's repeated join, this one is never
+     * dropped as a duplicate: a join still on its way (an earlier release's return, since replaced by a puppet) is
+     * stale by now, and this newer one replaces it.
+     */
+    @ApiStatus.Internal
+    public void loadOwnLastPlayed(Player body) {
+        joining.remove(body);
+        submit(body, new CharacterRequest.Join(body.getUniqueId().toString()));
+    }
+    /**
+     * Sets {@code key}'s owner's last-played character to it, through the owner's queue, after a swap put it on
+     * {@code body}, its owner. Loads nothing. Any load of that owner's characters still on its way was read before the
+     * swap and is dropped, so it can't put another character on the owner after the pointer moved. A failure is
+     * handled like any storage failure: the owner is told storage is unavailable and the owner's storage is fenced. The
+     * pointer then still names the character they wore before; if another body wears that one when they next join,
+     * the holder rule's owner-join exception gives it back to them.
+     */
+    @ApiStatus.Internal
+    public void writeLastPlayed(Player body, CharacterKey key) {
+        if (!body.getUniqueId().equals(key.owner())) throw new IllegalArgumentException(body.getName() + " doesn't own " + key);
+        submit(body, new CharacterRequest.SetLastPlayed(key.owner().toString(), key.characterId()));
+    }
+    /**
+     * Internal seam under {@code CharacterLists}: {@code owner}'s enabled characters and last-played pointer, online or
+     * offline. Reads only, in the owner's queue turn (so it sees the owner's queued edits); creates nothing and applies
+     * nothing. Completes on the main thread, or exceptionally if storage failed or closed.
+     */
+    @ApiStatus.Internal
+    public CompletableFuture<DatabaseOperations.Roster> listCharacters(UUID owner) {
+        CompletableFuture<DatabaseOperations.Roster> result = new CompletableFuture<>();
+        if (closed) { result.completeExceptionally(new IllegalStateException("SCM storage closed")); return result; }
+        awaiting.add(result);
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
+        enqueue(owner.toString(), skinBarrier, deadline, () -> operations.roster(owner.toString(), deadline)).whenComplete((roster, error) -> {
+            if (closed) return; // close() already failed it
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (closed) return;
+                if (error != null) {
+                    plugin.getLogger().warning("SCM database operation failed (character list); owner fenced after uncertain outcome. Check database and restart.");
+                    fail(result, error);
+                    return;
+                }
+                awaiting.remove(result);
+                result.complete(roster);
+            });
+        });
+        return result;
+    }
+    /** For a /char pick on a storage thread: another body wears the character, or a borrow of it is on its way. */
+    private boolean heldElsewhere(CharacterKey key) {
+        return HolderRegistry.heldAwayFromOwner(key) || borrowsInFlight.containsKey(key);
+    }
     @Override public void disconnect(Player player) {
         fence.forget(player.getUniqueId().toString()); joining.remove(player); failedJoins.remove(player);
     }
     @Override public void close() {
-        closed = true; fence.close(); revisions.clear(); queue.close(); operations.close(); http.shutdownNow(); joining.clear(); failedJoins.clear();
+        closed = true; fence.close(); revisions.clear(); queue.close(); operations.close(); http.shutdownNow(); joining.clear(); failedJoins.clear(); borrowsInFlight.clear();
+        // Nothing still on its way will be delivered now; tell whoever waits on it.
+        for (CompletableFuture<?> waiting : List.copyOf(awaiting)) fail(waiting, new IllegalStateException("SCM storage closed"));
     }
 }

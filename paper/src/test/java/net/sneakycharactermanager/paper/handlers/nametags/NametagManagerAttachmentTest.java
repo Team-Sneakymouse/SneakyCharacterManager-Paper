@@ -306,6 +306,51 @@ class NametagManagerAttachmentTest {
     }
 
     @Test
+    void aSwapReTextsTheSamePlateNowAndAgainNextTickForNewTrackers() {
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        plate.trackers.add(a);
+        f.ticks((int) NametagManager.INITIAL_TEXT_DELAY_TICKS);
+        clearInvocations(plate.entity);
+        when(f.characterOf(owner).getDisplayName()).thenReturn("Swapped In");
+
+        f.manager.showWornCharacter(owner);
+
+        verify(plate.entity).updatePackets("Swapped In", null);
+        verify(plate.entity).sendCharacter(a); // now, to who already tracks it
+        plate.trackers.add(b); // starts tracking the plate at its new spot
+        f.tick();
+        verify(plate.entity).sendCharacter(b);
+        assertSame(plate, f.plate(owner), "the same plate, not rebuilt");
+        assertEquals(1, f.plates.size());
+    }
+
+    @Test
+    void aSwapShowsNoNameOnABodyAPlacementListenerReleased() {
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        // A mount listener releases the owner while the swap re-places the plate.
+        when(plate.entity.mountOn(any(Entity.class))).thenAnswer(invocation -> {
+            f.removeCharacter(owner);
+            f.manager.unnicknamePlayer(owner);
+            return true;
+        });
+
+        f.manager.showWornCharacter(owner);
+
+        assertNull(f.manager.getNickname(owner), "no plate rebuilt with the character it no longer wears");
+        assertEquals(1, f.plates.size());
+    }
+
+    @Test
+    void aSwapBuildsAPlateForAnOwnerWithout() {
+        f.manager.showWornCharacter(owner);
+
+        assertNotNull(f.plate(owner));
+        verify(f.plate(owner).entity).updatePackets("Owner (character)", null);
+    }
+
+    @Test
     void permissionRefreshDoesNotCancelPendingInitialText() {
         knightTitleEquipped();
         f.nick(owner);

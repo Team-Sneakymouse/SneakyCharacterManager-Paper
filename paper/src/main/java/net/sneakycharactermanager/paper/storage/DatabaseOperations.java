@@ -3,6 +3,8 @@ package net.sneakycharactermanager.paper.storage;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.common.titles.TitleKeys;
 import net.sneakycharactermanager.proxy.common.SkinContentHash;
 import net.sneakycharactermanager.proxy.common.SkinFetchException;
@@ -14,18 +16,27 @@ public final class DatabaseOperations {
     public record Listed(String owner, String requester, long revision, List<CharacterView> characters,
                          List<Map<String,Object>> uniforms) implements Effect {}
     public record Loaded(String destination, String source, long revision, CharacterView character, boolean forced,
-                         List<Map<String,Object>> uniforms) implements Effect {}
-    public record NotFound(String player) implements Effect {}
+                         boolean borrowed, List<Map<String,Object>> uniforms) implements Effect {}
+    public record NotFound(String player, boolean borrowed) implements Effect {}
+    /** The owner picked a character another body wears; nothing was selected, so last-played is unchanged. */
+    public record HeldElsewhere(String owner, String character) implements Effect {}
     public record Deleted(String player, String id, String name) implements Effect {}
     public record Catalog(Map<String,String> titles) implements Effect {}
     public record TitleCreated(String admin, String target, boolean success, String code, String display, String error) implements Effect {}
     public record Resolved(String requestId, String status, String id, String url, String texture, String signature, String error) implements Effect {}
     public record Found(String requester, List<String> entries) implements Effect {}
     private record Snapshot(String lastPlayed, long revision, List<CharacterView> characters, List<Map<String,Object>> uniforms) {}
+    /** An owner's enabled characters in {@code /char} order, and their last-played character ID (empty if none). */
+    public record Roster(String lastPlayed, List<CharacterView> characters) {}
     private final SqlStore store;
     private final Function<String, CompletableFuture<String>> hash;
+    /** True if a body other than the owner wears the character (or is about to). Called on storage threads. */
+    private final Predicate<CharacterKey> heldElsewhere;
     public DatabaseOperations(SqlStore store, Function<String, CompletableFuture<String>> hash) {
-        this.store = store; this.hash = hash;
+        this(store, hash, key -> false);
+    }
+    public DatabaseOperations(SqlStore store, Function<String, CompletableFuture<String>> hash, Predicate<CharacterKey> heldElsewhere) {
+        this.store = store; this.hash = hash; this.heldElsewhere = heldElsewhere;
     }
     public CompletableFuture<Void> ready() { return store.ready(); }
     public void close() { store.close(); }
@@ -35,6 +46,8 @@ public final class DatabaseOperations {
             case CharacterRequest.Join r -> r.owner();
             case CharacterRequest.ListCharacters r -> r.owner();
             case CharacterRequest.Select r -> r.owner();
+            case CharacterRequest.Borrow r -> r.owner();
+            case CharacterRequest.SetLastPlayed r -> r.owner();
             case CharacterRequest.SelectByName r -> r.owner();
             case CharacterRequest.Create r -> r.owner();
             case CharacterRequest.Update r -> r.owner();
@@ -43,11 +56,17 @@ public final class DatabaseOperations {
         };
     }
     public CompletableFuture<List<Effect>> run(CharacterRequest request, String playerName, long deadline) {
-        return new DatabaseOperations(store.withDeadline(deadline), hash).run(request, playerName);
+        return new DatabaseOperations(store.withDeadline(deadline), hash, heldElsewhere).run(request, playerName);
+    }
+    /** Reads {@code owner}'s character list. Reads only: an owner storage doesn't know is not created. */
+    public CompletableFuture<Roster> roster(String owner, long deadline) {
+        return new DatabaseOperations(store.withDeadline(deadline), hash, heldElsewhere).snapshot(owner)
+                .thenApply(s -> new Roster(s.lastPlayed(), s.characters().stream().filter(CharacterView::enabled).toList()));
     }
     public CompletableFuture<List<Effect>> run(CharacterRequest request, String playerName) {
         String owner = owner(request);
-        CompletableFuture<?> initialized = owner.isEmpty() ? CompletableFuture.completedFuture(null)
+        // A borrow only reads: it must never create the owner it reads from.
+        CompletableFuture<?> initialized = owner.isEmpty() || request instanceof CharacterRequest.Borrow ? CompletableFuture.completedFuture(null)
                 : store.ensureOwner(owner, playerName);
         return initialized.thenCompose(unused -> dispatch(request, playerName));
     }
@@ -61,9 +80,18 @@ public final class DatabaseOperations {
                 String id = s.characters().stream().filter(c -> c.enabled() && !c.id().equals(s.lastPlayed())
                     && c.plainName().toLowerCase(Locale.ROOT).startsWith(r.name().toLowerCase(Locale.ROOT)))
                     .map(CharacterView::id).findFirst().orElse("");
-                if (id.isEmpty()) return done(new NotFound(r.owner()));
+                if (id.isEmpty()) return done(new NotFound(r.owner(), false));
                 return load(r.owner(), r.owner(), id, false, s);
             });
+            // Owner's snapshot only: no select, so neither the body's nor the owner's last-played changes.
+            // A disabled character is deleted as far as /char is concerned, so it can't be borrowed either.
+            case CharacterRequest.Borrow r -> snapshot(r.owner()).thenApply(s -> {
+                CharacterView c = s.characters().stream().filter(ch -> ch.id().equals(r.character()) && ch.enabled()).findFirst().orElse(null);
+                return List.<Effect>of(c == null ? new NotFound(r.body(), true)
+                        : new Loaded(r.body(), r.owner(), s.revision(), c, true, true, s.uniforms()));
+            });
+            // After a swap the owner already wears it: only the pointer moves, nothing is loaded.
+            case CharacterRequest.SetLastPlayed r -> empty(store.select(r.owner(), r.character()));
             case CharacterRequest.Create r -> {
                 String id = UUID.randomUUID().toString();
                 yield store.create(r.owner(), id, name, "", "", false)
@@ -95,9 +123,19 @@ public final class DatabaseOperations {
     }
     private CompletableFuture<List<Effect>> load(String destination, String owner, String id, boolean forced, Snapshot s) {
         CharacterView c = s.characters().stream().filter(ch -> ch.id().equals(id)).findFirst().orElse(null);
-        if (c == null) return done(new NotFound(destination));
-        Loaded loaded = new Loaded(destination, owner, s.revision(), c, forced, s.uniforms());
+        if (c == null) return done(new NotFound(destination, false));
+        // A /char pick (not forced) of a character another body wears must not move last-played: the owner's next
+        // join would otherwise take it back from the holder. A join (forced) is the owner taking it back on purpose.
+        if (!forced && heldElsewhere(owner, id)) return done(new HeldElsewhere(owner, id));
+        Loaded loaded = new Loaded(destination, owner, s.revision(), c, forced, false, s.uniforms());
         return store.select(owner, id).thenApply(unused -> List.of(loaded, list(owner, owner, s)));
+    }
+    private boolean heldElsewhere(String owner, String id) {
+        try {
+            return heldElsewhere.test(CharacterKey.of(owner, id));
+        } catch (IllegalArgumentException e) {
+            return false; // not a key anyone can wear; throwing here would fence the owner's storage
+        }
     }
     private CompletableFuture<List<Effect>> update(CharacterRequest.Update r) {
         Object[] v = r.values();

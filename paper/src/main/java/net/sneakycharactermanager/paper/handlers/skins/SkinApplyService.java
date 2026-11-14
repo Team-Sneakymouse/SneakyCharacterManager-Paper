@@ -2,8 +2,9 @@ package net.sneakycharactermanager.paper.handlers.skins;
 
 import com.destroystokyo.paper.profile.ProfileProperty;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.handlers.character.Character;
-import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
+import net.sneakycharactermanager.paper.handlers.character.CharacterUpdates;
 import com.sneakyutils.util.TextUtility;
 import net.sneakycharactermanager.paper.util.SkinUtil;
 import org.bukkit.Bukkit;
@@ -15,7 +16,11 @@ public final class SkinApplyService {
 
     private SkinApplyService() {}
 
-    public static void requestSkin(Player player, String characterUUID, String sourceUrl, @Nullable Boolean slim,
+    /**
+     * Resolves {@code sourceUrl} and applies it for {@code characterKey}. The key is fixed now: however late the result
+     * arrives, it is saved to this character and only put on {@code player} if the player still wears it.
+     */
+    public static void requestSkin(Player player, CharacterKey characterKey, String sourceUrl, @Nullable Boolean slim,
                                    int priority, @Nullable SkinApplyContext ctx) {
         if (sourceUrl == null || sourceUrl.isEmpty() || player == null) return;
         SkinApplyContext context = ctx == null ? SkinApplyContext.defaults() : ctx;
@@ -35,11 +40,11 @@ public final class SkinApplyService {
             }
             final SkinCache.ResolveResult resultFinal = resolved;
             Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () ->
-                    handleResolveResult(player, characterUUID, resolveUrl, slimValue, priority, context, resultFinal));
+                    handleResolveResult(player, characterKey, resolveUrl, slimValue, priority, context, resultFinal));
         });
     }
 
-    private static void handleResolveResult(Player player, String characterUUID, String resolveUrl, boolean slimValue,
+    private static void handleResolveResult(Player player, CharacterKey characterKey, String resolveUrl, boolean slimValue,
                                             int priority, SkinApplyContext context, SkinCache.ResolveResult result) {
         if (!player.isOnline()) return;
 
@@ -56,34 +61,33 @@ public final class SkinApplyService {
                 SneakyCharacterManager.getInstance().getLogger().warning(
                         "Skin cache HIT with empty texture for " + player.getName() + ": " + resolveUrl);
                 if (!SkinUtil.isMojangTextureUrl(resolveUrl)) {
-                    queueMineSkin(player, characterUUID, resolveUrl, slimValue, priority, context);
+                    queueMineSkin(player, characterKey, resolveUrl, slimValue, priority, context);
                 }
                 return;
             }
-            applyResolved(player, characterUUID, resolveUrl, result.skinId, result.mojangTextureUrl,
+            applyResolved(player, characterKey, resolveUrl, result.skinId, result.mojangTextureUrl,
                     property, priority, context, slimValue);
         } else {
-            queueMineSkin(player, characterUUID, resolveUrl, slimValue, priority, context, result.skinId);
+            queueMineSkin(player, characterKey, resolveUrl, slimValue, priority, context, result.skinId);
         }
     }
 
-    private static void queueMineSkin(Player player, String characterUUID, String sourceUrl, boolean slim,
+    private static void queueMineSkin(Player player, CharacterKey characterKey, String sourceUrl, boolean slim,
                                       int priority, SkinApplyContext context) {
-        queueMineSkin(player, characterUUID, sourceUrl, slim, priority, context, "");
+        queueMineSkin(player, characterKey, sourceUrl, slim, priority, context, "");
     }
 
-    private static void queueMineSkin(Player player, String characterUUID, String sourceUrl, boolean slim,
+    private static void queueMineSkin(Player player, CharacterKey characterKey, String sourceUrl, boolean slim,
                                       int priority, SkinApplyContext context, String knownSkinId) {
         Character character = Character.get(player);
-        String name = (character != null && character.getCharacterUUID().equals(characterUUID))
-                ? character.getName() : null;
+        String name = Character.isWearing(player, characterKey) ? character.getName() : null;
 
         SkinData sd;
         if (context.skullMeta() != null && context.characterHead() != null && context.inventory() != null) {
-            sd = SkinData.getOrCreate(sourceUrl, "", slim, priority, player, characterUUID, name,
+            sd = SkinData.getOrCreate(sourceUrl, "", slim, priority, player, characterKey, name,
                     context.skullMeta(), context.characterHead(), context.inventory(), context.index());
         } else {
-            sd = SkinData.getOrCreate(sourceUrl, "", slim, priority, player, characterUUID, name);
+            sd = SkinData.getOrCreate(sourceUrl, "", slim, priority, player, characterKey, name);
         }
 
         if (sd == null) return;
@@ -95,7 +99,7 @@ public final class SkinApplyService {
         }
     }
 
-    private static void applyResolved(Player player, String characterUUID, String sourceUrl, String skinId,
+    private static void applyResolved(Player player, CharacterKey characterKey, String sourceUrl, String skinId,
                                       String mojangUrl, ProfileProperty property, int priority,
                                       SkinApplyContext context, boolean slimFallback) {
         if (context.skullMeta() != null && context.characterHead() != null && context.inventory() != null) {
@@ -107,42 +111,48 @@ public final class SkinApplyService {
         }
 
         if (priority >= SkinQueue.PRIO_LOAD) {
-            SkinUtil.applySkin(player, property);
+            boolean slim = SkinUtil.isSlimModel(property, slimFallback);
+            String resolvedUrl = mojangUrl.isEmpty() ? textureUrlFromProperty(property) : mojangUrl;
 
-            if (context.recordSkinState()) {
-                String stateName = context.skinStateLabel() != null ? context.skinStateLabel() : "Regular";
-                String textureUrl = mojangUrl.isEmpty() ? textureUrlFromProperty(property) : mojangUrl;
-                if (textureUrl == null) textureUrl = sourceUrl;
-                SkinState state = SneakyCharacterManager.getInstance().skinStateManager.record(
-                        player, stateName, property.getValue(), property.getSignature(),
-                        characterUUID, textureUrl, false);
-                if (priority == SkinQueue.PRIO_SKIN || priority == SkinQueue.PRIO_UNIFORM) {
-                    SkinStateManager.sendSkinUpdatedMessage(player, state);
-                }
+            boolean worn = Character.isWearing(player, characterKey);
+            if (worn) {
+                SkinUtil.applySkin(player, property);
+                // applySkin fires events on this thread: a listener can switch or release the body before it returns.
+                worn = Character.isWearing(player, characterKey);
             }
 
-            Character character = Character.get(player);
-            boolean slim = SkinUtil.isSlimModel(property, slimFallback);
-            if (character != null && character.getCharacterUUID().equals(characterUUID)) {
-                String resolvedUrl = mojangUrl.isEmpty() ? textureUrlFromProperty(property) : mojangUrl;
+            if (worn) {
+                if (context.recordSkinState()) {
+                    String stateName = context.skinStateLabel() != null ? context.skinStateLabel() : "Regular";
+                    String textureUrl = resolvedUrl == null ? sourceUrl : resolvedUrl;
+                    SkinState state = SneakyCharacterManager.getInstance().skinStateManager.record(
+                            player, stateName, property.getValue(), property.getSignature(),
+                            characterKey, textureUrl, false);
+                    if (priority == SkinQueue.PRIO_SKIN || priority == SkinQueue.PRIO_UNIFORM) {
+                        SkinStateManager.sendSkinUpdatedMessage(player, state);
+                    }
+                }
+
+                Character character = Character.get(player);
                 if (resolvedUrl != null) {
                     character.setSkin(resolvedUrl);
                     character.setTexture(property.getValue());
                     character.setSignature(property.getSignature());
                     character.setSlim(slim);
                 }
+            } else if (context.updateProxyCharacter()) {
+                // The player switched away before the skin resolved or while it was put on. It still belongs to the
+                // requested character:
+                // save it there (below), and keep this body's older session state from overriding it on reload.
+                SneakyCharacterManager.getInstance().skinStateManager.forgetCharacter(characterKey);
             }
 
             if (context.updateProxyCharacter()) {
                 if (!skinId.isEmpty()) {
-                    SkinCache.updateCharacterSkin(player, characterUUID, skinId, slim);
-                } else {
-                    String resolvedUrl = mojangUrl.isEmpty() ? textureUrlFromProperty(property) : mojangUrl;
-                    if (resolvedUrl != null && character != null) {
-                        ProxyMessagingUtil.sendByteArray(player, "updateCharacter",
-                                player.getUniqueId().toString(), characterUUID, 1,
-                                resolvedUrl, "", property.getValue(), property.getSignature(), slim);
-                    }
+                    SkinCache.updateCharacterSkin(player, characterKey, skinId, slim);
+                } else if (resolvedUrl != null) {
+                    CharacterUpdates.send(player, characterKey, CharacterUpdates.LEGACY_SKIN,
+                            resolvedUrl, "", property.getValue(), property.getSignature(), slim);
                 }
             }
         }
@@ -206,14 +216,13 @@ public final class SkinApplyService {
 
         if (skinId == null || skinId.isEmpty()) {
             if (skinData.getPlayer() != null) {
-                ProxyMessagingUtil.sendByteArray(skinData.getPlayer(), "updateCharacter",
-                        skinData.getPlayer().getUniqueId().toString(), skinData.getCharacterUUID(), 1,
+                CharacterUpdates.send(skinData.getPlayer(), skinData.getCharacterKey(), CharacterUpdates.LEGACY_SKIN,
                         mojangUrl, skinData.getSkinUUID(), property.getValue(), property.getSignature(), skinData.isSlim());
             }
             return;
         }
 
-        SkinCache.updateCharacterSkin(skinData.getPlayer(), skinData.getCharacterUUID(), skinId, skinData.isSlim());
+        SkinCache.updateCharacterSkin(skinData.getPlayer(), skinData.getCharacterKey(), skinId, skinData.isSlim());
     }
 
     private static void registerGlobalSkinCache(SkinData skinData, ProfileProperty property, String mojangUrl, String skinId) {
@@ -240,7 +249,7 @@ public final class SkinApplyService {
     }
 
     private static boolean shouldUpdateProxyCharacterSave(SkinData skinData) {
-        return skinData.getCharacterUUID() != null && !skinData.getCharacterUUID().isEmpty()
+        return skinData.getCharacterKey() != null
                 && skinData.getUniformHash() == null
                 && (skinData.getPriority() == SkinQueue.PRIO_SKIN || skinData.getPriority() == SkinQueue.PRIO_LOAD);
     }

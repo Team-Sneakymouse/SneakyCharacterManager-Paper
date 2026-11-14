@@ -6,18 +6,20 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerEvent;
 import org.jetbrains.annotations.NotNull;
 
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
+
 public class CharacterNickChangeEvent extends PlayerEvent implements Cancellable {
 
 	protected static final HandlerList handlers = new HandlerList();
 	private boolean cancel = false;
 
-	private final String characterUUID;
+	private final CharacterKey key;
 	private final String oldName;
 	private final String newName;
 
-	public CharacterNickChangeEvent(@NotNull Player player, String characterUUID, String oldName, String newName) {
+	public CharacterNickChangeEvent(@NotNull Player player, @NotNull CharacterKey key, String oldName, String newName) {
 		super(player);
-		this.characterUUID = characterUUID;
+		this.key = key;
 		this.oldName = oldName;
 		this.newName = newName;
 	}
@@ -41,8 +43,13 @@ public class CharacterNickChangeEvent extends PlayerEvent implements Cancellable
 		this.cancel = cancel;
 	}
 
+	/** The renamed character; its owner can differ from {@link #getPlayer()}, who is wearing it. */
+	public @NotNull CharacterKey getCharacterKey() {
+		return key;
+	}
+
 	public String getCharacterUUID() {
-		return characterUUID;
+		return key.characterId();
 	}
 
 	public String getOldName() {

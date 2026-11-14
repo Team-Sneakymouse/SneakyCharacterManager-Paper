@@ -10,6 +10,7 @@ import com.destroystokyo.paper.profile.ProfileProperty;
 import com.sneakyutils.util.TextUtility;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.character.LoadReason;
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
@@ -19,14 +20,21 @@ import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 
 public final class CharacterResultEffects {
     private CharacterResultEffects() {}
+    /**
+     * Loads a storage result for the owner's own character onto the owner: a join or create ({@code forced}, no lock
+     * check) or a {@code /char} pick. The holder rule decides what happens if another body wears it.
+     */
     public static void load(Character character, boolean forced) {
         Player player = character.getPlayer();
         if (player == null) return;
-        if (!forced && !Character.canPlayerLoadCharacter(player, character.getCharacterUUID())) {
-            player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4You cannot access this character right now."));
-            return;
-        }
-        character.load();
+        if (!forced && !canLoad(player, character.getCharacterUUID())) return;
+        character.load(LoadReason.ownResult(forced));
+    }
+    /** The character-lock check for an owner picking their own character; tells them if it fails. */
+    static boolean canLoad(Player player, String characterId) {
+        if (Character.canPlayerLoadCharacter(player, characterId)) return true;
+        player.sendMessage(TextUtility.INSTANCE.convertToComponent("&4You cannot access this character right now."));
+        return false;
     }
     public static void titles(Map<String,String> titles) {
         SneakyCharacterManager.getInstance().titleRegistry.replaceAll(titles);
@@ -55,7 +63,7 @@ public final class CharacterResultEffects {
 			}
 
 			if (openGUI) {
-				SneakyCharacterManager.getInstance().selectionMenu.updateInventory(actualRequester, characters);
+				SneakyCharacterManager.getInstance().selectionMenu.updateInventory(actualRequester, playerUUID, characters);
 				return;
 			}
 
@@ -77,9 +85,9 @@ public final class CharacterResultEffects {
 						if (cacheKey == null || cacheKey.isEmpty()) cacheKey = skinUrl;
 						SkinCache.put(playerUUID, cacheKey, p);
 						SkinCache.put(playerUUID, skinUrl, p);
-						SneakyCharacterManager.getInstance().skinQueue.removePendingForCharacter(pl, c.getCharacterUUID());
+						SneakyCharacterManager.getInstance().skinQueue.removePendingForCharacter(pl, c.getKey());
 					} else {
-						SkinApplyService.requestSkin(pl, c.getCharacterUUID(), skinUrl, c.isSlim(),
+						SkinApplyService.requestSkin(pl, c.getKey(), skinUrl, c.isSlim(),
 								skinPrio, SkinApplyContext.preload());
 					}
 				}
@@ -100,7 +108,7 @@ public final class CharacterResultEffects {
 					}
 
 					if (vp == null) {
-						SkinData.getOrCreate(vUrl, vUUID, c.isSlim(), skinPrio, pl, c.getCharacterUUID(), c.getName())
+						SkinData.getOrCreate(vUrl, vUUID, c.isSlim(), skinPrio, pl, c.getKey(), c.getName())
 							.setUniformCacheInfo(c.getSkin(), entry.getKey(), entry.getKey());
 					}
 				}

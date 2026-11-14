@@ -9,6 +9,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.PuppetLeaveEvent;
 import net.sneakycharactermanager.paper.api.nameplate.ReleaseReason;
 import net.sneakycharactermanager.paper.commands.CommandChar;
 import net.sneakycharactermanager.paper.consolecommands.ConsoleCommandCharDisable;
@@ -76,7 +77,7 @@ public class ConnectionEventListeners implements Listener {
             character.save();
         }
         SneakyCharacterManager.getInstance().skinQueue.updatePriority(player, SkinQueue.PRIO_OFFLINE);
-        Character.remove(player);
+        Character.remove(player, PuppetLeaveEvent.Reason.QUIT);
 
     }
 

@@ -8,6 +8,7 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.nameplate.ReleaseReason;
+import net.sneakycharactermanager.paper.handlers.character.CharacterSwap;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
 
 public class TeleportEvents implements Listener {
@@ -18,6 +19,8 @@ public class TeleportEvents implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onGamemodeChange(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
+        // A swap's own teleports keep the plate riding along; the swap re-texts it (NametagManager.showWornCharacter).
+        if (CharacterSwap.isSwapping(player)) return;
         NametagManager manager = SneakyCharacterManager.getInstance().nametagManager;
 
         Action action = decide(

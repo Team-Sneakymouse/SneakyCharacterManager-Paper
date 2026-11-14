@@ -1,8 +1,8 @@
 package net.sneakycharactermanager.paper.handlers.character;
 
-import net.sneakycharactermanager.common.io.AtomicFiles;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
+import net.sneakycharactermanager.paper.api.character.PuppetLeaveEvent;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -16,12 +16,13 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
+import org.jetbrains.annotations.ApiStatus;
+
 import org.bukkit.Bukkit;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -31,8 +32,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.permissions.PermissionAttachmentInfo;
-import org.bukkit.util.io.BukkitObjectOutputStream;
-import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
 
 import net.sneakycharactermanager.paper.handlers.skins.SkinQueue;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
@@ -46,13 +45,34 @@ import com.google.gson.JsonParser;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * A character, and when loaded, the body wearing it.
+ *
+ * <p>Identity rule: a character is its {@link CharacterKey} (owner + character ID). Its gameplay file and every
+ * identity edit go to that key, never to the wearer, who may be another player. The only state keyed by the wearer is
+ * "what this body wears" ({@link #get(Player)}) and the body-level exceptions listed in the README under
+ * "Character identity" (nametags, placeholders, permissions, skin undo history, ...).
+ */
 public class Character {
 
+	/** What each body is wearing. Keyed by the body on purpose; see the class comment. Main thread only. */
 	private static Map<Player, Character> characterMap = new HashMap<>();
+	/**
+	 * The holder registry: the same pairs as {@link #characterMap}, by character. Changed only together with it
+	 * ({@link #wear}, {@link #takeOff}). Concurrent so storage threads can read it
+	 * ({@link HolderRegistry#heldAwayFromOwner}).
+	 */
+	private static final Map<CharacterKey, Player> holders = new ConcurrentHashMap<>();
 	private static final Map<UUID, List<Character>> playerCharactersCache = new ConcurrentHashMap<>();
 
-	private final Player player;
-	private String characterUUID;
+	/** Owner + character ID: where this character's identity record and gameplay file live. */
+	private final CharacterKey key;
+	/**
+	 * The body wearing this character, or null for a list entry, which is never loaded. Changes only when a swap moves
+	 * the character to another body ({@link #exchange}).
+	 */
+	@Nullable private Player player;
+	private final String characterUUID;
 	private String name;
 	private String namePrefix = "";
 	private String skin;
@@ -67,11 +87,16 @@ public class Character {
 
 	private boolean firstLoad = false;
 
-	public Character(String playerUUID, String characterUUID, String characterName, String skin, String skinUUID, String texture, String signature, boolean slim,
-			String tags, String gender, String title) {
-		this.player = Bukkit.getPlayer(UUID.fromString(playerUUID));
+	/**
+	 * @param key    the character's owner and ID
+	 * @param wearer the body that wears it once {@link #load()} runs, or null for a list entry
+	 */
+	public Character(CharacterKey key, @Nullable Player wearer, String characterName, String skin, String skinUUID,
+			String texture, String signature, boolean slim, String tags, String gender, String title) {
+		this.key = key;
+		this.player = wearer;
 		this.name = characterName;
-		this.characterUUID = characterUUID;
+		this.characterUUID = key.characterId();
 		this.skin = skin;
 		this.skinUUID = skinUUID;
 		this.texture = texture;
@@ -80,76 +105,68 @@ public class Character {
 		this.tags = tags.isEmpty() ? new JsonObject() : JsonParser.parseString(tags).getAsJsonObject();
 		this.gender = Gender.fromString(gender);
 		this.title = title == null ? "" : title;
+	}
 
-		File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(), playerUUID);
-		boolean firstLogin = false;
+	/**
+	 * Puts this character on its wearer, unless another body wears it, in which case the load is refused (see
+	 * {@link HolderRegistry}). For other plugins; SCM's own loads say why they load with {@link #load(LoadReason)}.
+	 */
+	public void load() {
+		load(LoadReason.OTHER);
+	}
 
-		if (!playerDir.exists()) {
-			firstLogin = true;
-			playerDir.mkdirs();
+	/**
+	 * Puts this character on its wearer: saves whatever the wearer had on, then applies this character's gameplay
+	 * file. The file belongs to the owner ({@link GameplayFile#of}); a character that has no file yet gets one here.
+	 * The holder rule runs first ({@link HolderRegistry}): if another body wears this character, {@code reason}
+	 * decides whether the load is refused, goes to the selection handler, or takes the character back for its owner.
+	 *
+	 * @return true if the character is now on its wearer
+	 */
+	@ApiStatus.Internal
+	public boolean load(LoadReason reason) {
+		if (this.player == null) {
+			SneakyCharacterManager.getInstance().getLogger().severe("Attempted to load character " + this.key + " without a wearer");
+			return false;
 		}
-
-		File characterFile = new File(playerDir, this.characterUUID + ".yml");
-
-		if (!characterFile.exists()) {
-			this.firstLoad = true;
-			if (firstLogin && !SneakyCharacterManager.getInstance().getConfig()
-					.getBoolean("deleteCharacterDataOnServerStart", false)) {
-				this.save();
-			} else {
-				YamlConfiguration config = new YamlConfiguration();
-
-				config.set("location", Bukkit.getWorlds().get(0).getSpawnLocation());
-
-				try {
-					ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-					BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream);
-
-					dataOutput.writeInt(this.player.getInventory().getSize());
-
-					for (int i = 0; i < this.player.getInventory().getSize(); i++) {
-						dataOutput.writeObject(new ItemStack(Material.AIR));
-					}
-
-					dataOutput.close();
-					config.set("inventory", Base64Coder.encodeLines(outputStream.toByteArray()));
-
-					// Converts the inventory and its contents to base64, This also saves item
-					// meta-data and inventory type
-				} catch (Exception e) {
-					throw new IllegalStateException("Could not convert inventory to base64.", e);
-				}
-
-				try {
-					AtomicFiles.writeUtf8(characterFile.toPath(), config.saveToString());
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
+		if (CharacterSwap.isSwapping(this.player)) {
+			SneakyCharacterManager.getInstance().getLogger().info("Refused to load " + this.key + " onto "
+					+ this.player.getName() + ": it is in the middle of a swap");
+			return false;
+		}
+		// Held from here until this load ends, through the holder rule's own side effects (a takeover releases the
+		// holder) and the load's events, so no load started from those can put this character on another body.
+		if (!HolderRegistry.reserve(this.key, this.player)) return false;
+		try {
+			return HolderRegistry.admit(this, reason) && applyToWearer();
+		} finally {
+			HolderRegistry.unreserve(this.key, this.player);
 		}
 	}
 
-	public void load() {
-		if (this.player != null && characterMap.containsKey(this.player)) {
-			Character character = get(this.player);
-			if (character != null)
-				character.save();
-		}
+	private boolean applyToWearer() {
+		Character current = get(this.player);
+		if (current != null) current.save();
 
-		File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(),
-				this.player.getUniqueId().toString());
-		File characterFile = new File(playerDir, this.characterUUID + ".yml");
-
-		if (!characterFile.exists()) {
-			SneakyCharacterManager.getInstance().getLogger()
-					.severe("SneakyCharacterManager attempted to load character data from a file that does not exist: "
-							+ this.characterUUID);
-			return;
-		}
+		File characterFile = GameplayFile.of(this.key);
+		boolean hasFile = GameplayFile.exists(characterFile); // sees the save just queued above, too
+		this.firstLoad = !hasFile;
+		// Only the owner's very first character on this server starts from the body's live state, as before
+		// files moved to load time. Anyone else starts fresh: a borrowed character must not copy its wearer.
+		boolean seedFromBody = this.firstLoad && current == null
+				&& this.player.getUniqueId().equals(this.key.owner())
+				&& !GameplayFile.ownerHasFiles(this.key)
+				&& !SneakyCharacterManager.getInstance().getConfig().getBoolean("deleteCharacterDataOnServerStart", false);
 
 		if (CharacterLoader.loadCharacter(this)) {
-			SneakyCharacterManager.getInstance().skinQueue.updatePriority(this.player, this.characterUUID, SkinQueue.PRIO_LOAD);
-			YamlConfiguration config = YamlConfiguration.loadConfiguration(characterFile);
+			SneakyCharacterManager.getInstance().skinQueue.updatePriority(this.player, this.key, SkinQueue.PRIO_LOAD);
+			YamlConfiguration config;
+			if (hasFile) {
+				config = GameplayFile.read(characterFile);
+			} else {
+				config = seedFromBody ? snapshot() : GameplayFile.fresh(this.player.getInventory().getSize());
+				GameplayFile.write(characterFile, config.saveToString());
+			}
 
 			if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageLocations", true)) {
 				Location playerLocation = config.getLocation("location");
@@ -191,10 +208,15 @@ public class Character {
 				applyAttributes(config);
 			}
 
-			characterMap.put(this.player, this);
+			Character previous = wear(this.player, this);
+			// Only now does Character.get(body) return this character, so the plate shows its title, not the previous one's.
+			SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(this.player, getDisplayName());
 			ConsoleCommandCharDisable.playerCharEnable(this.player.getUniqueId().toString());
+			// Reloading the same character is not leaving it.
+			if (previous != null && !previous.key.equals(this.key)) left(this.player, previous, PuppetLeaveEvent.Reason.LOADED_OTHER);
+			return true;
 		}
-
+		return false;
 	}
 
 	public Player getPlayer() {
@@ -480,16 +502,27 @@ public class Character {
 		return this.firstLoad;
 	}
 
+	/**
+	 * Writes the wearer's live location, inventory and attributes to this character's (the owner's) file. Does
+	 * nothing while the wearer is in a swap that already saved it ({@link CharacterSwap#blocksSave}).
+	 */
 	public void save() {
-		File playerDir = new File(SneakyCharacterManager.getCharacterDataFolder(),
-				this.player.getUniqueId().toString());
-
-		if (!playerDir.exists()) {
-			playerDir.mkdirs();
+		if (this.player == null) return;
+		if (CharacterSwap.blocksSave(this.player)) {
+			SneakyCharacterManager.getInstance().getLogger().fine("Skipped saving " + this.key + ": "
+					+ this.player.getName() + " is in the middle of a swap");
+			return;
 		}
+		write();
+	}
 
-		File characterFile = new File(playerDir, this.characterUUID + ".yml");
+	/** {@link #save()} without the swap guard: only the swap itself saves a character mid-swap. */
+	void write() {
+		GameplayFile.write(GameplayFile.of(this.key), snapshot().saveToString());
+	}
 
+	/** The wearer's live gameplay state, in the gameplay file's format. */
+	private YamlConfiguration snapshot() {
 		YamlConfiguration config = new YamlConfiguration();
 
 		Location playerLocation = this.player.getLocation();
@@ -503,8 +536,15 @@ public class Character {
 		if (SneakyCharacterManager.getInstance().getConfig().getBoolean("manageAttributes", false)) {
 			config.set("attributes", serializeAttributes());
 		}
+		return config;
+	}
 
-		SneakyCharacterManager.getInstance().writeFile(characterFile.toPath(), config.saveToString());
+	public CharacterKey getKey() {
+		return this.key;
+	}
+
+	public UUID getOwnerUUID() {
+		return this.key.owner();
 	}
 
 	@Nullable
@@ -516,9 +556,67 @@ public class Character {
 		return characterMap.values();
 	}
 
-	public static void remove(Player player) {
-		characterMap.remove(player);
+	/**
+	 * {@code player} quit ({@link PuppetLeaveEvent.Reason#QUIT}) or was locked out of its characters
+	 * ({@link PuppetLeaveEvent.Reason#LOCKED_OUT}): it stops wearing its character, without saving it.
+	 */
+	public static void remove(Player player, PuppetLeaveEvent.Reason reason) {
+		Character worn = takeOff(player);
+		HolderRegistry.forget(player);
 		playerCharactersCache.remove(player.getUniqueId());
+		left(player, worn, reason);
+	}
+
+	/**
+	 * Puts {@code character} on {@code body} and returns what it wore before. With {@link #takeOff}, the only place
+	 * that changes what a body wears; each caller reports a borrowed character leaving ({@link #left}), except a
+	 * swap ({@link #exchange}), which fires nothing.
+	 */
+	@Nullable
+	private static Character wear(Player body, Character character) {
+		Character previous = characterMap.put(body, character);
+		if (previous != null) holders.remove(previous.key, body);
+		holders.put(character.key, body);
+		return previous;
+	}
+
+	/**
+	 * A swap: {@code a} and {@code b} trade the characters they wear, and each character's wearer becomes the other
+	 * body. Changes the registry through {@link #wear} only, with no call-out in between, so nobody sees the half-way
+	 * state. Fires nothing; puppet bookkeeping ({@link #borrowedBy}) follows from what each body wears.
+	 */
+	static void exchange(Player a, Player b) {
+		Character x = characterMap.get(a);
+		Character y = characterMap.get(b);
+		if (x == null || y == null || a == b) throw new IllegalStateException("A swap needs two bodies that each wear a character");
+		wear(a, y);
+		wear(b, x);
+		x.player = b;
+		y.player = a;
+	}
+
+	/** {@code body} stops wearing its character, without saving it. Returns what it wore; see {@link #wear}. */
+	@Nullable
+	static Character takeOff(Player body) {
+		Character previous = characterMap.remove(body);
+		if (previous != null) holders.remove(previous.key, body);
+		return previous;
+	}
+
+	/**
+	 * {@code body} no longer wears {@code worn}: if it was borrowed (not the body's own), fires
+	 * {@link PuppetLeaveEvent}. Call once the change is complete, so listeners see the body's new state.
+	 */
+	static void left(Player body, @Nullable Character worn, PuppetLeaveEvent.Reason reason) {
+		if (worn == null || worn.getOwnerUUID().equals(body.getUniqueId())) return;
+		Bukkit.getServer().getPluginManager().callEvent(new PuppetLeaveEvent(body, worn.key, reason));
+	}
+
+	/** The character {@code body} wears if another player owns it, or null. */
+	@Nullable
+	public static CharacterKey borrowedBy(Player body) {
+		Character worn = characterMap.get(body);
+		return worn == null || worn.getOwnerUUID().equals(body.getUniqueId()) ? null : worn.key;
 	}
 
 	public static List<Character> getPlayerCharacters(UUID playerUUID) {
@@ -539,13 +637,44 @@ public class Character {
 				SneakyCharacterManager.getInstance().getLogger().severe(
 						"SneakyCharacterManager found an offline player on the characterMap. They have been removed, but this should never happen: "
 								+ player.getName());
-				characterMap.remove(player);
+				left(player, takeOff(player), PuppetLeaveEvent.Reason.QUIT);
 			}
 		}
 	}
 
 	public static boolean isPlayedMapped(Player player) {
 		return characterMap.containsKey(player);
+	}
+
+	/**
+	 * True if {@code body} is wearing exactly this character (same owner and ID) right now.
+	 *
+	 * <p>This is the guard for deferred work: anything that finishes later (async result, open menu or dialog, chat
+	 * button) keeps the key it started for, writes only to that key, and touches the body or its worn character only
+	 * while this returns true. An offline body wears nothing.
+	 */
+	public static boolean isWearing(Player body, CharacterKey key) {
+		Character worn = characterMap.get(body);
+		return worn != null && worn.key.equals(key);
+	}
+
+	/**
+	 * Resolves a bare character ID against what {@code body} is wearing: the worn character's key if the IDs match,
+	 * otherwise null. Only for old entry points that pass an ID without an owner; never guess the owner from the body.
+	 */
+	@Nullable
+	public static CharacterKey wornKey(Player body, String characterId) {
+		Character worn = characterMap.get(body);
+		return worn != null && worn.characterUUID.equals(characterId) ? worn.key : null;
+	}
+
+	/**
+	 * The body wearing this character right now, or null. This is the holder registry ({@link HolderRegistry});
+	 * safe to read from any thread, but only the main thread's answer is current.
+	 */
+	@Nullable
+	public static Player wearerOf(CharacterKey key) {
+		return holders.get(key);
 	}
 
 	public static boolean canPlayerLoadCharacter(Player player, String characterUUID) {

@@ -11,6 +11,7 @@ import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyContext;
 import net.sneakycharactermanager.paper.handlers.skins.SkinApplyService;
 import net.sneakycharactermanager.paper.handlers.skins.SkinFetching;
@@ -31,8 +32,8 @@ public class CharacterLoader {
 
 		LoadCharacterEvent event = new LoadCharacterEvent(
 				player,
+				character.getKey(),
 				character.isFirstLoad(),
-				character.getCharacterUUID(),
 				character.getName(),
 				url,
 				character.isSlim(),
@@ -44,27 +45,27 @@ public class CharacterLoader {
 			character.setFirstLoad(false);
 
 			SkinState existingState = SneakyCharacterManager.getInstance().skinStateManager
-					.latestForCharacter(player.getUniqueId(), character.getCharacterUUID());
+					.latestForCharacter(player.getUniqueId(), character.getKey());
 			if (existingState != null) {
 				SneakyCharacterManager.getInstance().getLogger().info("[SkinState] Restoring session state for character: " + character.getName());
+				// The restored state wins: queued preloads of the record skin must not paint over it later.
+				SneakyCharacterManager.getInstance().skinQueue.removePendingForCharacter(player, character.getKey());
 				ProfileProperty prop = new ProfileProperty("textures", existingState.texture(), existingState.signature());
 				SkinUtil.applySkin(player, prop);
 				SneakyCharacterManager.getInstance().skinStateManager.setCurrent(player.getUniqueId(), existingState.id());
 			} else if (hasPersistedSkinProperty(character)) {
 				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] Using cached texture and signature for character: " + character.getName());
-				SneakyCharacterManager.getInstance().skinQueue.removePendingForCharacter(player, character.getCharacterUUID());
+				SneakyCharacterManager.getInstance().skinQueue.removePendingForCharacter(player, character.getKey());
 				ProfileProperty prop = new ProfileProperty("textures", character.getTexture(), character.getSignature());
 				SkinUtil.applySkin(player, prop);
 				SneakyCharacterManager.getInstance().skinStateManager.record(
 						player, "Regular", character.getTexture(), character.getSignature(),
-						character.getCharacterUUID(), character.getSkin(), false);
+						character.getKey(), character.getSkin(), false);
 			} else if (!shouldSkipLoading(character)) {
 				SneakyCharacterManager.getInstance().getLogger().info("[SkinCache] Resolving skin for " + character.getName());
-				SkinApplyService.requestSkin(player, character.getCharacterUUID(), url, character.isSlim(),
+				SkinApplyService.requestSkin(player, character.getKey(), url, character.isSlim(),
 						SkinQueue.PRIO_LOAD, SkinApplyContext.defaults());
 			}
-
-			SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(player, character.getDisplayName());
 
 			return true;
 		}
@@ -94,26 +95,43 @@ public class CharacterLoader {
 		return false;
 	}
 
-	public static void updateSkin(Player player, String characterUUID, String url, Boolean slim) {
-		updateSkin(player, characterUUID, url, slim, null);
-	}
-
 	/**
 	 * Queues a skin fetch/apply for {@link SkinQueue#PRIO_SKIN}. When {@code skinStateName} is non-blank,
 	 * the resulting skin state uses that label in chat (hover / re-apply text).
+	 *
+	 * @deprecated a bare character ID doesn't say whose character it is. Use
+	 *             {@link #updateSkin(Player, CharacterKey, String, Boolean, String)}. Kept for SneakyMannequins and
+	 *             SneakyRacials: it only works for the character the player is wearing, and is dropped otherwise.
 	 */
+	@Deprecated
 	public static void updateSkin(Player player, String characterUUID, String url, Boolean slim, @Nullable String skinStateName) {
-		updateSkin(player, characterUUID, url, slim, skinStateName, SkinQueue.PRIO_SKIN);
+		CharacterKey key = Character.wornKey(player, characterUUID);
+		if (key == null) {
+			SneakyCharacterManager.getInstance().getLogger().warning("Dropped a skin change for character " + characterUUID
+					+ ": " + player.getName() + " isn't wearing it, so its owner is unknown");
+			return;
+		}
+		updateSkin(player, key, url, slim, skinStateName);
 	}
 
-	public static void updateSkin(Player player, String characterUUID, String url, Boolean slim, @Nullable String skinStateName, int priority) {
+	/**
+	 * Queues a skin fetch/apply for {@link SkinQueue#PRIO_SKIN} and saves it to {@code key}. {@code player} gets the
+	 * skin applied if it still wears that character when the skin is ready. When {@code skinStateName} is non-blank,
+	 * the resulting skin state uses that label in chat (hover / re-apply text).
+	 */
+	public static void updateSkin(Player player, CharacterKey key, String url, Boolean slim, @Nullable String skinStateName) {
+		updateSkin(player, key, url, slim, skinStateName, SkinQueue.PRIO_SKIN);
+	}
+
+	public static void updateSkin(Player player, CharacterKey key, String url, Boolean slim, @Nullable String skinStateName, int priority) {
+		SneakyCharacterManager.getInstance().skinQueue.supersede(key);
 		String sourceUrl = SkinUtil.isMojangTextureUrl(url) ? SkinUtil.normalizeMojangTextureUrl(url) : url;
 		SkinApplyContext ctx = skinStateName != null && !skinStateName.isBlank()
 				? SkinApplyContext.withSkinStateLabel(skinStateName.trim())
 				: SkinApplyContext.defaults();
 
 		if (slim != null) {
-			SkinApplyService.requestSkin(player, characterUUID, sourceUrl, slim, priority, ctx);
+			SkinApplyService.requestSkin(player, key, sourceUrl, slim, priority, ctx);
 			return;
 		}
 
@@ -122,11 +140,11 @@ public class CharacterLoader {
 		Bukkit.getAsyncScheduler().runNow(SneakyCharacterManager.getInstance(), (s) -> {
 			checkSlimThenSetSkin(sourceUrl,
 					playerProfile.getTextures().getSkinModel().equals(PlayerTextures.SkinModel.SLIM),
-					player, characterUUID, ctx, priority, policy);
+					player, key, ctx, priority, policy);
 		});
 	}
 
-	private static void checkSlimThenSetSkin(String url, boolean slim, Player player, String characterUUID,
+	private static void checkSlimThenSetSkin(String url, boolean slim, Player player, CharacterKey key,
 	                                         SkinApplyContext ctx, int priority, SkinUrlPolicy policy) {
 		try {
 			BufferedImage image = SkinFetching.fetcher().fetchImage(url.replace("imgur", "filmot"), policy);
@@ -147,7 +165,7 @@ public class CharacterLoader {
 		}
 		final boolean slimFinal = slim;
 		Bukkit.getScheduler().runTask(SneakyCharacterManager.getInstance(), () ->
-				SkinApplyService.requestSkin(player, characterUUID, url, slimFinal, priority, ctx));
+				SkinApplyService.requestSkin(player, key, url, slimFinal, priority, ctx));
 	}
 
 }

@@ -1,5 +1,6 @@
 package net.sneakycharactermanager.paper;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -35,6 +36,7 @@ import net.sneakycharactermanager.paper.handlers.ContextCalculatorCharacterTag;
 import net.sneakycharactermanager.paper.handlers.Placeholders;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
+import net.sneakycharactermanager.paper.handlers.character.HolderRegistry;
 import net.sneakycharactermanager.paper.handlers.nametags.NameTagRefresher;
 import net.sneakycharactermanager.paper.handlers.nametags.NameplateAttachmentsImpl;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
@@ -43,8 +45,9 @@ import net.sneakycharactermanager.paper.handlers.skins.SkinStateManager;
 import net.sneakycharactermanager.paper.handlers.titles.TitleRegistry;
 import net.sneakycharactermanager.paper.handlers.titles.TitlePermissionRefresh;
 import net.sneakycharactermanager.paper.handlers.titles.TitleSelectionMenu;
+import net.sneakycharactermanager.paper.handlers.voice.TalkingBodies;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
-import net.sneakycharactermanager.paper.storage.StorageMode;
+import net.sneakycharactermanager.paper.api.character.StorageMode;
 import net.sneakycharactermanager.paper.storage.CharacterBackend;
 import net.sneakycharactermanager.paper.storage.SneakyDbBootstrap;
 import net.sneakycharactermanager.common.io.AsyncAtomicFileWriter;
@@ -77,6 +80,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
     private StorageMode storageMode = StorageMode.LEGACY;
     private CharacterBackend characterBackend;
     public CharacterBackend getCharacterBackend() { return characterBackend; }
+    /** Public API: where character identity is stored this enable. See {@link StorageMode#current()}. */
     public StorageMode getStorageMode() { return storageMode; }
     public boolean validateStorageReload() {
         try {
@@ -238,6 +242,7 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 	@EventHandler
 	public void onPluginDisable(PluginDisableEvent event) {
+		HolderRegistry.clearSelectionHandler(event.getPlugin());
 		if (event.getPlugin() == this) {
 			SneakyItemsAPI.clearOwner(this);
             if (characterBackend != null) characterBackend.close();
@@ -258,6 +263,25 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 	public CompletableFuture<Void> writeFile(Path target, String content) {
 		return reportWriteFailure(target, fileWriter.writeUtf8(target, content));
+	}
+
+	/**
+	 * Reads a UTF-8 file off the main thread: its content, or an empty string if there is no such file. Completes on
+	 * the main thread. It does not see writes that are still queued; {@code GameplayFile.latest} adds that.
+	 */
+	public CompletableFuture<String> readFile(Path target) {
+		CompletableFuture<String> result = new CompletableFuture<>();
+		Bukkit.getAsyncScheduler().runNow(this, task -> {
+			String content;
+			try {
+				content = Files.exists(target) ? Files.readString(target) : "";
+			} catch (IOException | RuntimeException failure) {
+				Bukkit.getScheduler().runTask(this, () -> result.completeExceptionally(failure));
+				return;
+			}
+			Bukkit.getScheduler().runTask(this, () -> result.complete(content));
+		});
+		return result;
 	}
 
 	private void closeTitlePermissionRefresh() {
@@ -298,7 +322,9 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 			}
 			Class<?> pluginIface = Class.forName("de.maxhenkel.voicechat.api.VoicechatPlugin");
 			Class<?> implClass = Class.forName("net.sneakycharactermanager.paper.handlers.voice.SimpleVoiceChatIntegration");
-			Object impl = implClass.getConstructor().newInstance();
+			TalkingBodies bodies = new TalkingBodies(getServer().getServicesManager(), getLogger());
+			bodies.start(getServer().getPluginManager(), this);
+			Object impl = implClass.getConstructor(TalkingBodies.class).newInstance(bodies);
 			svcClass.getMethod("registerPlugin", pluginIface).invoke(service, impl);
 			svcIntegration = impl;
 			getLogger().info("[SVC] Registered SimpleVoiceChatIntegration with voicechat service");

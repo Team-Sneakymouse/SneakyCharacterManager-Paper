@@ -82,8 +82,11 @@ public final class NameplateFixture implements AutoCloseable {
 
         BukkitScheduler scheduler = mock(BukkitScheduler.class);
         when(scheduler.runTaskLater(any(Plugin.class), any(Runnable.class), anyLong())).thenAnswer(invocation -> {
-            tasks.add(new Task(tick + (long) invocation.getArgument(2), invocation.getArgument(1)));
-            return mock(BukkitTask.class);
+            Task task = new Task(tick + (long) invocation.getArgument(2), invocation.getArgument(1));
+            tasks.add(task);
+            BukkitTask handle = mock(BukkitTask.class);
+            doAnswer(cancel -> tasks.remove(task)).when(handle).cancel();
+            return handle;
         });
         when(scheduler.runTask(any(Plugin.class), any(Runnable.class))).thenAnswer(invocation -> {
             tasks.add(new Task(tick + 1, invocation.getArgument(1)));

@@ -44,6 +44,7 @@ import com.sneakyutils.util.TextUtility;
 
 import net.luckperms.api.model.user.User;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSlots;
 import net.sneakycharactermanager.paper.util.LuckPermsNodes;
@@ -112,7 +113,7 @@ public final class CharacterCrystal implements Listener {
         confirmUntil.remove(id);
 
         EquipmentSlot hand = event.getHand() == null ? EquipmentSlot.HAND : event.getHand();
-        String startCharacter = Character.get(player).getCharacterUUID();
+        CharacterKey startCharacter = Character.get(player).getKey();
         User user = LuckPermsNodes.user(player);
         int bonus = LuckPermsNodes.highestOwnPermanentSuffix(user, CharacterSlots.BONUS_PREFIX) + 1;
         int newMax = CharacterSlots.base(player) + Math.max(CharacterSlots.bonus(player), bonus);
@@ -209,6 +210,10 @@ public final class CharacterCrystal implements Listener {
             send(player, "&cYour character is still loading. Try again in a moment.");
             return false;
         }
+        if (!ownsWornCharacter(player)) {
+            send(player, "&cThe crystal won't answer a borrowed soul. Use it on one of your own characters.");
+            return false;
+        }
         if (CharacterSlots.isUnlimited(player)) {
             send(player, "&eYou already have unlimited character slots; the crystal has nothing to give you.");
             return false;
@@ -218,6 +223,15 @@ public final class CharacterCrystal implements Listener {
             return false;
         }
         return true;
+    }
+
+    /**
+     * The crystal is an item in the worn character's inventory, which belongs to that character's owner, while the slot
+     * it grants goes to the player's own account. Only a player wearing one of their own characters may spend it.
+     */
+    static boolean ownsWornCharacter(Player player) {
+        Character worn = Character.get(player);
+        return worn != null && worn.getOwnerUUID().equals(player.getUniqueId());
     }
 
     /** Magics spell still in Magics YAML (characterCrystal-effect): m1 screen animation + coin quake sound. */
@@ -240,14 +254,15 @@ public final class CharacterCrystal implements Listener {
     private final class Ritual extends BukkitRunnable {
         private final Player player;
         private final int newMax;
-        private final String startCharacter;
+        /** The character the ritual started on (owner + ID): the swap only happens while the player still wears it. */
+        private final CharacterKey startCharacter;
         private final ItemDisplay display;
         private final Location hover;
         private int tick = 0;
         private float spin = 0f;
         private boolean done = false;
 
-        Ritual(Player player, ItemStack shown, int newMax, String startCharacter) {
+        Ritual(Player player, ItemStack shown, int newMax, CharacterKey startCharacter) {
             this.player = player;
             this.newMax = newMax;
             this.startCharacter = startCharacter;
@@ -365,9 +380,7 @@ public final class CharacterCrystal implements Listener {
         }
 
         private boolean onStartCharacter() {
-            if (!Character.isPlayedMapped(player)) return false;
-            Character current = Character.get(player);
-            return current != null && startCharacter.equals(current.getCharacterUUID());
+            return Character.isWearing(player, startCharacter);
         }
 
         private void finish() {

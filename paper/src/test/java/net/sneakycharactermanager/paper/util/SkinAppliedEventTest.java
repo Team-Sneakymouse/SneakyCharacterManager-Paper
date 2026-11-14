@@ -3,6 +3,8 @@ package net.sneakycharactermanager.paper.util;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import org.bukkit.Bukkit;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
+import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSkinAppliedEvent;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
@@ -19,6 +21,23 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class SkinAppliedEventTest {
+    /** Bug: a listener that switched the body's character during the event still got the old character's skin put on. */
+    @Test void aListenerSwitchingTheBodysCharacterLeavesTheBodyUntouched() {
+        Player player = mock(Player.class);
+        PluginManager manager = mock(PluginManager.class);
+        Character before = mock(Character.class);
+        Character after = mock(Character.class);
+        when(before.getKey()).thenReturn(new CharacterKey(java.util.UUID.randomUUID(), "before"));
+        when(after.getKey()).thenReturn(new CharacterKey(java.util.UUID.randomUUID(), "after"));
+        try (var bukkit = mockStatic(Bukkit.class); var characters = mockStatic(Character.class)) {
+            bukkit.when(Bukkit::getPluginManager).thenReturn(manager);
+            characters.when(() -> Character.get(player)).thenReturn(before, after);
+            SkinUtil.applySkin(player, new ProfileProperty("textures", "value", "signature"));
+        }
+        verify(manager).callEvent(any());
+        verifyNoInteractions(player);
+    }
+
     @Test void cancellationLeavesPlayerAndProfileCompletelyUntouched() {
         Player player = mock(Player.class);
         PluginManager manager = mock(PluginManager.class);
@@ -80,5 +99,49 @@ class SkinAppliedEventTest {
         order.verify(player).setPlayerProfile(profile);
         order.verify(vehicle).removePassenger(player);
         order.verify(player).teleport(new Location(null, 1, 3, 3));
+    }
+
+    @Test void askingFiresTheEventAndReportsACancellationWithoutTouchingThePlayer() {
+        Player player = mock(Player.class);
+        PluginManager manager = mock(PluginManager.class);
+        ProfileProperty property = new ProfileProperty("textures", "value", "signature");
+        try (var bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::getPluginManager).thenReturn(manager);
+            assertTrue(SkinUtil.skinAllowed(player, property));
+            doAnswer(call -> { ((CharacterSkinAppliedEvent) call.getArgument(0)).setCancelled(true); return null; }).when(manager).callEvent(any());
+            assertFalse(SkinUtil.skinAllowed(player, property));
+        }
+        verify(manager, times(2)).callEvent(any(CharacterSkinAppliedEvent.class));
+        verifyNoInteractions(player);
+    }
+
+    @Test void puttingTheSkinOnSetsTheProfileWithoutAnEventOrMovingThePlayer() {
+        Player player = mock(Player.class);
+        PlayerProfile profile = mock(PlayerProfile.class);
+        PluginManager manager = mock(PluginManager.class);
+        when(player.getPlayerProfile()).thenReturn(profile);
+        ProfileProperty property = new ProfileProperty("textures", "value", "signature");
+        try (var bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::getPluginManager).thenReturn(manager);
+            SkinUtil.putSkin(player, property);
+        }
+        verifyNoInteractions(manager);
+        verify(profile).setProperty(property);
+        verify(player).setPlayerProfile(profile);
+        verify(player, never()).teleport(any(Location.class));
+        verify(player, never()).getVehicle();
+    }
+
+    @Test void puttingNoSkinOnRemovesTheTexturesProperty() {
+        Player player = mock(Player.class);
+        PlayerProfile profile = mock(PlayerProfile.class);
+        when(player.getPlayerProfile()).thenReturn(profile);
+
+        SkinUtil.putSkin(player, null);
+
+        var order = inOrder(profile, player);
+        order.verify(profile).removeProperty("textures");
+        order.verify(player).setPlayerProfile(profile);
+        verify(player, never()).sendMessage(any(net.kyori.adventure.text.Component.class));
     }
 }
