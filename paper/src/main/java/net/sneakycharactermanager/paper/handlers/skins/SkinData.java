@@ -487,7 +487,11 @@ public class SkinData extends BukkitRunnable {
             // It should only be applied if priority is PRIO_UNIFORM (4).
             if (worn && (!isUniform || this.priority == SkinQueue.PRIO_UNIFORM)) {
                 SkinUtil.applySkin(this.player, property);
+                // applySkin fires events on this thread: a listener can switch or release the body before it returns.
+                worn = Character.isWearing(this.player, this.characterKey);
+            }
 
+            if (worn && (!isUniform || this.priority == SkinQueue.PRIO_UNIFORM)) {
                 SkinStateManager mgr = SneakyCharacterManager.getInstance().skinStateManager;
                 String stateName;
                 if (isUniform) {

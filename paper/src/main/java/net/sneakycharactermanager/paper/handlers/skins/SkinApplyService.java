@@ -114,9 +114,14 @@ public final class SkinApplyService {
             boolean slim = SkinUtil.isSlimModel(property, slimFallback);
             String resolvedUrl = mojangUrl.isEmpty() ? textureUrlFromProperty(property) : mojangUrl;
 
-            if (Character.isWearing(player, characterKey)) {
+            boolean worn = Character.isWearing(player, characterKey);
+            if (worn) {
                 SkinUtil.applySkin(player, property);
+                // applySkin fires events on this thread: a listener can switch or release the body before it returns.
+                worn = Character.isWearing(player, characterKey);
+            }
 
+            if (worn) {
                 if (context.recordSkinState()) {
                     String stateName = context.skinStateLabel() != null ? context.skinStateLabel() : "Regular";
                     String textureUrl = resolvedUrl == null ? sourceUrl : resolvedUrl;
@@ -136,7 +141,8 @@ public final class SkinApplyService {
                     character.setSlim(slim);
                 }
             } else if (context.updateProxyCharacter()) {
-                // The player switched away before the skin resolved. It still belongs to the requested character:
+                // The player switched away before the skin resolved or while it was put on. It still belongs to the
+                // requested character:
                 // save it there (below), and keep this body's older session state from overriding it on reload.
                 SneakyCharacterManager.getInstance().skinStateManager.forgetCharacter(characterKey);
             }

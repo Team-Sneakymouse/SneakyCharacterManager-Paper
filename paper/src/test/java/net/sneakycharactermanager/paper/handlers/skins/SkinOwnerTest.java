@@ -120,6 +120,56 @@ class SkinOwnerTest {
         assertEquals(borrowed, plugin.skinStateManager.current(wearerId).characterKey());
     }
 
+    /**
+     * Bug: putting a skin on fires events on the same thread. A listener that switched the body's character there
+     * got the old character's skin written onto the new one.
+     */
+    @Test
+    void skinResolvedWhileAListenerSwitchesTheBodyIsSavedToTheRequestedCharacterOnly() {
+        CompletableFuture<SkinCache.ResolveResult> resolve = new CompletableFuture<>();
+        cache.when(() -> SkinCache.resolve(wearer, URL, false)).thenReturn(resolve);
+        Character worn = mock(Character.class);
+        Character switchedTo = mock(Character.class);
+        characters.when(() -> Character.get(wearer)).thenReturn(worn);
+        characters.when(() -> Character.isWearing(wearer, borrowed)).thenReturn(true);
+        skins.when(() -> SkinUtil.applySkin(wearer, property)).thenAnswer(call -> { // a listener switches the body
+            characters.when(() -> Character.get(wearer)).thenReturn(switchedTo);
+            characters.when(() -> Character.isWearing(wearer, borrowed)).thenReturn(false);
+            return null;
+        });
+        SkinApplyService.requestSkin(wearer, borrowed, URL, false, SkinQueue.PRIO_SKIN, SkinApplyContext.defaults());
+
+        resolve.complete(hit("skin-id"));
+
+        verify(switchedTo, never()).setSkin(anyString());
+        verify(switchedTo, never()).setTexture(anyString());
+        verify(plugin.skinStateManager, never()).record(any(), any(), any(), any(), any(), any(), anyBoolean());
+        verify(plugin.skinStateManager).forgetCharacter(borrowed);
+        cache.verify(() -> SkinCache.updateCharacterSkin(wearer, borrowed, "skin-id", false));
+    }
+
+    /** The same on the MineSkin path, where a released body wears nothing afterwards. */
+    @Test
+    void mineSkinJobFinishingWhileAListenerReleasesTheBodyTouchesNoCharacter() throws Exception {
+        SkinData job = SkinData.getOrCreate(URL, "", false, SkinQueue.PRIO_SKIN, wearer, borrowed, "Name");
+        job.setPendingSkinId("skin-id");
+        finished(job);
+        characters.when(() -> Character.get(wearer)).thenReturn(mock(Character.class));
+        characters.when(() -> Character.isWearing(wearer, borrowed)).thenReturn(true);
+        skins.when(() -> SkinUtil.applySkin(wearer, property)).thenAnswer(call -> { // a listener releases the body
+            characters.when(() -> Character.get(wearer)).thenReturn(null);
+            characters.when(() -> Character.isWearing(wearer, borrowed)).thenReturn(false);
+            return null;
+        });
+
+        assertDoesNotThrow(job::apply);
+
+        verify(plugin.skinStateManager, never()).record(any(), any(), any(), any(), any(), any(), anyBoolean());
+        verify(plugin.skinStateManager).forgetCharacter(borrowed);
+        cache.verify(() -> SkinCache.updateCharacterSkin(wearer, borrowed, "skin-id", false));
+        assertFalse(plugin.skinQueue.getQueue().get(SkinQueue.PRIO_SKIN).contains(job));
+    }
+
     /** Bug 2: a queued job matched URL + wearer + ID, so another owner's same-ID job was reused. */
     @Test
     void queuedSkinIsNeverReusedForAnotherOwnersCharacter() {

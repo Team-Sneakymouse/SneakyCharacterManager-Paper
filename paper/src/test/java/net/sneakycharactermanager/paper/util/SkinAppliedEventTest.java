@@ -3,6 +3,8 @@ package net.sneakycharactermanager.paper.util;
 import com.destroystokyo.paper.profile.PlayerProfile;
 import com.destroystokyo.paper.profile.ProfileProperty;
 import org.bukkit.Bukkit;
+import net.sneakycharactermanager.paper.api.character.CharacterKey;
+import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSkinAppliedEvent;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
@@ -19,6 +21,23 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class SkinAppliedEventTest {
+    /** Bug: a listener that switched the body's character during the event still got the old character's skin put on. */
+    @Test void aListenerSwitchingTheBodysCharacterLeavesTheBodyUntouched() {
+        Player player = mock(Player.class);
+        PluginManager manager = mock(PluginManager.class);
+        Character before = mock(Character.class);
+        Character after = mock(Character.class);
+        when(before.getKey()).thenReturn(new CharacterKey(java.util.UUID.randomUUID(), "before"));
+        when(after.getKey()).thenReturn(new CharacterKey(java.util.UUID.randomUUID(), "after"));
+        try (var bukkit = mockStatic(Bukkit.class); var characters = mockStatic(Character.class)) {
+            bukkit.when(Bukkit::getPluginManager).thenReturn(manager);
+            characters.when(() -> Character.get(player)).thenReturn(before, after);
+            SkinUtil.applySkin(player, new ProfileProperty("textures", "value", "signature"));
+        }
+        verify(manager).callEvent(any());
+        verifyNoInteractions(player);
+    }
+
     @Test void cancellationLeavesPlayerAndProfileCompletelyUntouched() {
         Player player = mock(Player.class);
         PluginManager manager = mock(PluginManager.class);

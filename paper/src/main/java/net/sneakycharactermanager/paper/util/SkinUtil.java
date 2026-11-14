@@ -1,6 +1,7 @@
 package net.sneakycharactermanager.paper.util;
 
 import com.sneakyutils.util.TextUtility;
+import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSkinAppliedEvent;
 
 import org.bukkit.OfflinePlayer;
@@ -55,13 +56,21 @@ public class SkinUtil {
     }
 
 	public static void applySkin(Player player, ProfileProperty profileProperty) {
+		Character worn = Character.get(player);
 		if (!skinAllowed(player, profileProperty)) return;
+		// A listener switched or released the body: this skin was for the character it wore before.
+		if (!sameCharacter(worn, Character.get(player))) return;
 		putSkin(player, profileProperty);
 
 		// Remove player from vehicle and teleport them up slightly to prevent them from getting stuck
 		Entity vehicle = player.getVehicle();
 		if (vehicle != null) vehicle.removePassenger(player);
 		player.teleport(player.getLocation().add(0, 1, 0));
+	}
+
+	private static boolean sameCharacter(@Nullable Character before, @Nullable Character after) {
+		if (before == null || after == null) return before == after;
+		return before.getKey().equals(after.getKey());
 	}
 
 	/**
