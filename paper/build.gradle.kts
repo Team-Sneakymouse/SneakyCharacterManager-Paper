@@ -40,7 +40,7 @@ dependencies {
     testImplementation("org.mockito:mockito-core:5.21.0")
     // Tests compile against SCM classes that implement SneakyUtils types (e.g. DisplayOnlyInventoryHolder).
     testImplementation("io.github.team-sneakymouse:sneakyutils:${rootProject.extra["sneakyUtilsVersion"]}")
-    testRuntimeOnly("io.github.team-sneakymouse:sneakyitems:${rootProject.extra["sneakyItemsVersion"]}")
+    testImplementation("io.github.team-sneakymouse:sneakyitems:${rootProject.extra["sneakyItemsVersion"]}")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

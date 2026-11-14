@@ -18,13 +18,11 @@ import org.bukkit.World;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import com.sneakyitems.events.MagicItemClickEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -88,13 +86,9 @@ public final class CharacterCrystal implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGH)
-    public void onUse(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
-        ItemStack item = event.getItem();
-        if (!isCrystal(item)) return;
-        // Air clicks arrive already cancelled, so ignoreCancelled can't be used. Region and protection plugins deny
-        // the item use instead, and that is respected here.
-        if (event.useItemInHand() == Event.Result.DENY) return;
+    public void onCrystalClick(MagicItemClickEvent event) {
+        if (!event.isRightClick() || !MAGIC_ITEM_NAME.equals(event.getItemKey())) return;
+        if (event.isAlreadyDenied()) return;
         event.setCancelled(true);
 
         Player player = event.getPlayer();
@@ -112,7 +106,7 @@ public final class CharacterCrystal implements Listener {
         }
         confirmUntil.remove(id);
 
-        EquipmentSlot hand = event.getHand() == null ? EquipmentSlot.HAND : event.getHand();
+        EquipmentSlot hand = event.getHand();
         CharacterKey startCharacter = Character.get(player).getKey();
         User user = LuckPermsNodes.user(player);
         int bonus = LuckPermsNodes.highestOwnPermanentSuffix(user, CharacterSlots.BONUS_PREFIX) + 1;
