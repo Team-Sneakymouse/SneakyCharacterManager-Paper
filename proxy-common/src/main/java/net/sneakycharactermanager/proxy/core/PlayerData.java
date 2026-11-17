@@ -65,7 +65,6 @@ public final class PlayerData {
             section.put("texture", "");
             section.put("signature", "");
             section.put("slim", false);
-            section.put("tags", "");
             section.put("gender", "");
             section.put("title", "");
 
@@ -95,11 +94,10 @@ public final class PlayerData {
             String texture = stringOrEmpty(section.get("texture"));
             String signature = stringOrEmpty(section.get("signature"));
             boolean slim = boolOrDefault(section.get("slim"), false);
-            String tags = normalizeTags(section.get("tags"));
             String gender = stringOrEmpty(section.get("gender"));
             String title = stringOrEmpty(section.get("title"));
 
-            characterMap.put(key, new CharacterData(key, enabled, name, skinId, skin, skinUUID, texture, signature, slim, tags, gender, title));
+            characterMap.put(key, new CharacterData(key, enabled, name, skinId, skin, skinUUID, texture, signature, slim, gender, title));
         }
     }
 
@@ -121,7 +119,6 @@ public final class PlayerData {
         section.put("enabled", character.enabled());
         section.put("name", character.name());
         section.put("slim", character.slim());
-        section.put("tags", character.tags());
         section.put("gender", Gender.toConfigKeyNullable(character.gender()));
         section.put("title", character.title() == null ? "" : character.title());
 
@@ -191,7 +188,7 @@ public final class PlayerData {
 
     public synchronized String createNewCharacter(String uuid, String name, String skin, String skinUUID, boolean slim) {
         storeCharacters();
-        CharacterData character = new CharacterData(uuid, true, name, "", skin, skinUUID, "", "", slim, "", "", "");
+        CharacterData character = new CharacterData(uuid, true, name, "", skin, skinUUID, "", "", slim, "", "");
         characterMap.put(character.uuid(), character);
         saveCharacter(character);
         return character.uuid();
@@ -300,17 +297,6 @@ public final class PlayerData {
         saveCharacter(character);
     }
 
-    public synchronized void setCharacterTags(String characterUUID, String tags) {
-        storeCharacters();
-        CharacterData character = characterMap.get(characterUUID);
-        if (character == null) {
-            platform.logger().severe("Attempted to tag missing character [" + playerUUID + ", " + characterUUID + "]");
-            return;
-        }
-        character.tags(tags);
-        saveCharacter(character);
-    }
-
     public synchronized void setCharacterGender(String characterUUID, String gender) {
         storeCharacters();
         CharacterData character = characterMap.get(characterUUID);
@@ -369,16 +355,5 @@ public final class PlayerData {
         return def;
     }
 
-    private static String normalizeTags(Object tagsObj) {
-        if (tagsObj == null) return "";
-        if (tagsObj instanceof String s) return s;
-        if (tagsObj instanceof List<?> list) {
-            // Legacy: list of tags. Keep as a single string joined by ',' to avoid breaking downstream.
-            List<String> out = new ArrayList<>();
-            for (Object o : list) out.add(String.valueOf(o));
-            return String.join(",", out);
-        }
-        return String.valueOf(tagsObj);
-    }
 }
 

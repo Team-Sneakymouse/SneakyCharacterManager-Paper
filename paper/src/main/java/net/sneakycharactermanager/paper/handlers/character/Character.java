@@ -40,8 +40,6 @@ import com.sneakyutils.util.TextUtility;
 import net.sneakycharactermanager.paper.util.ChatUtility;
 import com.sneakyutils.util.InventoryUtility;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -80,7 +78,6 @@ public class Character {
 	private String texture;
 	private String signature;
 	private boolean slim;
-	private JsonObject tags = null;
 	private Gender gender = null;
 	private String title = "";
 	private final Map<String, String[]> uniformVariants = new HashMap<>();
@@ -92,7 +89,7 @@ public class Character {
 	 * @param wearer the body that wears it once {@link #load()} runs, or null for a list entry
 	 */
 	public Character(CharacterKey key, @Nullable Player wearer, String characterName, String skin, String skinUUID,
-			String texture, String signature, boolean slim, String tags, String gender, String title) {
+			String texture, String signature, boolean slim, String gender, String title) {
 		this.key = key;
 		this.player = wearer;
 		this.name = characterName;
@@ -102,7 +99,6 @@ public class Character {
 		this.texture = texture;
 		this.signature = signature;
 		this.slim = slim;
-		this.tags = tags.isEmpty() ? new JsonObject() : JsonParser.parseString(tags).getAsJsonObject();
 		this.gender = Gender.fromString(gender);
 		this.title = title == null ? "" : title;
 	}
@@ -285,22 +281,6 @@ public class Character {
 
 	public boolean isSlim() {
 		return this.slim;
-	}
-
-	public JsonObject getTags() {
-		return this.tags;
-	}
-
-	public String getTagsAsString() {
-		return this.tags.isEmpty() ? "{}" : this.tags.toString();
-	}
-
-	public String tagValue(String key) {
-		return this.tags.get(key) != null ? this.tags.get(key).getAsJsonPrimitive().getAsString() : "";
-	}
-
-	public Boolean hasTag(String key) {
-		return this.tags.keySet().contains(key);
 	}
 
 	public Gender getGender() {

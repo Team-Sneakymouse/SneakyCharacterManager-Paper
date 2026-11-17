@@ -36,8 +36,7 @@ public class CharacterLoader {
 				character.isFirstLoad(),
 				character.getName(),
 				url,
-				character.isSlim(),
-				character.getTagsAsString());
+				character.isSlim());
 
 		Bukkit.getServer().getPluginManager().callEvent(event);
 

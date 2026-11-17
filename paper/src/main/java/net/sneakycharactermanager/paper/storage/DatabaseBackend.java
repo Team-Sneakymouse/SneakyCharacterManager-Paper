@@ -263,7 +263,7 @@ public final class DatabaseBackend implements CharacterBackend {
     }
     private Character character(String owner, Player wearer, CharacterView c, List<Map<String,Object>> uniforms) {
         Character character = new Character(CharacterKey.of(owner, c.id()), wearer, c.name(), c.skin(), c.skinUuid(), c.texture(), c.signature(),
-                c.slim(), c.tags(), c.gender(), c.title());
+                c.slim(), c.gender(), c.title());
         for (Map<String,Object> row : uniforms) {
             if (SqlStore.text(row, "base_url").equals(c.uniformBase())) character.addUniformVariant(SqlStore.text(row, "uniform_hash"),
                     SqlStore.text(row, "skin_uuid"), SqlStore.text(row, "texture_url"), SqlStore.text(row, "texture"), SqlStore.text(row, "signature"));

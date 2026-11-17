@@ -143,7 +143,6 @@ public final class DatabaseOperations {
             case 1 -> legacySkin(r.owner(), r.character(), (String)v[0], (String)v[1], (String)v[2], (String)v[3], (Boolean)v[4]);
             case 2 -> store.update(r.owner(), r.character(), "name", v[0]);
             case 3 -> store.update(r.owner(), r.character(), "enabled", v[0]);
-            case 4 -> store.update(r.owner(), r.character(), "tags", v[0]);
             case 5 -> store.update(r.owner(), r.character(), "gender", v[0]);
             case 6 -> {
                 if (((String)v[0]).isEmpty()) throw new IllegalArgumentException("Empty skin id");
@@ -152,7 +151,7 @@ public final class DatabaseOperations {
             case 7 -> store.update(r.owner(), r.character(), "title", v[0]);
             default -> throw new IllegalArgumentException("Unknown character update");
         };
-        if (r.type() == 1 || r.type() == 4 || r.type() == 6) return empty(write);
+        if (r.type() == 1 || r.type() == 6) return empty(write);
         return write.thenCompose(unused -> snapshot(r.owner())).thenApply(s -> {
             List<Effect> effects = new ArrayList<>();
             if (r.type() == 3 && Boolean.FALSE.equals(v[0])) {

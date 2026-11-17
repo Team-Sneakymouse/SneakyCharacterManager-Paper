@@ -32,7 +32,6 @@ import net.sneakycharactermanager.paper.consolecommands.*;
 import net.sneakycharactermanager.paper.listeners.*;
 import net.sneakycharactermanager.paper.handlers.crystal.CharacterCrystal;
 import com.sneakyitems.api.SneakyItemsAPI;
-import net.sneakycharactermanager.paper.handlers.ContextCalculatorCharacterTag;
 import net.sneakycharactermanager.paper.handlers.Placeholders;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
@@ -132,7 +131,6 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 		getServer().getCommandMap().register(IDENTIFIER, new CommandCharAdmin());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandCharScan());
-		getServer().getCommandMap().register(IDENTIFIER, new CommandCharTag());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandCharPrefix());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandUniform());
 		getServer().getCommandMap().register(IDENTIFIER, new CommandUserify());
@@ -183,7 +181,6 @@ public class SneakyCharacterManager extends JavaPlugin implements Listener {
 
 		if (Bukkit.getPluginManager().getPlugin("LuckPerms") != null) {
 			luckPermsActive = true;
-			new ContextCalculatorCharacterTag().register();
 			titlePermissionRefresh = TitlePermissionRefresh.register(this);
 		}
 

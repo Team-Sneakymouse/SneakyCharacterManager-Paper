@@ -1261,7 +1261,7 @@ class SwapTest {
     }
 
     private Character character(CharacterKey key, Player wearer) {
-        return new Character(key, wearer, key.characterId(), "", "", "", "", false, "", "", "");
+        return new Character(key, wearer, key.characterId(), "", "", "", "", false, "", "");
     }
 
     /** Kicks a body: it goes offline, then SCM's quit listener runs, as on Paper. */

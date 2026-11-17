@@ -6,7 +6,7 @@ import net.sneakycharactermanager.paper.api.character.CharacterKey;
 import net.sneakycharactermanager.paper.util.ProxyMessagingUtil;
 
 /**
- * Saves an identity edit (name, tags, gender, title, skin, enabled) to a character's record. The record is addressed by
+ * Saves an identity edit (name, gender, title, skin, enabled) to a character's record. The record is addressed by
  * the character's key; {@code via} is only the player whose connection carries the message on the legacy proxy path.
  */
 public final class CharacterUpdates {
@@ -14,7 +14,7 @@ public final class CharacterUpdates {
     public static final int LEGACY_SKIN = 1;
     public static final int NAME = 2;
     public static final int ENABLED = 3;
-    public static final int TAGS = 4;
+    // 4 was TAGS (character tags moved to SneakyVariables character variables).
     public static final int GENDER = 5;
     public static final int SKIN_ID = 6;
     public static final int TITLE = 7;

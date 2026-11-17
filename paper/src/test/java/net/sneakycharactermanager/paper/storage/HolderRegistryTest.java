@@ -581,7 +581,7 @@ class HolderRegistryTest {
     }
 
     private static Character character(CharacterKey key, Player wearer) {
-        return new Character(key, wearer, "Name", "", "", "", "", false, "", "", "");
+        return new Character(key, wearer, "Name", "", "", "", "", false, "", "");
     }
 
     private static Map<String,Object> row(String id, String name, String lastPlayed) {

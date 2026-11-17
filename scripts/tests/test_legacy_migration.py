@@ -44,7 +44,8 @@ class ManifestTests(unittest.TestCase):
         chars = value['tables']['characters']
         self.assertEqual([c['character_id'] for c in chars], [FIRST, SECOND])
         self.assertFalse(chars[0]['enabled'])
-        self.assertEqual((chars[0]['skin_id'], chars[0]['skin'], chars[0]['name'], chars[0]['tags'], chars[0]['gender']), ('abc','inline','1','a,b','feminine'))
+        self.assertEqual((chars[0]['skin_id'], chars[0]['skin'], chars[0]['name'], chars[0]['gender']), ('abc','inline','1','feminine'))
+        self.assertNotIn('tags', chars[0])
         self.assertEqual(value['tables']['owners'][0]['owner_id'], OWNER)
         self.assertNotIn('keys.ser', value['files'])
         self.assertEqual(value, m.preflight(self.root))
@@ -52,10 +53,11 @@ class ManifestTests(unittest.TestCase):
         self.put('characterdata/template.yml', f'{FIRST}: {{}}')
         with self.assertRaisesRegex(m.MigrationError, 'template owner is not supported'):
             m.preflight(self.root)
-    def test_player_scalar_defaults_and_tag_java_null(self):
+    def test_player_scalar_defaults_and_tags_ignored(self):
         self.put(f'characterdata/{OWNER}.yml', f'{FIRST}: {{enabled: 1, slim: yes, name: 001, tags: [null, TRUE, 001]}}')
         row = m.preflight(self.root)['tables']['characters'][0]
-        self.assertEqual((row['enabled'], row['slim'], row['name'], row['tags']), (True, True, '1', 'null,true,1'))
+        self.assertEqual((row['enabled'], row['slim'], row['name']), (True, True, '1'))
+        self.assertNotIn('tags', row)
     def test_opaque_skin_uuids_preserved(self):
         self.put(f'characterdata/{OWNER}.yml', f'{FIRST}: {{skinUUID: abc123, skinId: "001"}}')
         self.put('uniform_skin_cache.yml', 'cache: [{base_url: exact, variants: [{hash: h, uuid: "001abc"}]}]')

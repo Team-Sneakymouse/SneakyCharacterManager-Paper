@@ -172,7 +172,6 @@ public final class ProxyMessenger {
         out.writeUTF(resolved.texture() != null ? resolved.texture() : "");
         out.writeUTF(resolved.signature() != null ? resolved.signature() : "");
         out.writeBoolean(character.slim());
-        out.writeUTF(character.tags());
         out.writeUTF(Gender.toConfigKeyNullable(character.gender()));
         out.writeUTF(character.title() == null ? "" : character.title());
 
