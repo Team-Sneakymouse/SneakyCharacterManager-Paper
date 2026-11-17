@@ -20,7 +20,7 @@ This plugin lets players maintain multiple roleplay characters while syncing cha
 - Java 25
 - Paper server(s) (paperweight/dev setup targets 26.2)
 - BungeeCord or Velocity proxy for the default messaging backend; alternatively, SneakyDB on Paper for explicit database mode
-- SneakyDB mode requires the published API-compatible runtime `2026.10.26-fd4e29e90ad0` or a compatible newer release; no SneakyDB runtime is needed for legacy mode
+- SneakyDB mode requires the published API-compatible runtime `2026.11.17-452c61d0f480` or a compatible newer release (for `migrate`); no SneakyDB runtime is needed for legacy mode
 - Optional soft dependencies on Paper side:
   - PlaceholderAPI
   - LuckPerms
@@ -49,7 +49,7 @@ storage:
 
 Keep `storage.backend: legacy` on the current network until final migration. Only after the offline import and validation, explicitly select `sneakydb` on the intended Paper instances. Backend selection and request timeout are fixed at enable; changes require a full restart, not `/charreload`. An uncertain database operation fences further work for that owner until restart rather than automatically retrying writes. Investigate and reconcile the durable database outcome before restarting; a timeout does not prove rollback.
 
-Database mode requires the operator-applied [schema contract](db/001_scm.sql), followed by [`db/002_unique_character_id.sql`](db/002_unique_character_id.sql). Importing legacy data is a separate, operator-run Python tool: see [offline migration and rollback](docs/migration.md). There is no automatic migration or YAML fallback on database failure. Do not enable SQL writers while legacy YAML writers remain authoritative for the same dataset.
+Database mode requires schema `scm` (operator-created) and SneakyDB migrations shipped in the jar (`paper/src/resources/db/migrations/`; see [spec](docs/specs/sneakydb-migrations-uuid.md) and [db/README.md](db/README.md)). Importing legacy data is a separate, operator-run Python tool against the uuid schema: see [offline migration and rollback](docs/migration.md). There is no YAML fallback on database failure. Do not enable SQL writers while legacy YAML writers remain authoritative for the same dataset.
 
 Database mode reads authoritative character snapshots for join, list/menu and selection operations. Titles refresh on join and title creation; already-observed title codes are retained against out-of-order snapshots. There is no push subscription, periodic cross-server broadcast, or automatic update to already-loaded player appearances. Changes made elsewhere become visible at those read boundaries; editing/removing existing title displays directly in SQL is not a supported live refresh workflow.
 
@@ -64,7 +64,7 @@ See [backend verification and cutover gates](docs/backend-verification.md) for l
   - `plugins/SneakyCharacterManager/characterdata/<ownerUUID>/<characterUUID>.yml`
 - Messaging channel between proxy and backend:
   - `sneakymouse:sneakycharacters`
-- Character IDs are unique across all accounts. New characters get random UUIDs. In database mode, `db/002_unique_character_id.sql` enforces this with a unique index. Template characters were removed; rows stored under the legacy `template` owner stay in place and keep their IDs reserved.
+- Character IDs are unique across all accounts and stored as PostgreSQL `uuid` (with owner ids). New characters get random UUIDs. The unique index is part of `V001__init.sql`. The legacy `template` owner is deleted by `V002__uuid_identity.sql` and is not supported.
 
 ## Character identity
 
@@ -444,7 +444,7 @@ CharacterDirectory.get().ifPresent(directory -> {
 
 - Callable from any thread. Futures complete on an arbitrary thread; hop to the main thread before touching Bukkit state.
 - Every call reads the store again, so results include renames made by admins or on other servers. Nothing is cached: cache on your side for frequent callers such as tab completion.
-- Only UUID ids are returned; legacy template rows and other non-UUID ids are not part of the directory.
+- Only UUID ids are returned; non-UUID wire values are skipped.
 - **SneakyDB mode:** queries `scm.characters`.
 - **Legacy mode:** a plugin-message round trip to the proxy (`directoryOwner` / `directoryCharacter`), which reads its account files on a background thread. Plugin messages need a player connection, so a lookup fails right away with `IllegalStateException` while nobody is online on that server. A lookup that gets no complete reply, for example from a proxy older than this API, fails with `TimeoutException` after 5 seconds. Update the proxy together with the Paper servers.
 - Renames that don't happen on this server fire no `CharacterNickChangeEvent`; look the character up instead.
@@ -486,7 +486,7 @@ The combined plugin JAR is `SneakyCharacterManager-<version>.jar` and can be ins
 
 ## Publishing to sneakyrp Maven
 
-Pushes to `main` run [`.github/workflows/publish.yml`](.github/workflows/publish.yml), which builds and publishes to `https://maven.sneakyrp.com/releases`.
+Pushes to `main` run [`.github/workflows/publish.yml`](.github/workflows/publish.yml), which builds and publishes to `https://maven.sneakyrp.com/sneakymouse`.
 
 Published coordinates (`io.github.team-sneakymouse`):
 
@@ -513,7 +513,7 @@ sneakyrpPassword=<password>
 ```kotlin
 repositories {
     mavenCentral()
-    maven("https://maven.sneakyrp.com/releases")
+    maven("https://maven.sneakyrp.com/sneakymouse")
 }
 
 dependencies {

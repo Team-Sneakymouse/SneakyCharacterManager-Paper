@@ -13,15 +13,16 @@ repositories {
     maven {
         url = uri("https://maven.maxhenkel.de/repository/public")
     }
-    maven("https://maven.sneakyrp.com/releases")
+    maven("https://maven.sneakyrp.com/sneakymouse")
 }
 
 dependencies {
     implementation(project(":common"))
     implementation(project(":proxy-common")) // shared SCM skin hashing/download policy, not YAML repositories
     // Java/JDK API only: provided by the optional SneakyDB plugin, never shaded.
-    compileOnly("io.github.team-sneakymouse:sneakydb-api:2026.10.26-fd4e29e90ad0")
-    testImplementation("io.github.team-sneakymouse:sneakydb-api:2026.10.26-fd4e29e90ad0")
+    // migrate() API; match a server running this SneakyDB or newer.
+    compileOnly("io.github.team-sneakymouse:sneakydb-api:2026.11.17-452c61d0f480")
+    testImplementation("io.github.team-sneakymouse:sneakydb-api:2026.11.17-452c61d0f480")
     paperweight.paperDevBundle("26.2.build.+")
     implementation("org.apache.httpcomponents:httpclient:4.5.14")
     compileOnly("me.clip:placeholderapi:2.11.5")

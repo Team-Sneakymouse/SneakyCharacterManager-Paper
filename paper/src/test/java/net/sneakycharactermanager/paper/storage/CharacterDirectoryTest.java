@@ -16,7 +16,7 @@ class CharacterDirectoryTest {
         List<CharacterInfo> infos = DirectoryResults.fromWire(List.of(
                 A.toString(), OWNER.toString(), "<gold>Monica</gold> &lRupert", "true",
                 "guard", OWNER.toString(), "Guard", "true",
-                B.toString(), "template", "Template", "true",
+                B.toString(), "not-a-uuid", "Broken", "true",
                 B.toString(), OWNER.toString(), "Gone", "false"));
         assertEquals(List.of(new CharacterInfo(A, OWNER, "Monica Rupert", true), new CharacterInfo(B, OWNER, "Gone", false)), infos);
         assertEquals(List.of(new CharacterInfo(A, OWNER, "Monica Rupert", true)), DirectoryResults.enabled(infos));
@@ -29,17 +29,18 @@ class CharacterDirectoryTest {
         assertEquals(Optional.empty(), DirectoryResults.single(A, List.of(one, new CharacterInfo(A, B, "Two", true)), logger));
     }
     @Test void sqlDirectoryQueriesInMenuOrderAndFiltersDisabled() {
-        SqlStoreTest.Api api = new SqlStoreTest.Api(); api.ready.complete(null);
+        SqlStoreTest.Api api = new SqlStoreTest.Api(); api.migrated.complete(2);
         SqlCharacterDirectory directory = new SqlCharacterDirectory(new SqlStore(api, 5), logger);
         api.rows = List.of(row(A, "&aMouse", true), row(B, "Gone", false));
         assertEquals(List.of(new CharacterInfo(A, OWNER, "Mouse", true)), directory.charactersOf(OWNER).join());
         String sql = api.statements.getLast();
-        assertTrue(sql.contains("WHERE owner_id = ? ORDER BY ordinal"), sql);
+        assertTrue(sql.contains("WHERE owner_id = ?::uuid ORDER BY ordinal"), sql);
         assertEquals(List.of(OWNER.toString()), api.bindings.getLast());
 
         api.rows = List.of(row(B, "Gone", false));
         assertEquals(Optional.of(new CharacterInfo(B, OWNER, "Gone", false)), directory.character(B).join());
-        assertTrue(api.statements.getLast().contains("owner_id <> 'template' LIMIT 2"));
+        assertTrue(api.statements.getLast().contains("character_id = ?::uuid LIMIT 2"));
+        assertFalse(api.statements.getLast().contains("template"));
         assertEquals(List.of(B.toString()), api.bindings.getLast());
     }
     private static Map<String,Object> row(UUID id, String name, boolean enabled) {

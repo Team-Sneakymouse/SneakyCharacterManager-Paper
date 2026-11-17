@@ -1,26 +1,25 @@
 package net.sneakycharactermanager.paper.storage;
 
 import com.sneakydb.SneakyDBApi;
+import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import java.util.*;
 import java.util.concurrent.*;
 
 /** All SQL is SCM-owned. Each call is one statement on an independent pooled connection.
  * Mutations serialize through the owner row and increment its revision in the same statement.
- * There is deliberately no schema creation, importer, or YAML fallback here.
+ * Schema comes from this jar's {@code db/migrations} scripts via {@link SneakyDBApi#migrate}.
  */
 public final class SqlStore {
-    public static final String SCHEMA_CHECK = """
-        SELECT v.version, o.owner_id, o.last_played_character, o.revision,
-               c.character_id, c.ordinal, c.enabled, c.name, c.skin_id, c.skin, c.skin_uuid,
-               c.texture, c.signature, c.slim, c.tags, c.gender, c.title,
-               s.skin_id, s.mojang_url, s.texture, s.signature, a.source_url, a.skin_id,
-               u.base_url, u.uniform_hash, u.skin_uuid, u.texture_url, u.texture, u.signature,
-               t.code, t.display
-        FROM scm.schema_version v
-        LEFT JOIN scm.owners o ON false LEFT JOIN scm.characters c ON false
-        LEFT JOIN scm.skins s ON false LEFT JOIN scm.skin_sources a ON false
-        LEFT JOIN scm.uniform_variants u ON false LEFT JOIN scm.titles t ON false
-        WHERE v.singleton = true
+    /** Confirms every table this build queries still exists after migrations. */
+    public static final String SCHEMA_SMOKE = """
+        SELECT o.owner_id, c.character_id, s.skin_id, a.source_url, u.base_url, t.code
+        FROM scm.owners o
+        LEFT JOIN scm.characters c ON false
+        LEFT JOIN scm.skins s ON false
+        LEFT JOIN scm.skin_sources a ON false
+        LEFT JOIN scm.uniform_variants u ON false
+        LEFT JOIN scm.titles t ON false
+        WHERE false
         """;
     private final SneakyDBApi api;
     private final int timeoutSeconds;
@@ -35,17 +34,30 @@ public final class SqlStore {
     public int timeoutSeconds() { return timeoutSeconds; }
     public void close() { closed.set(true); }
 
-    public SqlStore(SneakyDBApi api, int timeoutSeconds) {
+    /**
+     * @param migrated result of {@code api.migrate(IDENTIFIER, anchor)}; nothing touches scm tables before it completes
+     */
+    public SqlStore(SneakyDBApi api, int timeoutSeconds, CompletableFuture<Integer> migrated) {
         this.api = api;
         this.closed = new java.util.concurrent.atomic.AtomicBoolean();
         this.deadline = 0;
         this.timeoutSeconds = timeoutSeconds;
-        ready = bounded(api.whenReady()).thenCompose(unused -> query(SCHEMA_CHECK, List.of()))
-                .thenAccept(rows -> {
-                    if (rows.size() != 1 || !(rows.getFirst().get("version") instanceof Number n) || n.intValue() != 1)
-                        throw new IllegalStateException("SCM schema version 1 must be operator-applied before enabling database storage");
-                });
+        ready = bounded(migrated).thenCompose(unused -> query(SCHEMA_SMOKE, List.of())).thenAccept(rows -> {});
     }
+
+    /** Test helper: registers migrations through {@link SneakyDBApi#migrate} using this class as the jar anchor. */
+    public SqlStore(SneakyDBApi api, int timeoutSeconds) {
+        this(api, timeoutSeconds, migrateOrFail(api));
+    }
+
+    private static CompletableFuture<Integer> migrateOrFail(SneakyDBApi api) {
+        try {
+            return api.migrate(SneakyCharacterManager.IDENTIFIER, SqlStore.class);
+        } catch (RuntimeException error) {
+            return CompletableFuture.failedFuture(error);
+        }
+    }
+
     public CompletableFuture<Void> ready() { return ready.copy(); }
     private <T> CompletableFuture<T> bounded(CompletableFuture<T> future) {
         return future.copy().orTimeout(timeoutSeconds, TimeUnit.SECONDS);
@@ -63,11 +75,11 @@ public final class SqlStore {
         String id = UUID.randomUUID().toString();
         return execute("""
             WITH new_owner AS (
-                INSERT INTO scm.owners(owner_id, last_played_character) VALUES (?, ?)
+                INSERT INTO scm.owners(owner_id, last_played_character) VALUES (?::uuid, ?::uuid)
                 ON CONFLICT (owner_id) DO NOTHING RETURNING owner_id
             )
             INSERT INTO scm.characters(owner_id, character_id, name, skin)
-            SELECT owner_id, ?, ?, ? FROM new_owner
+            SELECT owner_id, ?::uuid, ?, ? FROM new_owner
             """, List.of(owner, id, id, name, ""));
     }
 
@@ -92,26 +104,26 @@ public final class SqlStore {
     }
     private CompletableFuture<Integer> mutate(String owner, String character, String assignment, List<?> values, String condition) {
         List<Object> args = new ArrayList<>(); args.add(owner); args.addAll(values); args.add(character);
-        return execute("WITH locked AS (UPDATE scm.owners SET revision = revision + 1 WHERE owner_id = ? RETURNING owner_id) "
+        return execute("WITH locked AS (UPDATE scm.owners SET revision = revision + 1 WHERE owner_id = ?::uuid RETURNING owner_id) "
                 + "UPDATE scm.characters c SET " + assignment
-                + " FROM locked WHERE c.owner_id = locked.owner_id AND c.character_id = ?" + condition, args);
+                + " FROM locked WHERE c.owner_id = locked.owner_id AND c.character_id = ?::uuid" + condition, args);
     }
     public CompletableFuture<Integer> select(String owner, String character) {
         return execute("""
-            UPDATE scm.owners SET last_played_character = ?, revision = revision + 1
-            WHERE owner_id = ? AND EXISTS (
-                SELECT 1 FROM scm.characters WHERE owner_id = ? AND character_id = ?)
+            UPDATE scm.owners SET last_played_character = ?::uuid, revision = revision + 1
+            WHERE owner_id = ?::uuid AND EXISTS (
+                SELECT 1 FROM scm.characters WHERE owner_id = ?::uuid AND character_id = ?::uuid)
             """, List.of(character, owner, owner, character));
     }
     /** Returns 0 rows when another owner already holds {@code id}: character IDs are global. */
     public CompletableFuture<Integer> create(String owner, String id, String name, String skin, String skinUuid, boolean slim) {
         return execute("""
             WITH locked AS (
-                UPDATE scm.owners SET revision = revision + 1 WHERE owner_id = ? RETURNING owner_id
+                UPDATE scm.owners SET revision = revision + 1 WHERE owner_id = ?::uuid RETURNING owner_id
             )
             INSERT INTO scm.characters(owner_id, character_id, name, skin, skin_uuid, slim)
-            SELECT owner_id, ?, ?, ?, ?, ? FROM locked
-            WHERE NOT EXISTS (SELECT 1 FROM scm.characters WHERE character_id = ? AND owner_id <> ?)
+            SELECT owner_id, ?::uuid, ?, ?, ?, ? FROM locked
+            WHERE NOT EXISTS (SELECT 1 FROM scm.characters WHERE character_id = ?::uuid AND owner_id <> ?::uuid)
             ON CONFLICT (owner_id, character_id) DO UPDATE
             SET enabled = true, name = EXCLUDED.name, skin_id = '', skin = EXCLUDED.skin,
                 skin_uuid = EXCLUDED.skin_uuid, texture = '', signature = '', slim = EXCLUDED.slim,
@@ -125,7 +137,7 @@ public final class SqlStore {
                    s.skin_id AS cached_id
             FROM scm.owners o LEFT JOIN scm.characters c ON c.owner_id = o.owner_id
             LEFT JOIN scm.skins s ON s.skin_id = c.skin_id
-            WHERE o.owner_id = ? ORDER BY c.ordinal
+            WHERE o.owner_id = ?::uuid ORDER BY c.ordinal
             """, List.of(owner));
     }
     public CompletableFuture<List<Map<String,Object>>> uniforms(Collection<String> bases) {
@@ -155,14 +167,14 @@ public final class SqlStore {
     public CompletableFuture<List<Map<String,Object>>> directoryOfOwner(String owner) {
         return query("""
             SELECT character_id, owner_id, name, enabled FROM scm.characters
-            WHERE owner_id = ? ORDER BY ordinal
+            WHERE owner_id = ?::uuid ORDER BY ordinal
             """, List.of(owner));
     }
-    /** At most two rows, so a duplicate (which db/002 forbids) is visible to the caller. */
+    /** At most two rows, so a duplicate (which the unique index forbids) is visible to the caller. */
     public CompletableFuture<List<Map<String,Object>>> directoryOfCharacter(String id) {
         return query("""
             SELECT character_id, owner_id, name, enabled FROM scm.characters
-            WHERE character_id = ? AND owner_id <> 'template' LIMIT 2 -- legacy template rows still in storage
+            WHERE character_id = ?::uuid LIMIT 2
             """, List.of(id));
     }
     public CompletableFuture<List<Map<String,Object>>> search(String filter) {

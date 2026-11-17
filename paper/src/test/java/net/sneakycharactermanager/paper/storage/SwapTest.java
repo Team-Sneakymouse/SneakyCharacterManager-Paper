@@ -345,7 +345,7 @@ class SwapTest {
             dropped.add(call.getArgument(1));
             return null;
         });
-        api.ready.complete(null);
+        api.migrated.complete(2);
         api.characters.put(driverId.toString(), List.of(new String[]{"main", "Main Hero"}, new String[]{"second", "Second Self"},
                 new String[]{"spare", "Spare Self"}));
         api.characters.put(supporterId.toString(), List.<String[]>of(new String[]{"own", "Supporter Self"}));

@@ -4,6 +4,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import legacy_migration as m
 
+OWNER = '11111111-1111-1111-1111-111111111111'
+OTHER = '22222222-2222-2222-2222-222222222222'
+FIRST = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1'
+SECOND = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2'
+SHARED = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+
 class YamlTests(unittest.TestCase):
     def test_snake_yaml_22_scalar_contract(self):
         # Observed with new Yaml().load using the project's SnakeYAML 2.2 JAR.
@@ -30,23 +36,28 @@ class ManifestTests(unittest.TestCase):
         (self.root / 'characterdata').mkdir()
     def put(self, name, text):
         (self.root / name).write_text(text)
-    def test_preserve_order_disabled_template_and_skin(self):
-        self.put('characterdata/template.yml', 'lastPlayedCharacter: second\nfirst:\n  enabled: false\n  skinId: abc\n  skin: inline\n  name: 001\n  tags: [a, b]\n  gender: FEMININE\nsecond: {}\n')
+    def test_preserve_order_disabled_and_skin(self):
+        self.put(f'characterdata/{OWNER}.yml',
+                 f'lastPlayedCharacter: {SECOND}\n{FIRST}:\n  enabled: false\n  skinId: abc\n  skin: inline\n  name: 001\n  tags: [a, b]\n  gender: FEMININE\n{SECOND}: {{}}\n')
         self.put('keys.ser', 'not serialized: never read')
         value = m.preflight(self.root)
         chars = value['tables']['characters']
-        self.assertEqual([c['character_id'] for c in chars], ['first','second'])
+        self.assertEqual([c['character_id'] for c in chars], [FIRST, SECOND])
         self.assertFalse(chars[0]['enabled'])
         self.assertEqual((chars[0]['skin_id'], chars[0]['skin'], chars[0]['name'], chars[0]['tags'], chars[0]['gender']), ('abc','inline','1','a,b','feminine'))
-        self.assertEqual(value['tables']['owners'][0]['owner_id'], 'template')
+        self.assertEqual(value['tables']['owners'][0]['owner_id'], OWNER)
         self.assertNotIn('keys.ser', value['files'])
         self.assertEqual(value, m.preflight(self.root))
+    def test_template_owner_refused(self):
+        self.put('characterdata/template.yml', f'{FIRST}: {{}}')
+        with self.assertRaisesRegex(m.MigrationError, 'template owner is not supported'):
+            m.preflight(self.root)
     def test_player_scalar_defaults_and_tag_java_null(self):
-        self.put('characterdata/template.yml', 'x: {enabled: 1, slim: yes, name: 001, tags: [null, TRUE, 001]}')
+        self.put(f'characterdata/{OWNER}.yml', f'{FIRST}: {{enabled: 1, slim: yes, name: 001, tags: [null, TRUE, 001]}}')
         row = m.preflight(self.root)['tables']['characters'][0]
         self.assertEqual((row['enabled'], row['slim'], row['name'], row['tags']), (True, True, '1', 'null,true,1'))
     def test_opaque_skin_uuids_preserved(self):
-        self.put('characterdata/template.yml', 'x: {skinUUID: abc123, skinId: "001"}')
+        self.put(f'characterdata/{OWNER}.yml', f'{FIRST}: {{skinUUID: abc123, skinId: "001"}}')
         self.put('uniform_skin_cache.yml', 'cache: [{base_url: exact, variants: [{hash: h, uuid: "001abc"}]}]')
         value = m.preflight(self.root)
         self.assertEqual(value['tables']['characters'][0]['skin_uuid'], 'abc123')
@@ -64,8 +75,11 @@ class ManifestTests(unittest.TestCase):
         self.put('titles.yml', 'duke: "\u00a0Duke\u00a0"')
         self.assertEqual(m.preflight(self.root)['tables']['titles'][0]['display'], '\u00a0Duke\u00a0')
     def test_bad_owner_rejected_not_normalized(self):
-        self.put('characterdata/ABC.yml', 'lastPlayedCharacter: x\nx: {}')
+        self.put('characterdata/ABC.yml', f'lastPlayedCharacter: {FIRST}\n{FIRST}: {{}}')
         with self.assertRaisesRegex(m.MigrationError, 'owner'): m.preflight(self.root)
+    def test_non_uuid_character_id_refused(self):
+        self.put(f'characterdata/{OWNER}.yml', 'named: {}')
+        with self.assertRaisesRegex(m.MigrationError, 'character'): m.preflight(self.root)
     def test_collisions(self):
         for name, text in [
             ('titles.yml', 'Grand Duke: Duke\ngrand-duke: Other'),
@@ -76,12 +90,11 @@ class ManifestTests(unittest.TestCase):
                 with self.assertRaisesRegex(m.MigrationError, 'collision'): m.preflight(self.root)
                 (self.root / name).unlink()
     def test_character_id_collision_across_owners(self):
-        owner = '11111111-1111-1111-1111-111111111111'
-        self.put(f'characterdata/{owner}.yml', 'lastPlayedCharacter: shared\nshared: {name: Mouse}\n')
-        self.put('characterdata/template.yml', 'lastPlayedCharacter: guard\nguard: {}\n')
+        self.put(f'characterdata/{OWNER}.yml', f'lastPlayedCharacter: {SHARED}\n{SHARED}: {{name: Mouse}}\n')
+        self.put(f'characterdata/{OTHER}.yml', f'lastPlayedCharacter: {FIRST}\n{FIRST}: {{}}\n')
         self.assertEqual(len(m.preflight(self.root)['tables']['characters']), 2)
-        self.put('characterdata/template.yml', 'lastPlayedCharacter: guard\nguard: {}\nshared: {}\n')
-        with self.assertRaisesRegex(m.MigrationError, f"collision in characters: ID 'shared' in owners '{owner}' and 'template'"):
+        self.put(f'characterdata/{OTHER}.yml', f'lastPlayedCharacter: {FIRST}\n{FIRST}: {{}}\n{SHARED}: {{}}\n')
+        with self.assertRaisesRegex(m.MigrationError, f"collision in characters: ID '{SHARED}' in owners '{OWNER}' and '{OTHER}'"):
             m.preflight(self.root)
     def test_cache_success_and_source_untouched(self):
         self.put('skin_cache.yml', 'skins: [{id: 001, mojang_url: "https://textures.minecraft.net/texture/a", texture: raw, signature: sig}]')

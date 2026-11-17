@@ -13,7 +13,7 @@ class DatabaseOperationsTest {
                 statements.add(sql); return initialization;
             }
         };
-        api.ready.complete(null);
+        api.migrated.complete(2);
         SqlStore store = new SqlStore(api, 5);
         DatabaseOperations operations = new DatabaseOperations(store, url -> CompletableFuture.completedFuture("hash"));
         var future = operations.run(new CharacterRequest.Create("owner"), "Name", System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(10));
@@ -23,7 +23,7 @@ class DatabaseOperationsTest {
         assertEquals(1, api.statements.stream().filter(sql -> sql.contains("INSERT INTO scm.characters")).count());
     }
     @Test void listPreservesInsertionOrderFiltersDisabledAndKeepsMissingSkinReference() {
-        SqlStoreTest.Api api = new SqlStoreTest.Api(); api.ready.complete(null);
+        SqlStoreTest.Api api = new SqlStoreTest.Api(); api.migrated.complete(2);
         SqlStore store = new SqlStore(api, 5);
         api.rows = List.of(row("second", true, "missing"), row("first", false, ""), row("third", true, ""));
         DatabaseOperations operations = new DatabaseOperations(store, url -> CompletableFuture.completedFuture("hash"));
@@ -34,7 +34,7 @@ class DatabaseOperationsTest {
         assertEquals("", listed.characters().getFirst().skin());
     }
     @Test void titleCreationReturnsCanonicalWinnerNotAttemptedDisplay() {
-        SqlStoreTest.Api api = new SqlStoreTest.Api(); api.ready.complete(null);
+        SqlStoreTest.Api api = new SqlStoreTest.Api(); api.migrated.complete(2);
         SqlStore store = new SqlStore(api, 5);
         api.rows = List.of(Map.of("code", "captain", "display", "Winner"));
         DatabaseOperations operations = new DatabaseOperations(store, url -> CompletableFuture.completedFuture("hash"));
@@ -44,7 +44,7 @@ class DatabaseOperationsTest {
         assertEquals("captain", result.code());
     }
     @Test void rejectedSkinUrlResolvesAsRejectedButTransientFailureStaysError() {
-        SqlStoreTest.Api api = new SqlStoreTest.Api(); api.ready.complete(null);
+        SqlStoreTest.Api api = new SqlStoreTest.Api(); api.migrated.complete(2);
         SqlStore store = new SqlStore(api, 5);
         api.rows = List.of();
         var rejected = new DatabaseOperations(store, url -> CompletableFuture.failedFuture(new CompletionException(

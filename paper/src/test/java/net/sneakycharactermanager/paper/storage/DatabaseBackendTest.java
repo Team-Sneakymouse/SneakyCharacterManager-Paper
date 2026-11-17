@@ -23,7 +23,7 @@ class DatabaseBackendTest {
         }
     }
     @Test void oldOfflineOwnerMenuCannotPopulateNewMenuForAnotherOwner() {
-        Api api = new Api(); api.ready.complete(null);
+        Api api = new Api(); api.migrated.complete(2);
         SneakyCharacterManager plugin = mock(SneakyCharacterManager.class);
         when(plugin.getLogger()).thenReturn(Logger.getAnonymousLogger());
         plugin.selectionMenu = mock(CharacterSelectionMenu.class);
@@ -62,7 +62,7 @@ class DatabaseBackendTest {
     @Test void delayedLoadedCannotReplaceSkinAfterNewerUpdateWithoutListEffect() { loadedAfterChange(false); }
     @Test void delayedLoadedCannotReplaceNewerObservedDatabaseRevision() { loadedAfterChange(true); }
     private void loadedAfterChange(boolean newerSnapshot) {
-        Api api = new Api(); api.ready.complete(null);
+        Api api = new Api(); api.migrated.complete(2);
         SneakyCharacterManager plugin = mock(SneakyCharacterManager.class);
         when(plugin.getLogger()).thenReturn(Logger.getAnonymousLogger());
         Player player = mock(Player.class); UUID uuid = UUID.randomUUID();
@@ -90,7 +90,7 @@ class DatabaseBackendTest {
         }
     }
     private void check(boolean quit, boolean disable) {
-        Api api = new Api(); api.ready.complete(null);
+        Api api = new Api(); api.migrated.complete(2);
         SneakyCharacterManager plugin = mock(SneakyCharacterManager.class);
         when(plugin.getLogger()).thenReturn(Logger.getAnonymousLogger());
         plugin.selectionMenu = mock(CharacterSelectionMenu.class);

@@ -90,7 +90,7 @@ class BorrowedCharacterTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        api.ready.complete(null);
+        api.migrated.complete(2);
         api.owners.put(ownerId.toString(), List.of(row("shared-id", "Owner's Character")));
         api.owners.put(bodyId.toString(), List.of(row("shared-id", "Body's Own")));
         plugins = mockStatic(SneakyCharacterManager.class);
