@@ -95,7 +95,11 @@ public final class Puppets {
      * that wears its own character gets its last-played character set to it, through the owner's storage queue; a
      * body wearing someone else's character keeps its pointer. Fires no {@link PuppetLeaveEvent} and no
      * {@code LoadCharacterEvent}: a body wearing someone else's character after the swap simply puppets that one now
-     * ({@link #borrowedBy}). The README's "Swap" section lists what moves and what stays with the body.
+     * ({@link #borrowedBy}). Fires one {@code CharacterLoadedEvent} per body after the swap's locks are released, and
+     * checks the result again after their listeners ran. Called from a {@code CharacterLoadedEvent} listener, the swap
+     * returns its result as of the moment it returns: its own events are delivered later, after the current event, so
+     * their listeners can still change the bodies without the result saying so. Only the outermost swap's result
+     * accounts for listener effects. The README's "Swap" section lists what moves and what stays with the body.
      */
     public static SwapResult swap(Player a, Player b) {
         Objects.requireNonNull(a, "a");

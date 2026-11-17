@@ -10,11 +10,13 @@ import org.jetbrains.annotations.NotNull;
 
 import net.sneakycharactermanager.paper.api.character.CharacterKey;
 
-// Public API (with CharacterNickChangeEvent, CharacterSkinChangeEvent, Character.get): used by MagicSpells,
-// SneakyVehicles and others, so keep signatures compatible or update those repos together.
+// Public API (with CharacterLoadedEvent, CharacterNickChangeEvent, CharacterSkinChangeEvent, Character.get): used by
+// MagicSpells, SneakyVehicles and others, so keep signatures compatible or update those repos together.
 /**
  * Fired before a character is put on a player. {@link #getPlayer()} is the body that will wear it;
- * {@link #getCharacterKey()} is the character, whose owner can be a different player.
+ * {@link #getCharacterKey()} is the character, whose owner can be a different player. While it runs,
+ * {@link Character#get(Player)} still returns the previous character. To act once the new character is on, listen to
+ * {@link CharacterLoadedEvent}, which follows on the main thread unless this event is cancelled.
  */
 public class LoadCharacterEvent extends PlayerEvent implements Cancellable {
 

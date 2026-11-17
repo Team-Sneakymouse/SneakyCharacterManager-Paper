@@ -75,7 +75,7 @@ A character is identified by its owner and its character ID, `CharacterKey(owner
 - the gameplay file `characterdata/<owner>/<characterId>.yml`: load, save, and creating it;
 - every identity edit sent as `updateCharacter` (`/nick`, `/chargender`, `/title`, `/skin`, skin results, deletion);
 - the skin pipeline: a skin request carries its key from request to result. Queued skin jobs are matched on URL + requester + key, and raising or dropping a job matches the key too;
-- `LoadCharacterEvent`, `CharacterNickChangeEvent` and `CharacterSkinChangeEvent`, which expose `getCharacterKey()`.
+- `LoadCharacterEvent`, `CharacterLoadedEvent`, `CharacterNickChangeEvent` and `CharacterSkinChangeEvent`, which expose `getCharacterKey()`.
 
 The gameplay file path didn't change. Until now the owner was always the wearer, so existing files are already at `<owner>/<characterId>.yml` and no migration is needed.
 
@@ -178,7 +178,7 @@ The cases above are tested one by one in `PuppetApiTest` (its header lists them)
 | `SLEEPING` | A body is in a bed. The caller gets it out first. |
 | `BUSY` | A body or one of the two characters is in the middle of a load or another swap (for example, called from a `LoadCharacterEvent` listener). |
 | `REFUSED` | Before anything was exchanged: a listener cancelled either skin's `CharacterSkinAppliedEvent`, refused or redirected a teleport, or a body quit or lost its character. Bodies that moved are put back, moving as they were. Both characters may have been saved where they stood. |
-| `INTERRUPTED` | A listener of one of the swap's own events took a body off its new character: a `Puppets.release` (run once the swap is done), a quit, or a lock-out. Both characters were saved before it began; each body wears whatever it wears now. |
+| `INTERRUPTED` | A listener of one of the swap's own events took a body off its new character: a `Puppets.release` (run once the swap is done), a quit, or a lock-out. Also when a listener of the swap's own `CharacterLoadedEvent`s changed either body so the two no longer wear each other's characters (only for a swap not itself called from a `CharacterLoadedEvent` listener; see "Load events"). Both characters were saved before it began; each body wears whatever it wears now. |
 
 Only `SWAPPED`, `REFUSED` and `INTERRUPTED` can change anything. The others are checked before anything happens.
 
@@ -207,7 +207,7 @@ Only `SWAPPED`, `REFUSED` and `INTERRUPTED` can change anything. The others are 
 
 So each swap writes two gameplay files, X and Y (plus any save a listener asks for before step 2), and one last-played pointer for each body that ends up in its own character.
 
-**Events.** A swap fires no `LoadCharacterEvent`: its listeners treat it as a character switch, and MagicSpells' load spells cure effects, reset XP and scale, and add a hunger penalty, which would undo what a swap moves. It fires no `PuppetLeaveEvent` either: the plugin that swaps knows it did.
+**Events.** A swap fires no `LoadCharacterEvent`: its listeners treat it as a character switch, and MagicSpells' load spells cure effects, reset XP and scale, and add a hunger penalty, which would undo what a swap moves. It fires no `PuppetLeaveEvent` either: the plugin that swaps knows it did. Once the swap is over it fires one `CharacterLoadedEvent` with `isSwap()` true for each body that still wears its new character, so plugins that cache what a body wears stay current (see "Load events"). If a listener of those changes either body so they no longer wear each other's characters, `swap` returns `INTERRUPTED`. A swap called from a `CharacterLoadedEvent` listener is the exception: its events are delivered after it returns, so its result is as of the moment it returns.
 
 **Puppet bookkeeping afterwards.** Whatever a body wears decides it, as always. In a Shadow Dance the Driver (wearing their own X) and the Supporter (puppeting the Driver's Y) swap:
 
@@ -356,6 +356,24 @@ Character tags (`/chartag`, `character_tag_…` / `character_hastag_…`, the `c
 - `skinqueue_processing`: Active Mineskin jobs
 - `skinqueue_total_queued`: Total pending jobs
 - `skinqueue_queued_p<0-4>`: Pending jobs per priority tier
+
+## Load events (Paper API)
+
+Both events live in `net.sneakycharactermanager.paper.handlers.character` and fire synchronously on the main thread (every load and swap runs there).
+
+- `LoadCharacterEvent` fires **before** a character is put on a body, and is cancellable. `Character.get(player)` and the placeholders still return the previous character while it runs.
+- `CharacterLoadedEvent` fires **after** the body wears the new character, once per change, and is not cancellable. It is a snapshot of the change: the body (`getPlayer()`), `getCharacterKey()`, `getPreviousCharacterKey()` (null when the body wore nothing: a login, after a release or `charenable`), `isFirstLoad()` (no gameplay file yet), `isSwap()` and `getCharacterName()`.
+
+When `CharacterLoadedEvent` fires:
+
+| Change | Fires |
+| --- | --- |
+| Any load: join, `/char`, create, staff loads, `Character.load()`, `Puppets.puppet`, a released body getting its own character back | Once, after `LoadCharacterEvent`, once the load is done (gameplay file applied, nameplate set, the `PuppetLeaveEvent` of a borrowed character it replaced, the load's reservation released), before the load call returns (unless it was called from a `CharacterLoadedEvent` listener: see below). Reloading the worn character fires it too, with the previous key equal to the new one. |
+| A load that a `LoadCharacterEvent` listener cancels, or the holder rule refuses | Never. |
+| `Puppets.swap` | Once per body, after the swap's locks are released, with `isSwap()` true and no `LoadCharacterEvent` before it (see "Swap"). If a listener changes either body so that they no longer wear each other's characters, `swap` returns `INTERRUPTED`. Called from a `CharacterLoadedEvent` listener, the swap returns first and its events follow after the current event, so its result is as of the moment it returns and a later listener can still change the bodies; only the outermost swap's result accounts for listener effects. |
+| A body that stops wearing anything (quit, `chardisable`, a release until its own character arrives) | Never: nothing is loaded. A quit fires `PlayerQuitEvent`; a release, or a `chardisable` of a body wearing a borrowed character, fires `PuppetLeaveEvent`. A `chardisable` of a body wearing its **own** character fires no SCM event at all, and the player stays online. |
+
+**Order and staleness.** Listeners run synchronously inside the outermost load or swap call, after its processing (worn character, nameplate, `PuppetLeaveEvent`, reservations) is done, so they may load or swap characters themselves. Events are delivered in the order their loads and swaps finished that processing, not the order the characters were put on: a load whose own `PuppetLeaveEvent` listener loads another body delivers that other body's event first. A load or swap started from a `CharacterLoadedEvent` listener doesn't interrupt the event being delivered: its event is queued and delivered after the current one has reached every listener (and after that call returned). Each event is made for one state of its body; if the body changed again before the event's turn (another load, a same-character reload, a swap, a quit, a lock-out), the event is dropped. So for a body that still wears a character, the last event a listener saw for it describes what it wears now, and a cache keyed on `getCharacterKey()` stays correct. A body that stops wearing anything gets no `CharacterLoadedEvent` (see the table), and an owned-character `chardisable` has no other event either, so a cache that must not go stale should also check `Character.get(player)` (null when the body wears nothing). During delivery, live state (`Character.get`, the placeholders) is at least as new as the event and may already be newer if an earlier listener changed the body: use the event's fields for the change it reports. The skin may still be resolving when it fires.
 
 ## Skin events (Paper API)
 

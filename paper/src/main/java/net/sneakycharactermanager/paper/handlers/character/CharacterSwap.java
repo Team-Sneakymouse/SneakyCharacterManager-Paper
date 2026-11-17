@@ -59,7 +59,9 @@ import net.sneakycharactermanager.paper.util.SkinUtil;
  *     pointer.</li>
  * </ol>
  * Fires no {@code LoadCharacterEvent} (its listeners treat it as a switch: MagicSpells' load spells cure effects and
- * reset XP, scale and hunger, which would undo what a swap moves) and no {@code PuppetLeaveEvent}.
+ * reset XP, scale and hunger, which would undo what a swap moves) and no {@code PuppetLeaveEvent}. Once it is over, it
+ * fires one {@link CharacterLoadedEvent} ({@code isSwap()} true) for each body that still wears its new character,
+ * then checks the result again; called during another such event's delivery, its events come after it returns.
  */
 @ApiStatus.Internal
 public final class CharacterSwap {
@@ -115,8 +117,9 @@ public final class CharacterSwap {
         swapping.add(a);
         swapping.add(b);
         SwapResult result;
+        long[] revisions = {-1, -1}; // each body's wear revision from the exchange, if it happened
         try {
-            result = exchange(a, b, x, y);
+            result = exchange(a, b, x, y, revisions);
         } finally {
             swapping.remove(a);
             swapping.remove(b);
@@ -137,10 +140,17 @@ public final class CharacterSwap {
         // body that rejoins comes back as what it wears now.
         writeOwnPointer(a, y, storage);
         writeOwnPointer(b, x, storage);
+        // Last, once the swap is over: one CharacterLoadedEvent for each body that still wears what it got from the
+        // exchange (its wear revision then). Listeners run inside this call (later, if it was made from one of them) and
+        // may change either body again.
+        Character.queueLoaded(a, revisions[0], x.getKey(), false, true);
+        Character.queueLoaded(b, revisions[1], y.getKey(), false, true);
+        Character.deliverLoaded();
+        if (result == SwapResult.SWAPPED && !(wears(a, y) && wears(b, x))) result = SwapResult.INTERRUPTED;
         return result;
     }
 
-    private static SwapResult exchange(Player a, Player b, Character x, Character y) {
+    private static SwapResult exchange(Player a, Player b, Character x, Character y, long[] revisions) {
         closeContainer(a);
         closeContainer(b);
         // A close listener may have done anything; nothing has changed yet, so just stop.
@@ -181,6 +191,8 @@ public final class CharacterSwap {
         }
 
         Character.exchange(a, b);
+        revisions[0] = Character.wearRevision(a);
+        revisions[1] = Character.wearRevision(b);
         // From here a listener of the swap's own events (effects, air, poses, vehicles, the nameplate) may take a body
         // off its new character (a quit, a lock-out). The inventories move first, both ways at once, holding exactly
         // what the saves hold; after that each step for a body runs only while it still wears its new character.

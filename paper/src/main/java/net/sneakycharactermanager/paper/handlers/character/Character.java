@@ -5,6 +5,7 @@ import net.sneakycharactermanager.paper.api.character.PuppetLeaveEvent;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -62,6 +63,16 @@ public class Character {
 	 */
 	private static final Map<CharacterKey, Player> holders = new ConcurrentHashMap<>();
 	private static final Map<UUID, List<Character>> playerCharactersCache = new ConcurrentHashMap<>();
+	/**
+	 * Each body's wear revision: a fresh number on every {@link #wear} (same-key reloads and swaps included), removed by
+	 * {@link #takeOff}. A {@link CharacterLoadedEvent} is delivered only while its body still has the revision it was
+	 * made for. Main thread only.
+	 */
+	private static final Map<Player, Long> wearRevisions = new HashMap<>();
+	private static long lastRevision;
+	/** {@link CharacterLoadedEvent}s waiting to be delivered, in order; see {@link #deliverLoaded}. Main thread only. */
+	private static final ArrayDeque<LoadedNotice> loadedQueue = new ArrayDeque<>();
+	private static boolean deliveringLoaded;
 
 	/** Owner + character ID: where this character's identity record and gameplay file live. */
 	private final CharacterKey key;
@@ -121,6 +132,17 @@ public class Character {
 	 */
 	@ApiStatus.Internal
 	public boolean load(LoadReason reason) {
+		return load(reason, null);
+	}
+
+	/**
+	 * {@link #load(LoadReason)}, running {@code onWorn} as soon as the character is on the body (its wear revision
+	 * current), before any later event of the load ({@code PuppetLeaveEvent}, {@link CharacterLoadedEvent}) whose
+	 * listeners may change the body again. For work that must read the body as this load left it, or that must be
+	 * queued before anything those listeners start. Not run if the load doesn't go through.
+	 */
+	@ApiStatus.Internal
+	public boolean load(LoadReason reason, @Nullable Runnable onWorn) {
 		if (this.player == null) {
 			SneakyCharacterManager.getInstance().getLogger().severe("Attempted to load character " + this.key + " without a wearer");
 			return false;
@@ -133,20 +155,35 @@ public class Character {
 		// Held from here until this load ends, through the holder rule's own side effects (a takeover releases the
 		// holder) and the load's events, so no load started from those can put this character on another body.
 		if (!HolderRegistry.reserve(this.key, this.player)) return false;
+		Applied applied = null;
 		try {
-			return HolderRegistry.admit(this, reason) && applyToWearer();
+			if (HolderRegistry.admit(this, reason)) applied = applyToWearer(onWorn);
 		} finally {
 			HolderRegistry.unreserve(this.key, this.player);
 		}
+		if (applied == null) return false;
+		// After the reservation ends, so its listeners can load or swap like anyone else.
+		queueLoaded(this.player, applied.revision(), applied.previous(), applied.firstLoad(), false);
+		deliverLoaded();
+		return true;
 	}
 
-	private boolean applyToWearer() {
+	/**
+	 * A finished {@link #applyToWearer}: the body's wear revision it set, what the body wore before, and whether the
+	 * character had no file yet.
+	 */
+	private record Applied(long revision, @Nullable CharacterKey previous, boolean firstLoad) {}
+
+	/** Returns null if a {@link LoadCharacterEvent} listener cancelled the load. */
+	@Nullable
+	private Applied applyToWearer(@Nullable Runnable onWorn) {
 		Character current = get(this.player);
 		if (current != null) current.save();
 
 		File characterFile = GameplayFile.of(this.key);
 		boolean hasFile = GameplayFile.exists(characterFile); // sees the save just queued above, too
 		this.firstLoad = !hasFile;
+		boolean wasFirstLoad = this.firstLoad; // CharacterLoader clears it
 		// Only the owner's very first character on this server starts from the body's live state, as before
 		// files moved to load time. Anyone else starts fresh: a borrowed character must not copy its wearer.
 		boolean seedFromBody = this.firstLoad && current == null
@@ -205,14 +242,57 @@ public class Character {
 			}
 
 			Character previous = wear(this.player, this);
+			long revision = wearRevision(this.player);
+			if (onWorn != null) onWorn.run();
 			// Only now does Character.get(body) return this character, so the plate shows its title, not the previous one's.
 			SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(this.player, getDisplayName());
 			ConsoleCommandCharDisable.playerCharEnable(this.player.getUniqueId().toString());
 			// Reloading the same character is not leaving it.
 			if (previous != null && !previous.key.equals(this.key)) left(this.player, previous, PuppetLeaveEvent.Reason.LOADED_OTHER);
-			return true;
+			return new Applied(revision, previous == null ? null : previous.key, wasFirstLoad);
 		}
-		return false;
+		return null;
+	}
+
+	private record LoadedNotice(Player body, long revision, CharacterLoadedEvent event) {}
+
+	/** {@code body}'s current wear revision (see {@link #wearRevisions}), or -1 if it wears nothing. */
+	static long wearRevision(Player body) {
+		Long revision = wearRevisions.get(body);
+		return revision == null ? -1 : revision;
+	}
+
+	/**
+	 * Queues a {@link CharacterLoadedEvent} for what {@code body} wears now, made for wear revision {@code revision}.
+	 * Dropped, here or when its turn comes, once the body's revision moved on (a later wear, reload, swap or removal),
+	 * so no stale name goes out. Deliver with {@link #deliverLoaded}.
+	 */
+	static void queueLoaded(Player body, long revision, @Nullable CharacterKey previous, boolean firstLoad, boolean swap) {
+		Character worn = characterMap.get(body);
+		if (worn == null || wearRevision(body) != revision) return;
+		loadedQueue.add(new LoadedNotice(body, revision, new CharacterLoadedEvent(body, worn.key, previous, firstLoad,
+				swap, worn.getName())));
+	}
+
+	/**
+	 * Delivers the queued {@link CharacterLoadedEvent}s in order, each to all listeners before the next. Called while one
+	 * is being delivered (a listener loaded or swapped), it returns at once: the outer call delivers what was queued
+	 * after the current event, so for a body that still wears a character the last event a listener sees is what it
+	 * wears now. A body taken off everything gets no event (see {@link CharacterLoadedEvent}).
+	 */
+	static void deliverLoaded() {
+		if (deliveringLoaded) return;
+		deliveringLoaded = true;
+		try {
+			LoadedNotice notice;
+			while ((notice = loadedQueue.poll()) != null) {
+				if (wearRevision(notice.body()) != notice.revision()) continue; // superseded
+				Bukkit.getServer().getPluginManager().callEvent(notice.event());
+			}
+		} finally {
+			deliveringLoaded = false;
+			loadedQueue.clear(); // only left over if a call threw
+		}
 	}
 
 	public Player getPlayer() {
@@ -557,6 +637,7 @@ public class Character {
 		Character previous = characterMap.put(body, character);
 		if (previous != null) holders.remove(previous.key, body);
 		holders.put(character.key, body);
+		wearRevisions.put(body, ++lastRevision);
 		return previous;
 	}
 
@@ -580,6 +661,7 @@ public class Character {
 	static Character takeOff(Player body) {
 		Character previous = characterMap.remove(body);
 		if (previous != null) holders.remove(previous.key, body);
+		wearRevisions.remove(body);
 		return previous;
 	}
 

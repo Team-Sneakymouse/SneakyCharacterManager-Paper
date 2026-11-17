@@ -1,5 +1,7 @@
 package net.sneakycharactermanager.paper.listeners;
 
+import net.sneakycharactermanager.paper.storage.CharacterResultEffects;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -59,6 +61,7 @@ public class ConnectionEventListeners implements Listener {
         Player player = event.getPlayer();
         var backend = SneakyCharacterManager.getInstance().getCharacterBackend();
         if (backend != null) backend.disconnect(player);
+        CharacterResultEffects.forget(player);
             
         //Un-Nick player who is disconnecting from the server
         var nametags = SneakyCharacterManager.getInstance().nametagManager;
