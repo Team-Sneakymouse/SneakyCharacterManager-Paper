@@ -87,7 +87,7 @@ public final class SqlStore {
     }
 
     // Fixed allowlist: untrusted field names never enter SQL.
-    private static final Set<String> FIELDS = Set.of("name", "enabled", "tags", "gender", "title");
+    private static final Set<String> FIELDS = Set.of("name", "enabled", "gender", "title");
     public CompletableFuture<Integer> update(String owner, String character, String field, Object value) {
         if (!FIELDS.contains(field)) throw new IllegalArgumentException("Unknown character field");
         return mutate(owner, character, field + " = ?", List.of(value));
@@ -130,7 +130,7 @@ public final class SqlStore {
             ON CONFLICT (owner_id, character_id) DO UPDATE
             SET enabled = true, name = EXCLUDED.name, skin_id = '', skin = EXCLUDED.skin,
                 skin_uuid = EXCLUDED.skin_uuid, texture = '', signature = '', slim = EXCLUDED.slim,
-                tags = '', gender = '', title = ''
+                gender = '', title = ''
             """, List.of(owner, id, name, skin, skinUuid, slim, id, owner));
     }
     public CompletableFuture<List<Map<String,Object>>> snapshot(String owner) {

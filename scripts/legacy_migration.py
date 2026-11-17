@@ -153,8 +153,6 @@ def preflight(root):
                        'enabled': boolean(section.get('enabled'), True), 'slim': boolean(section.get('slim'), False)}
                 for source, target in [('name','name'),('skinId','skin_id'),('skin','skin'),('skinUUID','skin_uuid'),('texture','texture'),('signature','signature'),('title','title')]:
                     row[target] = scalar(section.get(source))
-                tags = section.get('tags')
-                row['tags'] = ','.join('null' if v is None else scalar(v) for v in tags) if isinstance(tags, list) else scalar(tags)
                 gender = scalar(section.get('gender')).lower()
                 row['gender'] = gender if gender in ('masculine','feminine','nonbinary') else ''
                 add('characters', row, (owner,key))
@@ -204,7 +202,7 @@ def destination_action(receipt, digest, same):
 
 COLUMNS = {
     'owners': ('owner_id','last_played_character','revision'),
-    'characters': ('owner_id','character_id','ordinal','enabled','name','skin_id','skin','skin_uuid','texture','signature','slim','tags','gender','title'),
+    'characters': ('owner_id','character_id','ordinal','enabled','name','skin_id','skin','skin_uuid','texture','signature','slim','gender','title'),
     'skins': ('skin_id','mojang_url','texture','signature'),
     'skin_sources': ('source_url','skin_id'),
     'uniform_variants': ('base_url','uniform_hash','skin_uuid','texture_url','texture','signature'),

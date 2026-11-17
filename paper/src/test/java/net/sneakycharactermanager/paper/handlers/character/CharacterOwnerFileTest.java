@@ -143,7 +143,7 @@ class CharacterOwnerFileTest {
     /** Bug 3, offline owner: building the owner's list must not touch a player or the disk. */
     @Test
     void listEntriesForAnOfflineOwnerNeedNoPlayerAndCreateNoFiles() {
-        assertDoesNotThrow(() -> new Character(new CharacterKey(ownerId, "a"), null, "Name", "", "", "", "", false, "", "", ""));
+        assertDoesNotThrow(() -> new Character(new CharacterKey(ownerId, "a"), null, "Name", "", "", "", "", false, "", ""));
         assertFalse(data.resolve(ownerId.toString()).toFile().exists());
         assertEquals(List.of(), writes);
     }
@@ -236,12 +236,12 @@ class CharacterOwnerFileTest {
     @Test
     void deprecatedEventConstructorTreatsThePlayerAsOwner() {
         @SuppressWarnings("deprecation")
-        LoadCharacterEvent event = new LoadCharacterEvent(wearer, false, "own", "Name", "", false, "{}");
+        LoadCharacterEvent event = new LoadCharacterEvent(wearer, false, "own", "Name", "", false);
         assertEquals(new CharacterKey(wearerId, "own"), event.getCharacterKey());
     }
 
     private Character character(UUID owner, String id) {
-        return new Character(new CharacterKey(owner, id), wearer, "Name", "", "", "", "", false, "", "", "");
+        return new Character(new CharacterKey(owner, id), wearer, "Name", "", "", "", "", false, "", "");
     }
 
     private File saved(UUID owner, String id, double x) throws Exception {

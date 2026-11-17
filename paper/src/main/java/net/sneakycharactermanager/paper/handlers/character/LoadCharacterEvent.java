@@ -26,17 +26,15 @@ public class LoadCharacterEvent extends PlayerEvent implements Cancellable {
 	private final String characterName;
 	private final String skin;
 	private final boolean slim;
-	private final String tags;
 
 	public LoadCharacterEvent(@NotNull Player player, @NotNull CharacterKey key, boolean firstLoad, String characterName,
-			String skin, boolean slim, String tags) {
+			String skin, boolean slim) {
 		super(player);
 		this.key = key;
 		this.firstLoad = firstLoad;
 		this.characterName = characterName;
 		this.skin = skin;
 		this.slim = slim;
-		this.tags = tags;
 	}
 
 	/**
@@ -45,8 +43,8 @@ public class LoadCharacterEvent extends PlayerEvent implements Cancellable {
 	 */
 	@Deprecated
 	public LoadCharacterEvent(@NotNull Player player, boolean firstLoad, String characterUUID, String characterName,
-			String skin, boolean slim, String tags) {
-		this(player, new CharacterKey(player.getUniqueId(), characterUUID), firstLoad, characterName, skin, slim, tags);
+			String skin, boolean slim) {
+		this(player, new CharacterKey(player.getUniqueId(), characterUUID), firstLoad, characterName, skin, slim);
 	}
 
 	@Override
@@ -96,10 +94,6 @@ public class LoadCharacterEvent extends PlayerEvent implements Cancellable {
 
 	public boolean isSlim() {
 		return slim;
-	}
-
-	public String getTags() {
-		return tags;
 	}
 
 }

@@ -72,7 +72,7 @@ class PostgresIntegrationTest {
             assertTrue(m.matches(), f.getName());
             return Integer.parseInt(m.group(1));
         }));
-        assertEquals(List.of(1, 2), Arrays.stream(scripts).map(f -> {
+        assertEquals(java.util.stream.IntStream.rangeClosed(1, scripts.length).boxed().toList(), Arrays.stream(scripts).map(f -> {
             Matcher m = MIGRATION.matcher(f.getName());
             m.matches();
             return Integer.parseInt(m.group(1));
@@ -127,13 +127,12 @@ class PostgresIntegrationTest {
         var created = (DatabaseOperations.Loaded)run(new CharacterRequest.Create(OWNER)).getFirst();
         String second = created.character().id();
         run(new CharacterRequest.Update(OWNER, second, 2, new Object[]{"<red>Captain &aMouse"}));
-        run(new CharacterRequest.Update(OWNER, second, 4, new Object[]{"tag,other"}));
         run(new CharacterRequest.Update(OWNER, second, 5, new Object[]{"feminine"}));
         run(new CharacterRequest.Update(OWNER, second, 7, new Object[]{"unresolved_title"}));
         run(new CharacterRequest.Select(OWNER, initial.id()));
         var matched = (DatabaseOperations.Loaded)run(new CharacterRequest.SelectByName(OWNER, "captain")).getFirst();
         assertEquals(second, matched.character().id());
-        assertEquals("tag,other", matched.character().tags()); assertEquals("feminine", matched.character().gender());
+        assertEquals("feminine", matched.character().gender());
         assertEquals("unresolved_title", matched.character().title());
         run(new CharacterRequest.Update(OWNER, second, 3, new Object[]{false}));
         assertEquals(List.of(initial.id()), list(OWNER).characters().stream().map(CharacterView::id).toList());
@@ -226,9 +225,9 @@ class PostgresIntegrationTest {
     }
     @Test void concurrentFieldWritesDoNotClobberOtherFieldsAndQueueKeepsPerOwnerOrder() {
         String id = list(OWNER).characters().getFirst().id();
-        var a = store.update(OWNER, id, "name", "A"); var b = store.update(OWNER, id, "tags", "B");
+        var a = store.update(OWNER, id, "name", "A"); var b = store.update(OWNER, id, "gender", "B");
         CompletableFuture.allOf(a,b).join();
-        var c = list(OWNER).characters().getFirst(); assertEquals("A", c.name()); assertEquals("B", c.tags());
+        var c = list(OWNER).characters().getFirst(); assertEquals("A", c.name()); assertEquals("B", c.gender());
         OwnerQueue queue = new OwnerQueue(64);
         List<CompletableFuture<?>> writes = new ArrayList<>();
         for (int i = 0; i < 20; i++) { String value = "name-" + i; writes.add(queue.submit(OWNER, () -> store.update(OWNER, id, "name", value))); }

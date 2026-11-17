@@ -73,7 +73,7 @@ A character is identified by its owner and its character ID, `CharacterKey(owner
 **The rule:** everything stored about a character is addressed by its key, never by its wearer:
 
 - the gameplay file `characterdata/<owner>/<characterId>.yml`: load, save, and creating it;
-- every identity edit sent as `updateCharacter` (`/nick`, `/chargender`, `/title`, `/chartag`, `/skin`, skin results, deletion);
+- every identity edit sent as `updateCharacter` (`/nick`, `/chargender`, `/title`, `/skin`, skin results, deletion);
 - the skin pipeline: a skin request carries its key from request to result. Queued skin jobs are matched on URL + requester + key, and raising or dropping a job matches the key too;
 - `LoadCharacterEvent`, `CharacterNickChangeEvent` and `CharacterSkinChangeEvent`, which expose `getCharacterKey()`.
 
@@ -84,7 +84,7 @@ The gameplay file path didn't change. Until now the owner was always the wearer,
 | State | Why |
 | --- | --- |
 | `Character.get(player)`: what a player is wearing | It is a fact about the body. Each save still goes to the worn character's own key. |
-| Nametags, placeholders, LuckPerms tag contexts | They show whoever is in front of you, using the worn character's data. |
+| Nametags, placeholders | They show whoever is in front of you, using the worn character's data. |
 | Title unlock permission (shown on the plate and in the `/title` menu) | LuckPerms nodes belong to accounts. A borrowed character's title is hidden if the wearer hasn't unlocked it. This is a known gap; the equipped title itself is saved on the character. |
 | Character lock permission (`sneakycharacters.character.<id>`) | Checked on the player loading the character. |
 | Character slots (slot permissions, Character Crystal) | LuckPerms nodes belong to accounts. The crystal is an item in the worn character's inventory, so it only works while you wear one of your own characters, and only swaps you if you are still on the character you started it on. |
@@ -294,7 +294,6 @@ Titles (proxy file `titles.yml`, not Paper `config.yml`):
 ### Admin commands
 
 - `/charadmin`
-- `/chartag`
 - `/charprefix`
 - `/charscan`
 - `/uniform`
@@ -335,14 +334,13 @@ Titles (proxy file `titles.yml`, not Paper `config.yml`):
 
 Prefix: `%sneakycharacters_<placeholder>%`
 
+Character tags (`/chartag`, `character_tag_…` / `character_hastag_…`, the `charactertag` LuckPerms context) are gone: per-character data lives in SneakyVariables character variables (`%sneakyvariables_<name>%`, LuckPerms `charactervar`). `V003__drop_tags.sql` drops the `tags` column after SneakyVariables has copied `paladin` and `badge_number`.
+
 - `character_uuid`
 - `character_name`
 - `character_name_noformat`
 - `character_skin`
 - `character_slim`
-- `character_tags`
-- `character_hastag_<key>`
-- `character_tag_<key>`
 - `character_name_prefix`
 - `character_gender`
 - `character_gender_suffix`

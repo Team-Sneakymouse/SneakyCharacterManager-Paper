@@ -341,7 +341,7 @@ class GameplayFileReadThroughTest {
     }
 
     private Character character(Player body, UUID owner, String id) {
-        return new Character(new CharacterKey(owner, id), body, "Name", "", "", "", "", false, "", "", "");
+        return new Character(new CharacterKey(owner, id), body, "Name", "", "", "", "", false, "", "");
     }
 
     /** Lands every pending write, oldest first, as the real writer eventually would. */

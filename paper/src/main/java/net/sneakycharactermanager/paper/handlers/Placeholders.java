@@ -80,8 +80,6 @@ public class Placeholders extends PlaceholderExpansion {
 			return character.getSkin();
 		} else if (placeholder.equals("character_slim")) {
 			return character.isSlim() + "";
-		} else if (placeholder.equals("character_tags")) {
-			return character.getTagsAsString();
 		} else if (placeholder.equals("character_name_prefix")) {
 			return character.getNamePrefix();
 		} else if (placeholder.equals("character_gender")) {
@@ -96,10 +94,6 @@ public class Placeholders extends PlaceholderExpansion {
 			return pronoun(character.getGender(), "p");
 		} else if (placeholder.equals("character_pronoun_p2")) {
 			return pronoun(character.getGender(), "p2");
-		} else if (placeholder.startsWith("character_hastag_")) {
-			return character.hasTag(placeholder.replace("character_hastag_", "")) + "";
-		} else if (placeholder.startsWith("character_tag_")) {
-			return character.tagValue(placeholder.replace("character_tag_", ""));
 		}
 
 		return null;

@@ -13,7 +13,6 @@ public final class CharacterData {
     private boolean slim;
     private String texture;
     private String signature;
-    private String tags;
     private Gender gender;
     private String title;
 
@@ -27,7 +26,6 @@ public final class CharacterData {
             String texture,
             String signature,
             boolean slim,
-            String tags,
             String gender,
             String title
     ) {
@@ -40,7 +38,6 @@ public final class CharacterData {
         this.texture = texture == null ? "" : texture;
         this.signature = signature == null ? "" : signature;
         this.slim = slim;
-        this.tags = tags == null ? "" : tags;
         this.gender = Gender.fromString(gender);
         this.title = title == null ? "" : title;
     }
@@ -63,8 +60,6 @@ public final class CharacterData {
     public void texture(String texture) { this.texture = texture == null ? "" : texture; }
     public String signature() { return signature; }
     public void signature(String signature) { this.signature = signature == null ? "" : signature; }
-    public String tags() { return tags; }
-    public void tags(String tags) { this.tags = tags == null ? "" : tags; }
     public Gender gender() { return gender; }
     public void gender(Gender gender) { this.gender = gender; }
     public String title() { return title; }

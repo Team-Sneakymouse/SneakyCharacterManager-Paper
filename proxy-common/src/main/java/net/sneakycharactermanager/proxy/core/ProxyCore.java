@@ -160,7 +160,6 @@ public final class ProxyCore {
                         }
                         pd.syncCharactersToSelf(server, messenger);
                     }
-                    case 4 -> pd.setCharacterTags(characterUUID, in.readUTF());
                     case 5 -> {
                         pd.setCharacterGender(characterUUID, in.readUTF());
                         pd.syncCharactersToSelf(server, messenger);
