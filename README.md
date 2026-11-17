@@ -44,7 +44,7 @@ The opt-in SneakyDB backend runs the identity/catalog/cache operations directly 
 ```yaml
 storage:
   backend: legacy                # default, also used when the key is missing
-  requestTimeoutSeconds: 15      # 1..60; database readiness/request deadline
+  requestTimeoutSeconds: 15      # 1..60; deadline of one database request (the wait for migrations at startup has none)
 ```
 
 Keep `storage.backend: legacy` on the current network until final migration. Only after the offline import and validation, explicitly select `sneakydb` on the intended Paper instances. Backend selection and request timeout are fixed at enable; changes require a full restart, not `/charreload`. An uncertain database operation fences further work for that owner until restart rather than automatically retrying writes. Investigate and reconcile the durable database outcome before restarting; a timeout does not prove rollback.

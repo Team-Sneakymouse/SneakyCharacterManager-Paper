@@ -42,7 +42,10 @@ public final class SqlStore {
         this.closed = new java.util.concurrent.atomic.AtomicBoolean();
         this.deadline = 0;
         this.timeoutSeconds = timeoutSeconds;
-        ready = bounded(migrated).thenCompose(unused -> query(SCHEMA_SMOKE, List.of())).thenAccept(rows -> {});
+        // No timeout on the migration result: SneakyDB completes it only after every plugin has enabled, which on a
+        // full server takes longer than one request may. It always completes, and a request that waits on ready()
+        // has its own deadline.
+        ready = migrated.thenCompose(unused -> query(SCHEMA_SMOKE, List.of())).thenAccept(rows -> {});
     }
 
     /** Test helper: registers migrations through {@link SneakyDBApi#migrate} using this class as the jar anchor. */

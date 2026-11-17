@@ -32,10 +32,21 @@ class SqlStoreTest {
         assertThrows(CompletionException.class, () -> store.ensureOwner("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Name").join());
         assertTrue(api.statements.isEmpty());
     }
-    @Test void pendingMigrationIsBoundedAndNeverMutatesProviderFuture() {
+    @Test void readinessWaitsForMigrationsPastTheRequestTimeoutAndNeverMutatesProviderFuture() throws Exception {
         Api api = new Api(); SqlStore store = new SqlStore(api, 1);
-        assertThrows(CompletionException.class, () -> store.ready().join());
+        // SneakyDB finishes migrations after every plugin has enabled: longer than the request timeout.
+        assertThrows(TimeoutException.class, () -> store.ready().get(1500, TimeUnit.MILLISECONDS));
+        assertFalse(store.ready().isDone());
         assertFalse(api.migrated.isDone());
+        assertTrue(api.statements.isEmpty());
+        api.migrated.complete(2);
+        store.ready().join();
+        assertEquals(1, api.statements.size());
+    }
+    @Test void failedMigrationFailsReadinessWithoutTouchingTables() {
+        Api api = new Api(); SqlStore store = new SqlStore(api, 1);
+        api.migrated.completeExceptionally(new IllegalStateException("migrations failed"));
+        assertThrows(CompletionException.class, () -> store.ready().join());
         assertTrue(api.statements.isEmpty());
     }
     @Test void readinessQueriesSmokeOnlyAfterMigrateCompletes() {
