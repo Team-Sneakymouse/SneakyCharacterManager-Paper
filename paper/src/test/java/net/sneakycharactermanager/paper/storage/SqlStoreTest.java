@@ -10,9 +10,10 @@ class SqlStoreTest {
     static class Api implements SneakyDBApi {
         List<String> statements = new ArrayList<>();
         List<List<?>> bindings = new ArrayList<>();
-        List<Map<String,Object>> rows = List.of(Map.of("version", 1));
-        CompletableFuture<Void> ready = new CompletableFuture<>();
-        public CompletableFuture<Void> whenReady() { return ready; }
+        List<Map<String,Object>> rows = List.of();
+        CompletableFuture<Integer> migrated = new CompletableFuture<>();
+        public CompletableFuture<Void> whenReady() { return migrated.thenApply(v -> null); }
+        public CompletableFuture<Integer> migrate(String plugin, Class<?> anchor) { return migrated; }
         public boolean isAvailable() { return true; }
         public CompletableFuture<List<Map<String,Object>>> query(String sql, List<?> args) {
             statements.add(sql); bindings.add(args); return CompletableFuture.completedFuture(rows);
@@ -25,40 +26,43 @@ class SqlStoreTest {
         Api api = new Api();
         SqlStore store = new SqlStore(api, 1);
         store.close();
-        api.ready.complete(null);
+        api.migrated.complete(2);
         assertThrows(CompletionException.class, () -> store.ready().join());
         assertTrue(api.statements.isEmpty());
-        assertThrows(CompletionException.class, () -> store.ensureOwner("owner", "Name").join());
+        assertThrows(CompletionException.class, () -> store.ensureOwner("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Name").join());
         assertTrue(api.statements.isEmpty());
     }
-    @Test void pendingReadinessIsBoundedAndNeverMutatesProviderFuture() {
+    @Test void pendingMigrationIsBoundedAndNeverMutatesProviderFuture() {
         Api api = new Api(); SqlStore store = new SqlStore(api, 1);
         assertThrows(CompletionException.class, () -> store.ready().join());
-        assertFalse(api.ready.isDone());
+        assertFalse(api.migrated.isDone());
         assertTrue(api.statements.isEmpty());
     }
-    @Test void readinessDoesNotQueryUntilProviderReadyAndRejectsWrongSchema() {
+    @Test void readinessQueriesSmokeOnlyAfterMigrateCompletes() {
         Api api = new Api();
         SqlStore store = new SqlStore(api, 5);
         assertTrue(api.statements.isEmpty());
         assertFalse(store.ready().isDone());
-        api.rows = List.of(Map.of("version", 2));
-        api.ready.complete(null);
-        assertThrows(CompletionException.class, () -> store.ready().join());
+        api.migrated.complete(2);
+        store.ready().join();
+        assertEquals(1, api.statements.size());
+        assertTrue(api.statements.getFirst().contains("FROM scm.owners"));
+        assertFalse(api.statements.getFirst().contains("schema_version"));
     }
     @Test void initializationIsSingleAtomicStatementWithBoundLiteralOwner() {
-        Api api = new Api(); api.ready.complete(null);
+        Api api = new Api(); api.migrated.complete(2);
         SqlStore store = new SqlStore(api, 5); store.ready().join(); api.statements.clear();
-        store.ensureOwner("owner", "Name").join();
+        store.ensureOwner("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Name").join();
         assertEquals(1, api.statements.size());
         assertTrue(api.statements.getFirst().contains("WITH new_owner AS"));
         assertTrue(api.statements.getFirst().contains("ON CONFLICT (owner_id) DO NOTHING"));
-        assertEquals("owner", api.bindings.getLast().getFirst());
+        assertEquals("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", api.bindings.getLast().getFirst());
     }
     @Test void updateParametersNeverBecomeSqlAndRevisionLocksOwner() {
-        Api api = new Api(); api.ready.complete(null);
+        Api api = new Api(); api.migrated.complete(2);
         SqlStore store = new SqlStore(api, 5);
-        store.update("owner", "character", "name", "x'; DROP TABLE scm.characters; --").join();
+        store.update("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                "name", "x'; DROP TABLE scm.characters; --").join();
         String sql = api.statements.getLast();
         assertFalse(sql.contains("DROP TABLE"));
         assertTrue(sql.contains("revision = revision + 1"));

@@ -133,7 +133,7 @@ class HolderRegistryTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        api.ready.complete(null);
+        api.migrated.complete(2);
         api.characters.put(ownerId.toString(), List.of(new String[]{"main", "Main Hero"}, new String[]{"second", "Second Self"}));
         api.characters.put(supporterId.toString(), List.<String[]>of(new String[]{"own", "Supporter Self"}));
         api.characters.put(thirdId.toString(), List.<String[]>of(new String[]{"third", "Third Self"}));

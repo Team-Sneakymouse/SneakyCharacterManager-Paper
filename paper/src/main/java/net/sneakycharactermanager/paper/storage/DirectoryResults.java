@@ -13,7 +13,7 @@ import net.sneakycharactermanager.paper.util.ChatUtility;
 final class DirectoryResults {
     private DirectoryResults() {}
 
-    /** Empty when the id or owner is not a UUID (template characters, legacy ids). */
+    /** Empty when the id or owner is not a UUID (malformed wire or legacy non-UUID leftovers). */
     static Optional<CharacterInfo> info(String id, String owner, String name, boolean enabled) {
         UUID characterId = uuid(id), ownerId = uuid(owner);
         if (characterId == null || ownerId == null) return Optional.empty();
@@ -34,7 +34,7 @@ final class DirectoryResults {
         return characters.stream().filter(CharacterInfo::enabled).toList();
     }
 
-    /** Character ids are unique (db/002); if a duplicate slipped through anyway, refuse to guess. */
+    /** Character ids are unique (characters_character_id_key); if a duplicate slipped through anyway, refuse to guess. */
     static Optional<CharacterInfo> single(UUID id, List<CharacterInfo> matches, Logger logger) {
         List<CharacterInfo> exact = matches.stream().filter(c -> c.id().equals(id)).toList();
         if (exact.size() > 1) {

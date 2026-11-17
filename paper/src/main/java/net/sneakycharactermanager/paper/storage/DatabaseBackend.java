@@ -49,7 +49,7 @@ public final class DatabaseBackend implements CharacterBackend {
                 () -> SkinFetching.skinId(url, SkinFetching.policy()), http), this::heldElsewhere);
         operations.ready().whenComplete((unused, error) -> {
             if (error != null && !closed) plugin.getLogger().severe(
-                    "SneakyDB SCM initialization failed. Apply db/001_scm.sql, check SneakyDB, then restart; no legacy fallback.");
+                    "SneakyDB SCM initialization failed (migrations or readiness). Check SneakyDB and db/migrations, then restart; no legacy fallback.");
         });
     }
     /**

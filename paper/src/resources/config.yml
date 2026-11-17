@@ -1,6 +1,6 @@
 # Identity storage is selected ONCE at enable. Changing this requires a full restart.
 # Missing key and legacy preserve the current Bungee/Velocity messaging setup and keys.ser.
-# sneakydb is opt-in: requires SneakyDB and operator-applied db/001_scm.sql + manual import.
+# sneakydb is opt-in: requires SneakyDB (migrate API), schema scm, and jar db/migrations; see docs/specs/sneakydb-migrations-uuid.md.
 # No importer, schema creation, SQL access or SneakyDB runtime is used in legacy mode.
 # Locations/inventories/attributes/other gameplay state remain Paper file-backed in both modes.
 storage:

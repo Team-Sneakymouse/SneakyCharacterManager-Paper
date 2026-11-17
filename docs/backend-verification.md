@@ -29,7 +29,7 @@ Automated tests and a built JAR do not establish these in-game results. Record t
 
 ## Database integration gate
 
-Use a separately provisioned disposable PostgreSQL database, never the live migration target, for tests. Apply the repository's operator DDL (`db/001_scm.sql`, then `db/002_unique_character_id.sql`). Test the same operations as above on Paper instances explicitly configured for the database backend. No SCM proxy plugin or `keys.ser` should be needed in this mode.
+Use a separately provisioned disposable PostgreSQL database, never the live migration target, for tests. Create schema `scm` and apply `paper/src/resources/db/migrations/` (V001 then V002), or start a jar that calls `migrate` against an empty `scm` schema. Test the same operations as above on Paper instances explicitly configured for the database backend. No SCM proxy plugin or `keys.ser` should be needed in this mode.
 
 In addition, exercise:
 
@@ -44,7 +44,7 @@ In addition, exercise:
 
 ## Migration gate
 
-Follow [migration.md](migration.md). Dry-run and inspect the reviewed manifest on a frozen snapshot. Verify all fields, disabled records, template IDs, insertion order, references, cache collisions and source checksums. Run the importer integration test against a fresh disposable database before any production consideration.
+Follow [migration.md](migration.md). Dry-run and inspect the reviewed manifest on a frozen snapshot. Verify all fields, disabled records, UUID character ids, insertion order, references, cache collisions and source checksums. Run the importer integration test against a fresh disposable database before any production consideration.
 
 Actual cutover is a separate, operator-approved action: stop writers, back up, import, independently validate, then explicitly select database mode across the intended Paper instances. Avoid simultaneous legacy YAML and SQL authorities for one logical dataset.
 

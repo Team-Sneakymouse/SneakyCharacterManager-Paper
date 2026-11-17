@@ -26,7 +26,7 @@ import org.bukkit.Bukkit;
  *   with {@link java.util.concurrent.TimeoutException} after a few seconds.</li>
  * </ul>
  * <p>Results reflect the store at the time of the call, including renames made on other servers or by admins.
- * Ids that are not UUIDs (template characters) are never returned.
+ * Ids that are not UUIDs are never returned.
  */
 public interface CharacterDirectory {
 

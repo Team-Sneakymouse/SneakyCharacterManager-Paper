@@ -52,7 +52,7 @@ velocity/       thin Velocity adapter → proxy-common
 
 Root build produces a single shaded JAR for proxy + Paper. The default proxy backend retains `keys.ser` generation on the proxy and matching keys on Paper. Messaging channel: `sneakymouse:sneakycharacters`. SneakyDB mode is an explicit Paper opt-in; keep its API compile-only, authenticate through the manager, and preserve legacy startup without SneakyDB. Storage-authority changes require a restart; config reload must not silently change backends.
 
-Operator SQL lives in `db/001_scm.sql`; the standalone importer and its tests live under `scripts/`. Neither schema installation nor legacy import belongs in plugin startup. Read `docs/migration.md` and `docs/backend-verification.md` before storage/migration work. Preserve the default Velocity path until a separate manual cutover; never switch deployed config or import live data as part of building/testing.
+Schema scripts live in `paper/src/resources/db/migrations/` and run through SneakyDB `migrate("sneakycharacters", …)` on database-mode enable (see `docs/specs/sneakydb-migrations-uuid.md`). The operator creates schema `scm` only. The standalone YAML importer and its tests live under `scripts/`. Neither schema installation nor legacy import belongs in plugin startup beyond registering migrations. Read `docs/migration.md` and `docs/backend-verification.md` before storage/migration work. Preserve the default Velocity path until a separate manual cutover; never switch deployed config or import live data as part of building/testing.
 
 Guidelines:
 

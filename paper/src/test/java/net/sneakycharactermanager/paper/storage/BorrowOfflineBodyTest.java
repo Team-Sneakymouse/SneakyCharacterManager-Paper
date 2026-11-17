@@ -77,7 +77,7 @@ class BorrowOfflineBodyTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        api.ready.complete(null);
+        api.migrated.complete(2);
         api.owners.put(ownerId.toString(), List.of(row("shared-id", "Owner's Character")));
         plugins = mockStatic(SneakyCharacterManager.class);
         bukkit = mockStatic(Bukkit.class);

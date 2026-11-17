@@ -118,7 +118,7 @@ class DatabaseBackendIsolationTest {
         final org.mockito.MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
         final DatabaseBackend backend;
         Fixture() {
-            api.ready.complete(null);
+            api.migrated.complete(2);
             when(plugin.getLogger()).thenReturn(mock(Logger.class));
             plugin.selectionMenu = mock(CharacterSelectionMenu.class);
             plugin.titleRegistry = new TitleRegistry();

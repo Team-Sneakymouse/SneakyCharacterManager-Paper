@@ -130,13 +130,21 @@ def preflight(root):
         except (MigrationError, UnicodeError) as exc: raise MigrationError(f'{relative}: {exc}') from exc
         if path.parent.name == 'characterdata':
             owner = path.stem
-            if owner != 'template': canonical_uuid(owner, 'owner')
-            add('owners', {'owner_id': owner, 'last_played_character': scalar(data.get('lastPlayedCharacter')), 'revision': 0}, owner)
+            if owner == 'template':
+                raise MigrationError(f'{relative}: template owner is not supported; remove characterdata/template.yml')
+            canonical_uuid(owner, 'owner')
+            last_played = scalar(data.get('lastPlayedCharacter'))
+            if last_played:
+                canonical_uuid(last_played, 'lastPlayedCharacter')
+            else:
+                last_played = None
+            add('owners', {'owner_id': owner, 'last_played_character': last_played, 'revision': 0}, owner)
             for key, section in data.items():
                 if key.lower() == 'lastplayedcharacter': continue
                 scalar(key)
                 if not key: raise MigrationError('empty character ID')
-                # Character IDs are global (db/002_unique_character_id.sql), not per owner.
+                canonical_uuid(key, 'character')
+                # Character IDs are global (unique index), not per owner.
                 if key in character_owners:
                     raise MigrationError(f'collision in characters: ID {key!r} in owners {character_owners[key]!r} and {owner!r}')
                 character_owners[key] = owner
@@ -221,8 +229,12 @@ def apply_postgres(dsn, root, manifest):
         conn.execute('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE')
         conn.execute("SET LOCAL lock_timeout = '10s'")
         conn.execute("SET LOCAL statement_timeout = '120s'")
-        version = conn.execute('SELECT version FROM scm.schema_version WHERE singleton = true').fetchone()
-        if version != (1,): raise MigrationError('unsupported SCM schema version')
+        owner_type = conn.execute("""
+            SELECT data_type FROM information_schema.columns
+            WHERE table_schema = 'scm' AND table_name = 'owners' AND column_name = 'owner_id'
+            """).fetchone()
+        if owner_type != ('uuid',):
+            raise MigrationError('SCM schema must be at uuid identity (V002); apply paper db/migrations first')
         conn.execute('LOCK TABLE ' + ','.join('scm.' + table for table in COLUMNS) + ' IN ACCESS EXCLUSIVE MODE')
         # Durable provenance is created only by explicit offline apply, transactionally.
         conn.execute('CREATE TABLE IF NOT EXISTS scm.legacy_import (singleton boolean PRIMARY KEY CHECK (singleton), manifest_sha256 text NOT NULL, manifest jsonb NOT NULL, imported_at timestamptz NOT NULL DEFAULT now())')

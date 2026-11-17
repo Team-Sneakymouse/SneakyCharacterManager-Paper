@@ -166,7 +166,7 @@ class PuppetApiTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        api.ready.complete(null);
+        api.migrated.complete(2);
         api.characters.put(ownerId.toString(), List.of(new String[]{"main", "Main Hero"}, new String[]{"retired", "Old Self"},
                 new String[]{"second", "Second Self"}));
         api.disabled.add("retired");
