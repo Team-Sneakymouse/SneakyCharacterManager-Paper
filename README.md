@@ -486,7 +486,7 @@ The combined plugin JAR is `SneakyCharacterManager-<version>.jar` and can be ins
 
 ## Publishing to sneakyrp Maven
 
-Pushes to `main` run [`.github/workflows/publish.yml`](.github/workflows/publish.yml), which builds and publishes to `https://maven.sneakyrp.com/releases`.
+Pushes to `main` run [`.github/workflows/publish.yml`](.github/workflows/publish.yml), which builds and publishes to `https://maven.sneakyrp.com/sneakymouse`.
 
 Published coordinates (`io.github.team-sneakymouse`):
 
@@ -513,7 +513,7 @@ sneakyrpPassword=<password>
 ```kotlin
 repositories {
     mavenCentral()
-    maven("https://maven.sneakyrp.com/releases")
+    maven("https://maven.sneakyrp.com/sneakymouse")
 }
 
 dependencies {

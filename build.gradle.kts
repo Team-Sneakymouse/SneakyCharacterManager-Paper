@@ -72,7 +72,7 @@ fun org.gradle.api.publish.maven.MavenPom.configureSharedPom(moduleLabel: String
 fun org.gradle.api.artifacts.dsl.RepositoryHandler.sneakyrpReleases() {
     maven {
         name = "sneakyrp"
-        url = uri("https://maven.sneakyrp.com/releases")
+        url = uri("https://maven.sneakyrp.com/sneakymouse")
         credentials(PasswordCredentials::class)
         authentication {
             create<org.gradle.authentication.http.BasicAuthentication>("basic")
@@ -98,7 +98,7 @@ allprojects {
         mavenCentral()
         maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://maven.maxhenkel.de/repository/public")
-        maven("https://maven.sneakyrp.com/releases")
+        maven("https://maven.sneakyrp.com/sneakymouse")
     }
 }
 

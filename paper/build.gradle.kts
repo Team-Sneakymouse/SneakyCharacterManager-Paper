@@ -13,7 +13,7 @@ repositories {
     maven {
         url = uri("https://maven.maxhenkel.de/repository/public")
     }
-    maven("https://maven.sneakyrp.com/releases")
+    maven("https://maven.sneakyrp.com/sneakymouse")
 }
 
 dependencies {
