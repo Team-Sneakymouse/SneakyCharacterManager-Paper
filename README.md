@@ -295,7 +295,7 @@ Titles (proxy file `titles.yml`, not Paper `config.yml`):
 
 - `/charadmin`
 - `/charprefix`
-- `/charscan`
+- `/charscan <id|name|magicitem> <value>` (scan saved character inventories by material id, display name, or SneakyItems magic-item PDC name, e.g. `magicitem item-characterCrystal`)
 - `/uniform`
 - `/userify` (alias: `/whois`)
 - `/migrateinventories`
