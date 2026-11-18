@@ -37,7 +37,9 @@ public enum SwapResult {
      * waits until the swap is done, then saves and takes off the character as usual), a quit or a lock-out. Both
      * characters were saved where they stood before the exchange began; whatever each body wears now is what it
      * wears. No item is on both bodies. A body that quit or was locked out mid-swap got nothing more of its new
-     * character.
+     * character. Also returned when a listener of the swap's own {@code CharacterLoadedEvent}s changed either body so
+     * the two no longer wear each other's characters. Only a swap not itself called from a {@code CharacterLoadedEvent}
+     * listener sees that: a nested swap's events are delivered after it returns, so its result is as of that moment.
      */
     INTERRUPTED;
 

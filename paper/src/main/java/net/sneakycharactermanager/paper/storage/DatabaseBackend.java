@@ -219,8 +219,10 @@ public final class DatabaseBackend implements CharacterBackend {
                     // No lock-permission check and no default-skin initialisation: the body isn't the owner.
                     return character.load(LoadReason.BORROW) ? Outcome.LOADED : Outcome.REFUSED;
                 }
-                CharacterResultEffects.load(character, r.forced());
-                if (r.character().skin().isEmpty() && r.character().skinId().isEmpty())
+                boolean defaultSkin = r.character().skin().isEmpty() && r.character().skinId().isEmpty();
+                // The default skin is written as the load puts the character on, before its events' listeners run.
+                // A load that didn't go through fires no CharacterLoadedEvent: the body's skin is read now, as before.
+                if (!CharacterResultEffects.load(character, r.forced(), defaultSkin) && defaultSkin)
                     CharacterResultEffects.defaultSkin(r.destination(), r.character().id());
             }
             case DatabaseOperations.HeldElsewhere r -> {

@@ -121,6 +121,8 @@ class PuppetApiTest {
     final List<Object[]> left = new ArrayList<>();
     boolean deferTasks;
     final List<Runnable> deferred = new ArrayList<>();
+    /** Runs inside each event, like a listener; null for none. */
+    java.util.function.Consumer<org.bukkit.event.Event> listener;
     PluginManager events;
     Player owner, supporter, third;
     DatabaseBackend backend;
@@ -136,6 +138,8 @@ class PuppetApiTest {
         final Map<String, List<String[]>> characters = new HashMap<>();
         final Map<String, String> lastPlayed = new HashMap<>();
         final Set<String> disabled = new HashSet<>();
+        /** Characters with no skin, skin ID, texture or signature: their loads initialise a default skin. */
+        final Set<String> skinless = new HashSet<>();
         boolean failSnapshots;
         /** Owners whose next snapshot waits until the gate completes, like a slow database. */
         final Map<String, CompletableFuture<Void>> gates = new HashMap<>();
@@ -145,8 +149,11 @@ class PuppetApiTest {
                 if (failSnapshots) return CompletableFuture.failedFuture(new IllegalStateException("database down"));
                 String owner = (String) args.getFirst();
                 List<Map<String,Object>> rows = new ArrayList<>();
-                for (String[] c : characters.getOrDefault(owner, List.of()))
-                    rows.add(row(c[0], c[1], lastPlayed.get(owner), !disabled.contains(c[0])));
+                for (String[] c : characters.getOrDefault(owner, List.of())) {
+                    Map<String,Object> row = row(c[0], c[1], lastPlayed.get(owner), !disabled.contains(c[0]));
+                    if (skinless.contains(c[0])) { row.put("skin", ""); row.put("texture", ""); row.put("signature", ""); }
+                    rows.add(row);
+                }
                 CompletableFuture<Void> gate = gates.remove(owner);
                 return gate == null ? CompletableFuture.completedFuture(rows) : gate.thenApply(unused -> rows);
             }
@@ -212,6 +219,7 @@ class PuppetApiTest {
                 left.add(new Object[]{event.getPlayer(), event.getCharacterKey(), event.getReason(),
                         worn == null ? null : worn.getKey(), CharacterHolders.holderOf(event.getCharacterKey())});
             }
+            if (listener != null) listener.accept(call.getArgument(0));
             return null;
         }).when(events).callEvent(any());
         Server server = mock(Server.class);
@@ -687,6 +695,42 @@ class PuppetApiTest {
     }
 
     /** {@code player} is online and asks for its last-played character. */
+    /**
+     * Codex review 4, finding 1: a skinless character's default skin is written as its load puts it on, before its
+     * {@code CharacterLoadedEvent}. A {@code /char} pick a listener of that event makes is queued after the write, so
+     * its result isn't dropped as stale and the body ends up on the picked character.
+     */
+    @Test
+    void aPickFromALoadedEventListenerIsNotDroppedByTheDefaultSkinWrite() throws Exception {
+        api.skinless.add("main");
+        java.net.URL mojang = java.net.URI.create("http://textures.minecraft.net/texture/account").toURL();
+        org.bukkit.profile.PlayerTextures textures = mock(org.bukkit.profile.PlayerTextures.class);
+        when(textures.getSkin()).thenReturn(mojang);
+        when(textures.getSkinModel()).thenReturn(org.bukkit.profile.PlayerTextures.SkinModel.CLASSIC);
+        com.destroystokyo.paper.profile.PlayerProfile profile = mock(com.destroystokyo.paper.profile.PlayerProfile.class);
+        when(profile.getTextures()).thenReturn(textures);
+        when(owner.getPlayerProfile()).thenReturn(profile);
+        List<Boolean> skinWrittenFirst = new ArrayList<>();
+        listener = event -> {
+            if (event instanceof net.sneakycharactermanager.paper.handlers.character.CharacterLoadedEvent loaded
+                    && loaded.getCharacterKey().equals(main) && skinWrittenFirst.isEmpty()) {
+                skinWrittenFirst.add(api.any("skin = ?, slim = ?"));
+                deferTasks = true; // the pick's result arrives later, as storage results do
+                backend.submit(owner, new CharacterRequest.Select(ownerId.toString(), "second"));
+            }
+        };
+
+        join(owner);
+        deferTasks = false;
+        runDeferred();
+
+        assertEquals(second, Character.get(owner).getKey(), "the listener's pick was applied, not dropped as stale");
+        assertEquals(List.of(true), skinWrittenFirst, "the default skin was written before the event's listeners ran");
+        int skin = api.statements.indexOf(api.statements.stream().filter(sql -> sql.contains("skin = ?, slim = ?")).findFirst().orElseThrow());
+        assertEquals(List.of("http://textures.minecraft.net/texture/account", false), api.bindings.get(skin).subList(1, 3),
+                "the account skin the body had");
+    }
+
     private void join(Player player) {
         bukkit.when(() -> Bukkit.getPlayer(player.getUniqueId())).thenReturn(player);
         backend.submit(player, new CharacterRequest.Join(player.getUniqueId().toString()));

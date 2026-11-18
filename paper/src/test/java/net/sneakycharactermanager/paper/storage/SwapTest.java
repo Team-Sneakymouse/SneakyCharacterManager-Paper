@@ -68,6 +68,8 @@ import net.sneakycharactermanager.paper.api.character.Puppets;
 import net.sneakycharactermanager.paper.api.character.StorageMode;
 import net.sneakycharactermanager.paper.api.character.SwapResult;
 import net.sneakycharactermanager.paper.handlers.character.Character;
+import net.sneakycharactermanager.paper.handlers.character.CharacterLoadedEvent;
+import net.sneakycharactermanager.paper.handlers.character.CharacterSwap;
 import net.sneakycharactermanager.paper.handlers.character.CharacterSelectionMenu;
 import net.sneakycharactermanager.paper.handlers.character.LiveState;
 import net.sneakycharactermanager.paper.handlers.character.LoadCharacterEvent;
@@ -470,6 +472,106 @@ class SwapTest {
         assertNull(Puppets.borrowedBy(driver.player), "the Driver wears their own character now");
         assertEquals(main, Puppets.borrowedBy(supporter.player), "the Supporter puppets the Driver's former character");
         assertEquals(List.of(), fired.stream().filter(e -> e instanceof PuppetLeaveEvent || e instanceof LoadCharacterEvent).toList());
+    }
+
+    @Test
+    void eachBodyGetsOneCharacterLoadedEventOnceTheSwapIsOver() {
+        List<String> seen = new ArrayList<>();
+        listener = event -> {
+            if (!(event instanceof CharacterLoadedEvent loaded)) return;
+            // Already the new character, and the swap is over: the body isn't swapping any more.
+            assertEquals(loaded.getCharacterKey(), Character.get(loaded.getPlayer()).getKey());
+            seen.add(loaded.getPlayer().getName() + ":" + CharacterSwap.isSwapping(driver.player) + CharacterSwap.isSwapping(supporter.player));
+        };
+        assertEquals(SwapResult.SWAPPED, Puppets.swap(driver.player, supporter.player));
+
+        List<CharacterLoadedEvent> loaded = loadedEvents();
+        assertEquals(2, loaded.size());
+        assertSame(driver.player, loaded.get(0).getPlayer());
+        assertEquals(second, loaded.get(0).getCharacterKey());
+        assertEquals(main, loaded.get(0).getPreviousCharacterKey());
+        assertSame(supporter.player, loaded.get(1).getPlayer());
+        assertEquals(main, loaded.get(1).getCharacterKey());
+        assertEquals(second, loaded.get(1).getPreviousCharacterKey());
+        assertTrue(loaded.stream().allMatch(e -> e.isSwap() && !e.isFirstLoad()));
+        assertEquals(List.of("Driver:falsefalse", "Supporter:falsefalse"), seen, "the swap was over");
+    }
+
+    @Test
+    void aRefusedSwapFiresNoCharacterLoadedEvent() {
+        skinVetoed.add(driver.player);
+        assertEquals(SwapResult.REFUSED, Puppets.swap(driver.player, supporter.player));
+        assertEquals(List.of(), loadedEvents());
+    }
+
+    @Test
+    void anInterruptedSwapFiresOnlyForTheBodyThatKeptItsNewCharacter() {
+        supporter.effects = new ArrayList<>(List.of(mock(PotionEffect.class, "glow")));
+        deferTasks = true;
+        List<ReleaseResult> released = new ArrayList<>();
+        callOut = (body, what) -> {
+            if (body == driver && what.equals("effect") && released.isEmpty()) released.add(Puppets.release(supporter.player));
+        };
+        assertEquals(SwapResult.INTERRUPTED, Puppets.swap(driver.player, supporter.player));
+
+        List<CharacterLoadedEvent> loaded = loadedEvents();
+        assertEquals(1, loaded.size());
+        assertSame(driver.player, loaded.getFirst().getPlayer());
+        assertEquals(second, loaded.getFirst().getCharacterKey());
+    }
+
+    /** Codex review finding 1: a listener swapping the pair back must not leave the outer swap reporting SWAPPED. */
+    @Test
+    void aListenerThatUndoesTheSwapMakesItInterruptedAndEventsEndOnTheCurrentState() {
+        List<SwapResult> nested = new ArrayList<>();
+        boolean[] once = {false};
+        listener = event -> {
+            if (event instanceof CharacterLoadedEvent loaded && !once[0]) {
+                once[0] = true;
+                nested.add(Puppets.swap(driver.player, supporter.player)); // swap back, from the first event
+                // The event being delivered is a snapshot: live state is already newer.
+                assertEquals(second, loaded.getCharacterKey());
+                assertEquals(main, Character.get(driver.player).getKey());
+            }
+        };
+
+        assertEquals(SwapResult.INTERRUPTED, Puppets.swap(driver.player, supporter.player));
+
+        assertEquals(List.of(SwapResult.SWAPPED), nested);
+        assertEquals(main, Character.get(driver.player).getKey());
+        assertEquals(second, Character.get(supporter.player).getKey());
+        // The outer swap's Supporter event was superseded by the swap back, so it's dropped; the swap back's events
+        // follow the Driver's first one, in order.
+        assertEquals(List.of("Driver:second", "Driver:main", "Supporter:second"),
+                loadedEvents().stream().map(e -> e.getPlayer().getName() + ":" + e.getCharacterUUID()).toList());
+    }
+
+    /** Codex review finding 2: a same-key reload during delivery supersedes the swap's queued event for that body. */
+    @Test
+    void aReloadOfTheSameCharacterDropsTheSwapsOlderEventForThatBody() {
+        List<Boolean> reloaded = new ArrayList<>();
+        listener = event -> {
+            if (event instanceof CharacterLoadedEvent loaded && loaded.getPlayer() == driver.player && reloaded.isEmpty()) {
+                Character renamed = new Character(main, supporter.player, "Renamed", "", "", "", "", false, "", "");
+                reloaded.add(renamed.load(LoadReason.OTHER)); // same key, new instance, on the Supporter
+            }
+        };
+
+        assertEquals(SwapResult.SWAPPED, Puppets.swap(driver.player, supporter.player));
+
+        assertEquals(List.of(true), reloaded);
+        List<CharacterLoadedEvent> loaded = loadedEvents();
+        assertEquals(List.of("Driver:second", "Supporter:main"),
+                loaded.stream().map(e -> e.getPlayer().getName() + ":" + e.getCharacterUUID()).toList());
+        CharacterLoadedEvent last = loaded.get(1);
+        assertFalse(last.isSwap(), "the reload's event, not the swap's older one");
+        assertEquals("Renamed", last.getCharacterName());
+        assertEquals(main, last.getPreviousCharacterKey());
+        assertEquals("Renamed", Character.get(supporter.player).getName());
+    }
+
+    private List<CharacterLoadedEvent> loadedEvents() {
+        return fired.stream().filter(e -> e instanceof CharacterLoadedEvent).map(e -> (CharacterLoadedEvent) e).toList();
     }
 
     @Test
