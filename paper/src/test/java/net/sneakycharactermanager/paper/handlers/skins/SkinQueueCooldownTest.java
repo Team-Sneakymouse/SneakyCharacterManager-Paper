@@ -66,6 +66,35 @@ class SkinQueueCooldownTest {
     }
 
     @Test
+    void failedEntriesBackOffAndGiveUpAfterTheLastRetry() {
+        SkinQueue.Cooldowns<String> state = new SkinQueue.Cooldowns<>();
+        state.add("entry");
+        assertTrue(state.claim("entry", 1000));
+        assertEquals(SkinQueue.FailedRetry.RETRY, state.failed("entry", 2, 1000));
+        state.release("entry");
+        assertFalse(state.ready("entry", 5999)); // first retry waits 5 seconds
+        assertTrue(state.claim("entry", 6000));
+        state.succeeded("entry"); // the new job was queued fine; that must not reset the failure count
+        assertEquals(SkinQueue.FailedRetry.RETRY, state.failed("entry", 2, 7000));
+        state.release("entry");
+        assertEquals(2, state.failures("entry"));
+        assertFalse(state.ready("entry", 16999)); // second retry waits 10 seconds
+        assertTrue(state.claim("entry", 17000));
+        assertEquals(SkinQueue.FailedRetry.EXHAUSTED, state.failed("entry", 2, 17000));
+    }
+
+    @Test
+    void removedEntriesAreNeitherRetriedNorReported() {
+        SkinQueue.Cooldowns<String> state = new SkinQueue.Cooldowns<>();
+        state.add("entry");
+        state.claim("entry", 1000);
+        state.remove("entry");
+        assertEquals(SkinQueue.FailedRetry.REMOVED, state.failed("entry", 2, 1000));
+        state.add("entry");
+        assertEquals(0, state.failures("entry")); // a re-added skin starts over
+    }
+
+    @Test
     void removalMakesLateWorkerReportsInert() {
         SkinQueue.Cooldowns<String> state = new SkinQueue.Cooldowns<>();
         state.add("entry");

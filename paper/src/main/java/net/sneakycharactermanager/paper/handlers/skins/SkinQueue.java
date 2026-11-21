@@ -43,6 +43,8 @@ public class SkinQueue extends BukkitRunnable {
         private static final class State {
             long retryAt;
             int hits;
+            /** Failed MineSkin attempts re-queued so far; never reset by later successful requests. */
+            int failures;
             boolean inFlight;
         }
         private final Map<T, State> entries = new HashMap<>();
@@ -78,7 +80,35 @@ public class SkinQueue extends BukkitRunnable {
             State state = entries.get(entry);
             if (state != null) { state.hits = 0; state.retryAt = 0; }
         }
+        /** Backs a failed entry off for another attempt (5s, then 10s, ...) until maxRetries are used. */
+        synchronized FailedRetry failed(T entry, int maxRetries, long now) {
+            State state = entries.get(entry);
+            if (state == null) return FailedRetry.REMOVED; // superseded, flushed or the player left
+            if (state.failures >= maxRetries) return FailedRetry.EXHAUSTED;
+            state.failures++;
+            state.retryAt = Math.max(state.retryAt, RateLimitBackoff.retryAt(null, 0, state.failures, now));
+            return FailedRetry.RETRY;
+        }
+        synchronized int failures(T entry) {
+            State state = entries.get(entry);
+            return state == null ? 0 : state.failures;
+        }
     }
+
+    enum FailedRetry { RETRY, EXHAUSTED, REMOVED }
+
+    /** Failed MineSkin attempts retried per skin before the player is told. */
+    static final int MAX_FAILED_RETRIES = 2;
+
+    /**
+     * Records a failed attempt (failed job, MineSkin 5xx, network error). On RETRY the entry is
+     * backed off and the caller must reset it to start a fresh job; on EXHAUSTED the caller gives up.
+     */
+    FailedRetry failed(SkinData data) {
+        return cooldowns.failed(data, MAX_FAILED_RETRIES, System.currentTimeMillis());
+    }
+
+    int failedAttempts(SkinData data) { return cooldowns.failures(data); }
 
     /** HTTP interpretation stays in SkinData; retry eligibility lives here. */
     public void rateLimited(SkinData data, String retryAfter) {
