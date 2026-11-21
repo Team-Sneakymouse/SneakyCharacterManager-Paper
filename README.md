@@ -446,6 +446,18 @@ Bukkit.getServicesManager().register(TalkingNameplateLookup.class,
 - While a lookup is registered, SVC's empty end-of-talk packet lights no plate, since it can't say which body it belongs to.
 - SCM uses the highest-priority registration and drops it when it is unregistered (Bukkit unregisters a plugin's services when it disables). With none registered, plates behave as before.
 
+## Name prefix (Paper API)
+
+`net.sneakycharactermanager.paper.api.character.CharacterNamePrefix` reads and sets the prefix `/charprefix` sets, on the main thread:
+
+```java
+String prefix = CharacterNamePrefix.get(player);            // null when the player wears no character, "" when none is set
+boolean set = CharacterNamePrefix.set(player, "<gold>Sir "); // updates the nameplate; false when they wear no character
+CharacterNamePrefix.clear(player);                           // same as set(player, "")
+```
+
+The prefix is kept on the worn character in memory only, like `/charprefix`: it is not saved, and loading a character again or a restart drops it, so a plugin that owns a prefix sets it again after `CharacterLoadedEvent`. It is formatted like the nameplate (legacy `&` codes, MiniMessage tags, `\uXXXX` escapes).
+
 ## Character directory (Paper API)
 
 `net.sneakycharactermanager.paper.api.directory.CharacterDirectory` looks up characters whether or not they are loaded. It is read-only and registered in Bukkit's `ServicesManager` at the end of SCM's enable, in both storage modes.

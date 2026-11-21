@@ -10,7 +10,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import net.sneakycharactermanager.paper.SneakyCharacterManager;
+import net.sneakycharactermanager.paper.api.character.CharacterNamePrefix;
 import net.sneakycharactermanager.paper.handlers.character.Character;
 import com.sneakyutils.util.TextUtility;
 
@@ -45,8 +45,7 @@ public class CommandCharPrefix extends CommandBaseAdmin {
 		}
 
 		if (args.length == 2 && args[1].equalsIgnoreCase("clear")) {
-			character.setNamePrefix("");
-			SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(target, character.getDisplayName());
+			CharacterNamePrefix.clear(target);
 
 			sender.sendMessage(TextUtility.INSTANCE
 					.convertToComponent("&aCleared name prefix for &b'" + character.getNameUnformatted() + "'&a."));
@@ -66,8 +65,7 @@ public class CommandCharPrefix extends CommandBaseAdmin {
 
 		String prefix = rawInput.substring(1, rawInput.length() - 1);
 
-		character.setNamePrefix(prefix);
-		SneakyCharacterManager.getInstance().nametagManager.nicknamePlayer(target, character.getDisplayName());
+		CharacterNamePrefix.set(target, prefix);
 
 		sender.sendMessage(TextUtility.INSTANCE.convertToComponent(
 				"&aSet name prefix for &b'" + character.getNameUnformatted() + "'&a to: &r" + prefix));
