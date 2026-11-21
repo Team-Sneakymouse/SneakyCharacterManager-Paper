@@ -69,6 +69,45 @@ public class SkinData extends BukkitRunnable {
     private volatile String jobid = null;
     private volatile long lastPollTime = 0;
     private String characterName = null;
+    /** The first error code of a failed MineSkin job response, or "unknown". */
+    static String failureCode(JSONObject response) {
+        if (response != null && response.get("errors") instanceof org.json.simple.JSONArray errors && !errors.isEmpty()
+                && errors.get(0) instanceof JSONObject first && first.get("code") != null) {
+            return first.get("code").toString();
+        }
+        return "unknown";
+    }
+
+    /** Failures that come from MineSkin or Mojang rather than the image itself; a new job usually succeeds. */
+    static boolean retryableFailure(String code) {
+        return !code.startsWith("invalid_image");
+    }
+
+    static final String TEMPORARY_FAILURE_MESSAGE = "&cFailed to generate skin: MineSkin couldn't process it right now. Please try again in a moment.";
+    static final String INVALID_IMAGE_MESSAGE = "&cFailed to generate skin. The URL may be invalid or unsupported.";
+
+    /**
+     * Retry a temporary MineSkin failure with backoff, telling the player only once the last attempt has failed.
+     * @param reason log text for this attempt (include the job id before it is cleared)
+     */
+    private void retryOrFail(String reason) {
+        SkinQueue skinQueue = SneakyCharacterManager.getInstance().skinQueue;
+        switch (skinQueue.failed(this)) {
+            case RETRY -> {
+                SneakyCharacterManager.getInstance().getLogger().info("MineSkin " + reason + " for " + player.getName()
+                        + "; retrying (" + skinQueue.failedAttempts(this) + "/" + SkinQueue.MAX_FAILED_RETRIES + ").");
+                jobid = null;
+                processing = false;
+            }
+            case EXHAUSTED -> {
+                SneakyCharacterManager.getInstance().getLogger().warning("MineSkin " + reason + " for " + player.getName()
+                        + "; giving up after " + SkinQueue.MAX_FAILED_RETRIES + " retries.");
+                player.sendMessage(TextUtility.INSTANCE.convertToComponent(TEMPORARY_FAILURE_MESSAGE));
+                skinQueue.remove(this);
+            }
+            case REMOVED -> { } // Superseded or flushed while in flight: nobody is waiting on this entry.
+        }
+    }
 
     private String baseSkinUrl;
     private String uniformHash;
@@ -285,6 +324,8 @@ public class SkinData extends BukkitRunnable {
                         } else if (statusCode == 429) {
                              SneakyCharacterManager.getInstance().getLogger().warning("MineSkin API rate limit hit (429) during queue request.");
                              reportRateLimit(response, result);
+                        } else if (statusCode >= 500) {
+                             retryOrFail("queue request returned " + statusCode);
                         } else {
                              SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + statusCode + " during queue request.");
                              player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cFailed to generate skin (MineSkin error " + statusCode + "). The URL may be invalid or unsupported."));
@@ -292,9 +333,7 @@ public class SkinData extends BukkitRunnable {
                         }
                     }
                 } catch (IOException e) {
-                    SneakyCharacterManager.getInstance().getLogger().severe("Something went very wrong!");
-                    e.printStackTrace();
-                    this.cancel();
+                    retryOrFail("queue request failed (" + e + ")");
                 }
             } else {
                 // Make a request to MineSkin to re-request an old job.
@@ -423,9 +462,15 @@ public class SkinData extends BukkitRunnable {
                             isValid = true;
                             this.apply();
                         } else if (status.equals("failed")) {
-                            SneakyCharacterManager.getInstance().getLogger().warning("MineSkin job " + jobid + " failed for " + player.getName() + ".");
-                            player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cFailed to generate skin. The URL may be invalid or unsupported."));
-                            SneakyCharacterManager.getInstance().skinQueue.remove(this);
+                            String code = failureCode(jsonResponse);
+                            if (retryableFailure(code)) {
+                                // MineSkin-side failures (invalid_skin_data, Mojang/proxy rate limits) usually pass on a fresh job.
+                                retryOrFail("job " + jobid + " failed (" + code + ")");
+                            } else {
+                                SneakyCharacterManager.getInstance().getLogger().warning("MineSkin job " + jobid + " failed for " + player.getName() + " (" + code + ").");
+                                player.sendMessage(TextUtility.INSTANCE.convertToComponent(INVALID_IMAGE_MESSAGE));
+                                SneakyCharacterManager.getInstance().skinQueue.remove(this);
+                            }
                         }
                     } else {
                         SneakyCharacterManager.getInstance().getLogger().severe("Mineskin API returned an Error: Job check failed or job does not exist.");
@@ -434,10 +479,14 @@ public class SkinData extends BukkitRunnable {
                 } else if (statusCode == 429) {
                     SneakyCharacterManager.getInstance().getLogger().warning("MineSkin API rate limit hit (429) during job poll.");
                     reportRateLimit(response, jsonResponse);
+                } else if (statusCode >= 500) {
+                    retryOrFail("job " + jobid + " poll returned " + statusCode);
                 } else if (statusCode != 200) {
                     SneakyCharacterManager.getInstance().getLogger().severe("MineSkin API returned status: " + statusCode + " during job poll.");
                     SneakyCharacterManager.getInstance().skinQueue.remove(this);
                 }
+            } catch (IOException e) {
+                retryOrFail("job " + jobid + " poll failed (" + e + ")");
             } catch (Exception e) {
                 SneakyCharacterManager.getInstance().getLogger().severe("Something went very wrong!");
                 e.printStackTrace();
