@@ -182,10 +182,15 @@ class SimpleVoiceChatIntegrationTest {
     }
 
     @Test
-    void aSpeakerWhoLeavesWhileTalkingLeavesNoTask() {
+    void aSpeakerWhoLeavesWhileTalkingLightsUpAgainAfterRejoining() {
         listener.accept(packet(driver, PLAIN));
         f.quit(driver);
         f.ticks(10);
         assertEquals(0, f.pendingTasks());
+
+        // The talking flag was cleared while they were offline, so their first packet back lights the plate.
+        f.rejoin(driver);
+        listener.accept(packet(driver, PLAIN));
+        verify(plate(driver), times(2)).setTalking(true);
     }
 }

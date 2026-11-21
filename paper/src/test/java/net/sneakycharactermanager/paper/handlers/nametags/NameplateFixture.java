@@ -199,6 +199,11 @@ public final class NameplateFixture implements AutoCloseable {
         online.remove(player.getUniqueId());
     }
 
+    /** The same player comes back online; their plate is left as it was. */
+    public void rejoin(Player player) {
+        online.put(player.getUniqueId(), player);
+    }
+
     /** Advances one server tick and runs whatever became due (tasks scheduled meanwhile wait for later ticks). */
     public void tick() {
         tick++;
