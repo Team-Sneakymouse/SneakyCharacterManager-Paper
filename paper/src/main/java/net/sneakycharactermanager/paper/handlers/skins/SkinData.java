@@ -63,6 +63,23 @@ public class SkinData extends BukkitRunnable {
     private volatile String jobid = null;
     private volatile long lastPollTime = 0;
     private String characterName = null;
+    /** Failed MineSkin jobs re-queued so far for this skin. */
+    private int failedRetries = 0;
+    static final int MAX_FAILED_RETRIES = 2;
+
+    /** The first error code of a failed MineSkin job response, or "unknown". */
+    static String failureCode(JSONObject response) {
+        if (response != null && response.get("errors") instanceof org.json.simple.JSONArray errors && !errors.isEmpty()
+                && errors.get(0) instanceof JSONObject first && first.get("code") != null) {
+            return first.get("code").toString();
+        }
+        return "unknown";
+    }
+
+    /** Failures that come from MineSkin or Mojang rather than the image itself; a new job usually succeeds. */
+    static boolean retryableFailure(String code) {
+        return !code.startsWith("invalid_image");
+    }
 
     private String baseSkinUrl;
     private String uniformHash;
@@ -418,7 +435,18 @@ public class SkinData extends BukkitRunnable {
                             isValid = true;
                             this.apply();
                         } else if (status.equals("failed")) {
-                            SneakyCharacterManager.getInstance().getLogger().warning("MineSkin job " + jobid + " failed for " + player.getName() + ".");
+                            String code = failureCode(jsonResponse);
+                            if (retryableFailure(code) && failedRetries < MAX_FAILED_RETRIES) {
+                                // MineSkin-side failures (invalid_skin_data, Mojang/proxy rate limits) usually pass
+                                // on a fresh job: queue this skin again instead of telling the player it failed.
+                                failedRetries++;
+                                SneakyCharacterManager.getInstance().getLogger().info("MineSkin job " + jobid + " failed for "
+                                        + player.getName() + " (" + code + "); retrying (" + failedRetries + "/" + MAX_FAILED_RETRIES + ").");
+                                jobid = null;
+                                processing = false;
+                                return;
+                            }
+                            SneakyCharacterManager.getInstance().getLogger().warning("MineSkin job " + jobid + " failed for " + player.getName() + " (" + code + ").");
                             player.sendMessage(TextUtility.INSTANCE.convertToComponent("&cFailed to generate skin. The URL may be invalid or unsupported."));
                             SneakyCharacterManager.getInstance().skinQueue.remove(this);
                         }
