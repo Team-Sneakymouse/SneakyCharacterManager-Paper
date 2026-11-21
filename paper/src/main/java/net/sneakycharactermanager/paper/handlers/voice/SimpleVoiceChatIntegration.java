@@ -1,7 +1,6 @@
 package net.sneakycharactermanager.paper.handlers.voice;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -28,9 +27,9 @@ public class SimpleVoiceChatIntegration implements VoicechatPlugin {
     // SVC stops dispatching to lower-priority listeners once cancelled.
     private static final int MIC_EVENT_PRIORITY = 101;
 
-    // Shared by the voice thread (packets) and the main thread (expiry).
+    // When each talking nameplate last heard a packet; a key is present exactly while its plate is lit. Written by the
+    // voice thread (packets) and the main thread (expiry), so every transition is one atomic map operation.
     private final Map<UUID, Long> lastHeard = new ConcurrentHashMap<>();
-    private final Set<UUID> talking = ConcurrentHashMap.newKeySet();
     private final TalkingBodies bodies;
     private final LongSupplier clock;
 
@@ -94,9 +93,7 @@ public class SimpleVoiceChatIntegration implements VoicechatPlugin {
         Player player = Bukkit.getPlayer(uuid);
         if (player == null) return;
 
-        // Written before the add, so an expiry that sees the nameplate talking also sees this packet's time.
-        lastHeard.put(uuid, clock.getAsLong());
-        if (talking.add(uuid)) {
+        if (lastHeard.put(uuid, clock.getAsLong()) == null) {
             SneakyCharacterManager.getInstance().nametagManager.setTalking(player, true);
             scheduleExpiry(uuid, TALKING_TIMEOUT_TICKS);
         }
@@ -107,20 +104,22 @@ public class SimpleVoiceChatIntegration implements VoicechatPlugin {
     }
 
     /**
-     * Main thread. Turns the nameplate off once no packet arrived for the timeout; otherwise waits for the rest of it.
-     * A packet racing this check can lose its lit state until its next packet, about 20 ms later, which relights it.
+     * Main thread. Turns the nameplate off once no packet arrived for the timeout; otherwise checks again when the rest
+     * of it has passed. Delays are converted to ticks at 20 TPS, so under lag a check runs late: a single packet at
+     * 10 TPS keeps the plate lit for about a second, as the old fixed 10-tick timer did.
      */
     private void expire(UUID uuid) {
-        Long heard = lastHeard.get(uuid);
-        if (heard != null) {
+        while (true) {
+            Long heard = lastHeard.get(uuid);
+            if (heard == null) return; // Only expiry removes keys, and one expiry runs per lit plate.
             long remainingNanos = TALKING_TIMEOUT_NANOS - (clock.getAsLong() - heard);
             if (remainingNanos > 0) {
                 scheduleExpiry(uuid, Math.max(1, (remainingNanos + NANOS_PER_TICK - 1) / NANOS_PER_TICK));
                 return;
             }
-            lastHeard.remove(uuid, heard); // Keeps a packet's time written since the read.
+            // Fails when a packet arrived since the read; that packet saw the key, started nothing, and is rechecked.
+            if (lastHeard.remove(uuid, heard)) break;
         }
-        talking.remove(uuid);
         Player player = Bukkit.getPlayer(uuid);
         if (player != null) SneakyCharacterManager.getInstance().nametagManager.setTalking(player, false);
     }
