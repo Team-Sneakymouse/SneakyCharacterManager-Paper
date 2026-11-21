@@ -1,5 +1,6 @@
 package net.sneakycharactermanager.paper.handlers.voice;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -51,7 +52,8 @@ class SimpleVoiceChatIntegrationTest {
 
         bodies = new TalkingBodies(services, Logger.getLogger("SimpleVoiceChatIntegrationTest"));
         EventRegistration registration = mock(EventRegistration.class);
-        new SimpleVoiceChatIntegration(bodies).registerEvents(registration);
+        // The clock follows the fixture's ticks, so packet times line up with scheduled expiries.
+        new SimpleVoiceChatIntegration(bodies, () -> f.currentTick() * 50_000_000L).registerEvents(registration);
         ArgumentCaptor<Consumer<MicrophonePacketEvent>> captor = ArgumentCaptor.forClass(Consumer.class);
         verify(registration).registerEvent(eq(MicrophonePacketEvent.class), captor.capture(), eq(101));
         listener = captor.getValue();
@@ -146,5 +148,44 @@ class SimpleVoiceChatIntegrationTest {
         listener.accept(packet(driver, MARKED));
         verify(plate(supporter), never()).setTalking(anyBoolean());
         verify(plate(driver), never()).setTalking(anyBoolean());
+    }
+
+    @Test
+    void continuousSpeechStaysLitWithoutReschedulingPerPacket() {
+        clearInvocations(f.scheduler);
+        for (int i = 0; i < 60; i++) {
+            listener.accept(packet(driver, PLAIN));
+            f.tick();
+        }
+        verify(plate(driver)).setTalking(true);
+        verify(plate(driver), never()).setTalking(false);
+        // About one expiry per timeout window (7 here), never one per packet (60).
+        verify(f.scheduler, atMost(10)).runTaskLater(any(Plugin.class), any(Runnable.class), anyLong());
+
+        // The last packet came at tick 59 and the loop ended at 60: off exactly 10 ticks after it.
+        f.ticks(8);
+        verify(plate(driver), never()).setTalking(false);
+        f.tick();
+        verify(plate(driver)).setTalking(false);
+    }
+
+    @Test
+    void talkingAgainAfterTheTimeoutRelightsThePlate() {
+        listener.accept(packet(driver, PLAIN));
+        f.ticks(10);
+        verify(plate(driver)).setTalking(false);
+
+        listener.accept(packet(driver, PLAIN));
+        verify(plate(driver), times(2)).setTalking(true);
+        f.ticks(10);
+        verify(plate(driver), times(2)).setTalking(false);
+    }
+
+    @Test
+    void aSpeakerWhoLeavesWhileTalkingLeavesNoTask() {
+        listener.accept(packet(driver, PLAIN));
+        f.quit(driver);
+        f.ticks(10);
+        assertEquals(0, f.pendingTasks());
     }
 }
