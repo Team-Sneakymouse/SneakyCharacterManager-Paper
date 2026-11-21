@@ -36,6 +36,8 @@ public final class NameplateFixture implements AutoCloseable {
     public final World otherWorld = mock(World.class, "otherWorld");
     public final YamlConfiguration config = new YamlConfiguration();
     public final NametagManager manager;
+    /** Tick-driven: tasks run from {@link #tick()}. */
+    public final BukkitScheduler scheduler = mock(BukkitScheduler.class);
 
     private final MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class);
     private final MockedStatic<SneakyCharacterManager> instance = mockStatic(SneakyCharacterManager.class);
@@ -80,7 +82,6 @@ public final class NameplateFixture implements AutoCloseable {
         when(plugin.getLogger()).thenReturn(Logger.getLogger("NameplateFixture"));
         instance.when(SneakyCharacterManager::getInstance).thenReturn(plugin);
 
-        BukkitScheduler scheduler = mock(BukkitScheduler.class);
         when(scheduler.runTaskLater(any(Plugin.class), any(Runnable.class), anyLong())).thenAnswer(invocation -> {
             Task task = new Task(tick + (long) invocation.getArgument(2), invocation.getArgument(1));
             tasks.add(task);
@@ -198,6 +199,11 @@ public final class NameplateFixture implements AutoCloseable {
         online.remove(player.getUniqueId());
     }
 
+    /** The same player comes back online; their plate is left as it was. */
+    public void rejoin(Player player) {
+        online.put(player.getUniqueId(), player);
+    }
+
     /** Advances one server tick and runs whatever became due (tasks scheduled meanwhile wait for later ticks). */
     public void tick() {
         tick++;
@@ -214,6 +220,11 @@ public final class NameplateFixture implements AutoCloseable {
 
     public void ticks(int count) {
         for (int i = 0; i < count; i++) tick();
+    }
+
+    /** Ticks advanced so far; 0 at construction. */
+    public long currentTick() {
+        return tick;
     }
 
     public int pendingTasks() {
