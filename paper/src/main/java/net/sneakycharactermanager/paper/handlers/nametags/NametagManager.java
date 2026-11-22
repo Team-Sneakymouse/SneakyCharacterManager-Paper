@@ -106,10 +106,21 @@ public class NametagManager implements PlateAttachment.Operations {
         }, ticks);
     }
 
-    /** Destroys the plate now and builds it again shortly; fenced against later nick/unnick. */
+    /**
+     * Destroys the plate now and builds it again shortly; fenced against later nick/unnick. The owner stays marked as
+     * awaiting a plate, so if the delayed renick is dropped (e.g. a quick spectate in between bumped the lifecycle)
+     * the refresher still rebuilds it once they are unsuppressed, instead of leaving them without a plate for good.
+     */
     public void rebuild(Player owner) {
         unnicknamePlayer(owner);
+        suppressedPlates.add(owner.getUniqueId());
         renickLater(owner);
+    }
+
+    /** Removes the plate of an owner entering spectator and remembers to rebuild it when they leave. */
+    public void suppressForSpectator(Player owner) {
+        unnicknamePlayer(owner);
+        suppressedPlates.add(owner.getUniqueId());
     }
 
     /**
