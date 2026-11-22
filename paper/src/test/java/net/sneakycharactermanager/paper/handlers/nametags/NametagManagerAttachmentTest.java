@@ -597,4 +597,41 @@ class NametagManagerAttachmentTest {
         assertEquals(owner.getUniqueId(), handle.owner());
         assertSame(racials, handle.consumer());
     }
+
+    @Test
+    void plateKnockedOffItsOwnerIsRemountedNextTick() {
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        plate.vehicle = null; // another plugin's setPassenger ejected it
+
+        f.manager.plateDismounted(plate.display);
+        assertNull(plate.vehicle, "not remounted inside the dismount callback");
+        f.tick();
+        assertSame(owner, plate.vehicle);
+    }
+
+    @Test
+    void plateKnockedOffItsAnchorGoesBackOntoTheAnchor() {
+        f.nick(owner);
+        Entity shell = f.anchor("shell");
+        attached(api.attach(racials, owner, shell));
+        Plate plate = f.plate(owner);
+        plate.vehicle = null;
+
+        f.manager.plateDismounted(plate.display);
+        f.tick();
+        assertSame(shell, plate.vehicle);
+    }
+
+    @Test
+    void dismountOfARemovedPlateDoesNothing() {
+        f.nick(owner);
+        Plate plate = f.plate(owner);
+        f.manager.unnicknamePlayer(owner);
+
+        f.manager.plateDismounted(plate.display);
+        f.ticks(5);
+        assertNull(plate.vehicle);
+        assertNull(f.manager.getNickname(owner));
+    }
 }
