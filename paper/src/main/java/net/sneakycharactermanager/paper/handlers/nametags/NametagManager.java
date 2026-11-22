@@ -330,6 +330,22 @@ public class NametagManager implements PlateAttachment.Operations {
         reconcile(owner, name);
     }
 
+    /**
+     * A plate left its vehicle. Other plugins' legacy {@code setPassenger} ejects every passenger first, which knocks
+     * the plate off its owner. Puts it back on the next tick, outside the dismount callback, and after the other
+     * plugin has added its own passenger. SCM's own moves and removals also dismount: the owner's current plate is
+     * already where it belongs then, and a removed plate is no longer mapped or is fenced by the lifecycle.
+     */
+    public void plateDismounted(Entity plate) {
+        UUID plateId = plate.getUniqueId();
+        for (Nickname name : nicknames.values()) {
+            if (!plateId.equals(name.display().getUniqueId())) continue;
+            Player owner = Bukkit.getPlayer(UUID.fromString(name.getOwnerUuid()));
+            if (owner != null) runLater(owner, 1, this::ensurePlacement);
+            return;
+        }
+    }
+
     /** Applies the visibility policy for every online viewer of {@code owner}'s plate. */
     public void reconcile(Player owner) {
         Nickname name = getNickname(owner);

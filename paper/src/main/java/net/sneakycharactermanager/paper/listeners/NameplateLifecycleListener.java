@@ -3,6 +3,7 @@ package net.sneakycharactermanager.paper.listeners;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDismountEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.server.PluginDisableEvent;
 
@@ -11,8 +12,9 @@ import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import net.sneakycharactermanager.paper.SneakyCharacterManager;
 import net.sneakycharactermanager.paper.api.nameplate.ReleaseReason;
 import net.sneakycharactermanager.paper.handlers.nametags.NametagManager;
+import net.sneakycharactermanager.paper.handlers.nametags.NicknameEntity;
 
-/** Ends nameplate attachments whose consumer, anchor or world went away. */
+/** Ends nameplate attachments whose consumer, anchor or world went away, and remounts plates knocked off. */
 public class NameplateLifecycleListener implements Listener {
 
     private final SneakyCharacterManager plugin;
@@ -42,5 +44,12 @@ public class NameplateLifecycleListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onWorldChange(PlayerChangedWorldEvent event) {
         manager().releaseOwner(event.getPlayer().getUniqueId(), ReleaseReason.OWNER_CHANGED_WORLD);
+    }
+
+    /** Another plugin ejected the plate (e.g. legacy {@code setPassenger} on its owner): remount it next tick. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPlateDismount(EntityDismountEvent event) {
+        if (!event.getEntity().getScoreboardTags().contains(NicknameEntity.SCOREBOARD_TAG)) return;
+        manager().plateDismounted(event.getEntity());
     }
 }
