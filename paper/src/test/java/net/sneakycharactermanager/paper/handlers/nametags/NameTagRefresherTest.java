@@ -5,6 +5,7 @@ import static org.mockito.Mockito.*;
 
 import java.util.Optional;
 
+import org.bukkit.GameMode;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -61,6 +62,35 @@ class NameTagRefresherTest {
         refresher.run();
         verify(second.entity, times(1)).sendCharacter(a);
         assertEquals(second.displayId, refresher.seen(owner.getUniqueId()).displayId());
+    }
+
+    @Test
+    void aSpectatorWhoseLeaveWasMissedGetsThePlateBackFromTheRefresher() {
+        f.nick(owner);
+        f.manager.suppressForSpectator(owner);
+        when(owner.getGameMode()).thenReturn(GameMode.SPECTATOR);
+        refresher.run();
+        assertNull(f.manager.getNickname(owner));
+
+        // Back out of spectator without SCM's rebuild (e.g. the change event was cancelled or its renick fenced off).
+        when(owner.getGameMode()).thenReturn(GameMode.SURVIVAL);
+        refresher.run();
+        assertNotNull(f.manager.getNickname(owner));
+    }
+
+    @Test
+    void aRebuildWhoseRenickIsDroppedIsStillRestoredByTheRefresher() {
+        f.nick(owner);
+        f.manager.rebuild(owner);
+        // A quick spectate inside the renick delay (the Ankh Suit's camera) fences the renick off.
+        f.manager.suppressForSpectator(owner);
+        when(owner.getGameMode()).thenReturn(GameMode.SPECTATOR);
+        f.ticks(2);
+        when(owner.getGameMode()).thenReturn(GameMode.SURVIVAL);
+        assertNull(f.manager.getNickname(owner));
+
+        refresher.run();
+        assertNotNull(f.manager.getNickname(owner));
     }
 
     @Test
